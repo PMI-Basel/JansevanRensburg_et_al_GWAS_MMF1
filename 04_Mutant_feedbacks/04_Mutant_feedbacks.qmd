@@ -1,0 +1,1179 @@
+---
+title: "04_Mutant_feedbacks"
+author: "Henry Janse van Rensburg"
+date:  "`r Sys.Date()`"  # Automatically updates to the current date
+format:
+  pdf:
+    toc: true  # Adds a table of contents
+    toc-depth: 2  # Includes up to second-level headings in the TOC
+    number-sections: true  # Adds numbering to sections
+    keep-tex: true  # Retains the intermediate .tex file for debugging
+    documentclass: article  # Default LaTeX class for academic documents
+    fig-width: 6  # Adjust figure width
+    fig-height: 4  # Adjust figure height
+    fig-dpi: 300  # High-quality figures
+    highlight-style: tango  # Syntax highlighting style
+    fontsize: 10pt  # Adjust font size
+    mainfont: "Arial"  # Adjust font family
+    geometry: a4paper  # Use A4 paper size
+  html:
+    toc: true  # Adds a table of contents
+    toc-depth: 2  # Includes up to second-level headings in the TOC
+    number-sections: true  # Adds numbering to sections
+    highlight-style: tango  # Syntax highlighting style
+    code-overflow: wrap  # Wrap long lines of code
+    code-fold: true # Allow users to fold/unfold code chunks
+    mainfont: "Arial" 
+execute:
+  echo: true  # Show code output in the document
+  warning: false  # Suppress warnings
+  message: false  # Suppress messages
+editor_options: 
+  chunk_output_type: inline
+#bibliography: references.bib
+---
+
+# Background
+
+We conducted this experiment to study the effect of *mmf1* mutants, and mutants affected in ETI signalling pathways on BX-growth feedbacks. We repeated screening of *mmf1* mutants three times
+
+# Materials and methods
+
+We grew Arabidopsis plants on BXplus and BXminus soils and phenotyped them for rosette area and weighed them at the end of the experiment. We extracted the phenotypes using ARADEEPOPSIS (@hüther2020).
+
+**Experiments:**
+
+-   ***mmf1*** **mutants**:
+
+1- Screening of *mmf1-1* on BS04 soil batch
+
+2- Screening of *mmf1-1* and *mmf1-2* BS04 soil batch
+
+3- Screening of *mmf1-1* and *mmf1-2* BS09 soil batch
+
+-   **ETI mutants**:
+
+4- Screening of *pad4-1*, *eds1-12* and *sag101-3* on BS07 soil batch
+
+5- Screening of *pad4-1*, *eds1-12* and *sag101-3* on BS07 soil batch
+
+-   **Purpose**: We performed this study to confirm the involvement of MMF1 in BX-feedbacks.
+
+# Important results
+
+*mmf1* mutants had a significant effect on the growth of Arabidopsis plants on BXplus and BXminus soils. They showed no growth feedback. ETI mutants on the other hand showed a significant growth feedback on BXplus soils.
+
+```{r}
+
+### **1. Setup and Load Libraries**
+
+# Load necessary libraries
+library(ggplot2)
+library(ggbeeswarm)
+library(tidyverse)
+library(ggtext)
+library(tidyr)
+library(ggpubr)
+library(pander)
+library(cowplot)
+library(dplyr)
+library(knitr)
+library(writexl)
+library(openxlsx)
+library(readxl)
+```
+
+# Read Phenotype Tables
+
+```{r}
+# Read phenotype tables
+# Exp 1
+phenotypes_E1 <- read_excel("Input/Dataset4.xlsx", sheet = "ExpIII_mmf1_phenotypes")
+weight_E1 <- read_excel("Input/Dataset4.xlsx", sheet = "ExpIII_mmf1_weight")
+ 
+#Exp2
+phenotypes_E2 <- read_excel("Input/Dataset4.xlsx", sheet = "ExpIV_mmf1_phenotypes")
+weight_E2 <- read_excel("Input/Dataset4.xlsx", sheet = "ExpIV_mmf1_weight")
+  
+#Exp3
+phenotypes_E3 <- read_excel("Input/Dataset4.xlsx", sheet = "ExpV_mmf1_phenotypes")
+  
+weight_E3 <- read_excel("Input/Dataset4.xlsx", sheet = "ExpV_mmf1_weight")
+  
+#removed_plants_E3 <- read.csv("Input/E3_removed_plants.csv")
+# Purpose: Load the phenotype data and mutant screen fresh weight data into R.
+```
+
+# Function to Add Replicate Number to Graph
+
+```{r}
+# Function to display the number of replicates below each bar
+give.n <- function(x){
+  return(c(y = median(x) * -0.005, label = length(x)))
+}
+
+# Function to make colored facets at the bottom
+element_textbox_highlight <- function(..., 
+                                      hi.labels = NULL, hi.fill = NULL,
+                                      hi.col = NULL, hi.box.col = NULL,
+                                      hi.labels2 = NULL, hi.fill2 = NULL,
+                                      hi.col2 = NULL, hi.box.col2 = NULL) {
+  structure(
+    c(element_textbox(...),
+      list(hi.labels = hi.labels, hi.fill = hi.fill, hi.col = hi.col, 
+           hi.box.col = hi.box.col,
+           hi.labels2 = hi.labels2, hi.fill2 = hi.fill2, hi.col2 = hi.col2, 
+           hi.box.col2 = hi.box.col2)
+    ),
+    class = c("element_textbox_highlight", "element_textbox", "element_text", "element",
+              "element_textbox_highlight", "element_textbox", "element_text", "element")
+  )
+}
+
+element_grob.element_textbox_highlight <- function(element, label = "", ...) {
+  if (label %in% element$hi.labels) {
+    element$fill <- element$hi.fill %||% element$fill
+    element$colour <- element$hi.col %||% element$colour
+    element$box.colour <- element$hi.box.col %||% element$box.colour
+  }
+  if (label %in% element$hi.labels2) {
+    element$fill <- element$hi.fill2 %||% element$fill
+    element$colour <- element$hi.col2 %||% element$colour
+    element$box.colour <- element$hi.box.col2 %||% element$box.colour
+  }
+  NextMethod()
+}
+# Purpose: Define functions for visualizing the number of replicates in a graph and customizing text box elements.
+```
+
+# Experiment III: Screening of *mmf1-1* on BS04 soil batch
+
+## Modify and Verify Data
+
+```{r}
+# Change the levels of the 'line' column
+weight_E1 <- weight_E1 %>%
+  mutate(line = factor(line, levels = c("WT", "mmf1-1")))
+
+#number of replicates
+kable(
+  table(weight_E1$BX, weight_E1$line), 
+  caption = "Number of replicates (E-III)"
+)
+# Purpose: Relevel the 'line' factor and filter out rows with missing fresh weight data.
+```
+
+## Plot Fresh Weight
+
+```{r}
+#| label: fig-mmf1-mutants-Fw-EIII
+#| fig-cap: "Feedbacks of mmf1 mutants in manuscript experiments (E-III)."
+#| warning: false
+# Generate the boxplot
+fresh_weight_E1 <- weight_E1 %>%
+  ggplot(aes(x = line, y = fresh_weight, fill = BX)) + 
+  geom_boxplot(position = position_dodge(width = 0.85), alpha = 0.6, 
+               color = "grey35",
+               outlier.colour = NA, size = 0.5) + 
+  ggbeeswarm::geom_quasirandom(dodge.width = 0.85, size = 1, shape = 21, 
+                               color = "black",
+                               width = 0.1, alpha = 0.4, show.legend = FALSE) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", linewidth = 0.5, 
+               width = 0.4, position = position_dodge(width = 0.85)) + 
+  stat_compare_means(method = "t.test", paired = FALSE, size = 2, 
+                     label.y = 0.09, label.x = 1) +
+  theme_bw() +
+  scale_fill_manual(name = "Conditioning", values = c("seagreen", "gold2")) + 
+  coord_cartesian(ylim = c(0, 0.10)) +
+  ggtitle("E1 - Fresh Weight") +  # Add a title
+  ylab("Fresh Weight") + 
+  scale_x_discrete(labels = c("WT", expression(italic("mmf1-2")))) + 
+  theme(
+    plot.title = element_text(size = 7, hjust = 0),  # Move title to the left
+    axis.title.x = element_text(size = 7),
+    axis.title.y = element_text(size = 7),
+    axis.text.x = element_text(size = 7),
+    axis.text.y = element_text(size = 7),
+    legend.title = element_text(size = 7),
+    legend.text = element_text(size = 7),
+    strip.text = element_text(size = 7),  # Facet strip text size
+    legend.position = "bottom"
+  )
+
+# Display the plot
+print(fresh_weight_E1)
+# Purpose: Generate and display a boxplot for fresh weight data in MMF1 mutants.
+```
+
+## Plot Plant Area
+
+```{r}
+phenotypes_E1 <- phenotypes_E1 %>%
+  mutate(line = factor(line, levels = c("WT", "mmf1-1")))
+
+
+#number of replicates
+kable(
+  table(phenotypes_E1$BX, phenotypes_E1$line), 
+  caption = "Number of replicates (E-III)"
+)
+```
+
+```{r}
+#| label: fig-mmf1-mutants-area-EIII
+#| fig-cap: "Feedbacks of mmf1 mutants in repeat experiments (E-III)."
+#| warning: false
+# Generate the boxplot
+plant_area_E1 <- phenotypes_E1 %>%
+  ggplot(aes(x = line, y = plant_region_area, fill = BX)) + 
+  geom_boxplot(position = position_dodge(width = 0.85), alpha = 0.6, 
+               color = "grey35", outlier.colour = NA, size = 0.5) + 
+  ggbeeswarm::geom_quasirandom(dodge.width = 0.85, size = 1, shape = 21, 
+                               color = "black", width = 0.1, alpha = 0.4, 
+                               show.legend = FALSE) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", linewidth = 0.5, 
+               width = 0.4, position = position_dodge(width = 0.85)) + 
+  stat_compare_means(method = "t.test", paired = FALSE, size = 2, 
+                     label.y = 900000, label.x = 1) +
+  theme_bw() +
+  scale_fill_manual(name = "Conditioning", values = c("seagreen", "gold2")) + 
+  coord_cartesian(ylim = c(0, 1000000)) +
+  ggtitle("E1 - Plant Area") +  # Add a title
+  ylab("Plant Area") + 
+  scale_x_discrete(labels = c("WT", expression(italic("mmf1-1")))) +  # Adjust x-axis labels
+  theme(
+    plot.title = element_text(size = 7, hjust = 0),  # Title aligned to the left
+    axis.title.x = element_blank(),  # Optional: Remove x-axis title
+    axis.title.y = element_text(size = 7),
+    axis.text.x = element_text(size = 7),
+    axis.text.y = element_text(size = 7),
+    legend.title = element_text(size = 7),
+    legend.text = element_text(size = 7),
+    strip.text = element_text(size = 7),  # Facet strip text size
+    legend.position = "bottom"
+  )
+
+# Display the plot
+print(plant_area_E1)
+# Purpose: Generate and display a boxplot for plant area data in MMF1 mutants.
+```
+
+## Statistics
+
+```{r}
+# Perform ANOVA for MMF1 mutants
+# Fit the ANOVA model for fresh weight
+# Fit the ANOVA model
+MMF1_anova_model_Fw_E1 <- aov(fresh_weight ~ line * BX, data = weight_E1)
+
+# Extract the ANOVA table and format it with kable
+anova_table <- summary(MMF1_anova_model_Fw_E1)[[1]]  # Extract the ANOVA table as a data frame
+
+# Display the ANOVA table using kable
+library(knitr)
+kable(anova_table, caption = "ANOVA Table for Fresh Weight (E-III)")
+
+
+# Fit the ANOVA model for plant region area
+MMF1_anova_model_rosettearea_E1 <- aov(plant_region_area ~ line * BX, 
+                                       data = phenotypes_E1)
+
+# Extract the ANOVA table and format it with kable
+anova_table <- summary(MMF1_anova_model_rosettearea_E1)[[1]]  # Extract the ANOVA table as a data frame
+
+# Display the ANOVA table using kable
+kable(anova_table, caption = "ANOVA Table for Plant Region Area (E-III)")
+# Purpose: Perform ANOVA to analyze the effects of line and BX on fresh weight and plant region area in MMF1 mutants.
+```
+
+-   **Purpose**: We performed ANOVA to analyze the effects of line and BX on fresh weight and plant region area in MMF1 mutants.
+
+### Perform ANOVA and FDR Correction for fresh weight
+
+```{r}
+# Perform ANOVA and FDR correction for fresh weight
+stat.test_FW <- weight_E1 %>%
+  group_by(line) %>%
+  do({
+    model <- aov(fresh_weight ~ BX, data = .)
+    anova_results <- summary(model)[[1]]
+    p_value <- anova_results[["Pr(>F)"]][1]
+    data.frame(p_value = p_value)
+  }) %>%
+  ungroup() %>%
+  mutate(
+    p.adj = p.adjust(p_value, method = "fdr"),
+    significance = cut(p.adj, 
+                       breaks = c(0, 1e-04, 0.001, 0.01, 0.05, 1),
+                       labels = c("****", "***", "**", "*", "ns"))
+  )
+
+# Display the result using kable
+kable(stat.test_FW, caption = "Statistical Test Results for Fresh Weight (E-III)")
+```
+
+### **Perform ANOVA and FDR correction for Rosette area**
+
+```{r}
+stat.test_region_area <- phenotypes_E1 %>%
+  group_by(line) %>%
+  do({
+    model <- aov(plant_region_area ~ BX, data = .)
+    anova_results <- summary(model)[[1]]
+    p_value <- anova_results[["Pr(>F)"]][1]
+    data.frame(p_value = p_value)
+  }) %>%
+  ungroup() %>%
+  mutate(
+    p.adj = p.adjust(p_value, method = "fdr"),
+    significance = cut(
+      p.adj,
+      breaks = c(0, 1e-04, 0.001, 0.01, 0.05, 1),
+      labels = c("****", "***", "**", "*", "ns")
+    )
+  )
+
+# Display the results using kable
+library(knitr)
+kable(stat.test_region_area, caption = "Statistical Test Results for Plant Region Area (E-III)")
+```
+
+# Experiment IV: Screening of *mmf1-1* and *mmf1-2* on BS04 soil batch
+Experiment that was used for microbiome analysis and RNAseq.
+
+## Modify and Verify Data
+
+```{r}
+# Change the levels of the 'line' column
+weight_E2 <- weight_E2 %>%
+  mutate(line = factor(line, levels = c("WT", "mmf1-1", "mmf1-2")))
+
+# Filter out rows with NA in the fresh_weight column
+weight_E2 <- weight_E2 %>%
+  filter(!is.na(fresh_weight))
+
+#number of replicates
+kable(
+  table(weight_E2$BX, weight_E2$line), 
+  caption = "Number of replicates (E-IV)"
+)
+
+```
+
+-   **Purpose**: We re-leveled the 'line' factor and filtered out rows with missing fresh weight data.
+
+## Plot Fresh weight
+
+```{r}
+#| label: fig-mmf1-mutants-Fw-EIV
+#| fig-cap: "Feedbacks of mmf1 mutants in manuscript experiments (E-IV)."
+#| warning: false
+# Generate the boxplot
+fresh_weight_E2 <- weight_E2 %>%
+  ggplot(aes(x = line, y = fresh_weight, fill = BX)) + 
+  geom_boxplot(position = position_dodge(width = 0.85), alpha = 0.6, 
+               color = "grey35", outlier.colour = NA, size = 0.5) + 
+  ggbeeswarm::geom_quasirandom(dodge.width = 0.85, size = 1, shape = 21, 
+                               color = "black", width = 0.1, alpha = 0.4, 
+                               show.legend = FALSE) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", linewidth = 0.5, 
+               width = 0.4, position = position_dodge(width = 0.85)) + 
+  stat_compare_means(method = "t.test", paired = FALSE, size = 2, 
+                     label.y = 0.350, label.x = 1) +
+  theme_bw() +
+  scale_fill_manual(name = "Conditioning", values = c("seagreen", "gold2")) + 
+  coord_cartesian(ylim = c(0, 0.40)) +
+  ggtitle("E2 - Fresh Weight Analysis") +  # Add a title
+  ylab("Fresh Weight") + 
+  scale_x_discrete(labels = c("WT", expression(italic("mmf1-1")), 
+                              expression(italic("mmf1-2")))) +  # Adjust x-axis labels
+  theme(
+    plot.title = element_text(size = 7, hjust = 0),  # Title aligned to the left
+    axis.title.x = element_blank(),  # Optional: Remove x-axis title
+    axis.title.y = element_text(size = 7),
+    axis.text.x = element_text(size = 7),
+    axis.text.y = element_text(size = 7),
+    legend.title = element_text(size = 7),
+    legend.text = element_text(size = 7),
+    strip.text = element_text(size = 7),  # Facet strip text size
+    legend.position = "bottom"
+  )
+
+# Display the plot
+print(fresh_weight_E2)
+# Purpose: Generate and display a boxplot for fresh weight data in MMF1 mutants.
+```
+
+-   **Purpose**: We generated a boxplot to visualize the fresh weight data in MMF1 mutants.
+
+## Plot Plant Area
+
+```{r, echo=FALSE,  message=FALSE}
+phenotypes_E2 <- phenotypes_E2 %>%
+  mutate(line = factor(line, levels = c("WT", "mmf1-1", "mmf1-2")))
+
+kable(
+  table(phenotypes_E2$BX, phenotypes_E2$line), 
+  caption = "Number of replicates (E-IV)"
+)
+# Purpose: Display the number of replicates for plant area data.
+```
+
+## Plot Plant Area for MMF1 Mutants
+
+```{r}
+#| label: fig-mmf1-mutants-area-EIV
+#| fig-cap: "Feedbacks of mmf1 mutants in manuscript experiments (E-IV)."
+#| warning: false
+# Generate the boxplot
+plant_area_E2 <- phenotypes_E2 %>%
+  ggplot(aes(x = line, y = plant_region_area, fill = BX)) + 
+  geom_boxplot(position = position_dodge(width = 0.85), alpha = 0.6, 
+               color = "grey35", outlier.colour = NA, size = 0.5) + 
+  ggbeeswarm::geom_quasirandom(dodge.width = 0.85, size = 1, shape = 21, 
+                               color = "black",
+                               width = 0.1, alpha = 0.4, show.legend = FALSE) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", linewidth = 0.5, width = 0.4,
+               position = position_dodge(width = 0.85)) + 
+  stat_compare_means(method = "t.test", paired = FALSE, size = 2, 
+                     label.y = 800000, label.x = 1) +
+  theme_bw() +
+  scale_fill_manual(name = "Conditioning", values = c("seagreen", "gold2")) + 
+  coord_cartesian(ylim = c(0, 900000)) +
+  ggtitle("E2 - Plant Area") +  # Add a title
+  ylab("Plant Area") + 
+  scale_x_discrete(labels = c("WT", expression(italic("mmf1-1")), 
+                              expression(italic("mmf1-2")))) +  # Adjust x-axis labels
+  theme(
+    plot.title = element_text(size = 7, hjust = 0),  # Title aligned to the left
+    axis.title.x = element_blank(),  # Optional: Remove x-axis title
+    axis.title.y = element_text(size = 7),
+    axis.text.x = element_text(size = 7),
+    axis.text.y = element_text(size = 7),
+    legend.title = element_text(size = 7),
+    legend.text = element_text(size = 7),
+    strip.text = element_text(size = 7),  # Facet strip text size
+    legend.position = "bottom"
+  )
+
+# Display the plot
+print(plant_area_E2)
+# Purpose: Generate and display a boxplot for plant area data in MMF1 mutants.
+```
+
+-   **Purpose**: We generated a boxplot to visualize the plant area data in MMF1 mutants.
+
+## Statistics
+
+```{r, echo=FALSE,  message=FALSE}
+# Perform ANOVA for MMF1 mutants
+# Fit the ANOVA model for fresh weight
+# Fit the ANOVA model
+MMF1_anova_model_Fw_E2 <- aov(fresh_weight ~ line * BX, data = weight_E2)
+
+# Extract the ANOVA table and format it with kable
+anova_table <- summary(MMF1_anova_model_Fw_E2)[[1]]  # Extract the ANOVA table as a data frame
+
+# Display the ANOVA table using kable
+library(knitr)
+kable(anova_table, caption = "ANOVA Table for Fresh Weight (E-IV)")
+
+
+# Fit the ANOVA model for plant region area
+MMF1_anova_model_rosettearea_E2 <- aov(plant_region_area ~ line * BX, 
+                                       data = phenotypes_E2)
+
+# Extract the ANOVA table and format it with kable
+anova_table <- summary(MMF1_anova_model_rosettearea_E2)[[1]]  # Extract the ANOVA table as a data frame
+
+# Display the ANOVA table using kable
+kable(anova_table, caption = "ANOVA Table for Plant Region Area (E-IV)")
+# Purpose: Perform ANOVA to analyze the effects of line and BX on fresh weight and plant region area in MMF1 mutants.
+```
+
+-   **Purpose**: We performed ANOVA to analyze the effects of line and BX on fresh weight and plant region area in MMF1 mutants.
+
+### Perform ANOVA and FDR Correction for fresh weight
+
+```{r}
+# Perform ANOVA and FDR correction for fresh weight
+stat.test_FW <- weight_E2 %>%
+  group_by(line) %>%
+  do({
+    model <- aov(fresh_weight ~ BX, data = .)
+    anova_results <- summary(model)[[1]]
+    p_value <- anova_results[["Pr(>F)"]][1]
+    data.frame(p_value = p_value)
+  }) %>%
+  ungroup() %>%
+  mutate(
+    p.adj = p.adjust(p_value, method = "fdr"),
+    significance = cut(p.adj, 
+                       breaks = c(0, 1e-04, 0.001, 0.01, 0.05, 1),
+                       labels = c("****", "***", "**", "*", "ns"))
+  )
+
+# Display the result using kable
+kable(stat.test_FW, caption = "Statistical Test Results for Fresh Weight (E-IV)")
+```
+
+-   **Purpose**: We performed ANOVA and FDR correction to assess the statistical significance of differences in fresh weight for MMF1 mutants.
+
+### Perform ANOVA and FDR Correction for Rosette Area
+
+```{r}
+
+stat.test_region_area <- phenotypes_E2 %>%
+  group_by(line) %>%
+  do({
+    model <- aov(plant_region_area ~ BX, data = .)
+    anova_results <- summary(model)[[1]]
+    p_value <- anova_results[["Pr(>F)"]][1]
+    data.frame(p_value = p_value)
+  }) %>%
+  ungroup() %>%
+  mutate(
+    p.adj = p.adjust(p_value, method = "fdr"),
+    significance = cut(
+      p.adj,
+      breaks = c(0, 1e-04, 0.001, 0.01, 0.05, 1),
+      labels = c("****", "***", "**", "*", "ns")
+    )
+  )
+
+# Display the results using kable
+library(knitr)
+kable(stat.test_region_area, caption = "Statistical Test Results for Plant Region Area (E-IV)")
+
+```
+
+-   **Purpose**: We performed ANOVA and FDR correction to assess the statistical significance of differences in plant region area for MMF1 mutants.
+
+# Experiment V: Screening of *mmf1-1* and *mmf1-2* on BS09 soil batch
+
+## Modify and Verify Data
+
+```{r}
+# Change the levels of the 'line' column
+weight_E3 <- weight_E3 %>%
+  mutate(genotype = factor(genotype, levels = c("Col0", "mmf1-1", "mmf1-2")))
+
+# Filter out rows with NA in the fresh_weight column
+weight_E3 <- weight_E3 %>%
+  filter(!is.na(fresh_weight))
+
+#number of replicates
+kable(
+  table(weight_E3$soil, weight_E3$genotype), 
+  caption = "Number of replicates (E-V)"
+)
+
+```
+
+-   **Purpose**: We re-leveled the 'line' factor and filtered out rows with missing fresh weight data.
+
+## Plot Fresh weight
+
+```{r}
+#| label: fig-mmf1-fresh-weight-E3
+#| fig-cap: "Fresh weight of mmf1 mutants (E-V)."
+#| warning: false
+# Generate the boxplot
+fresh_weight_E3 <- weight_E3 %>%
+  ggplot(aes(x = genotype, y = fresh_weight, fill = soil)) + 
+  geom_boxplot(position = position_dodge(width = 0.85), alpha = 0.6, 
+               color = "grey35", outlier.colour = NA, size = 0.5) + 
+  ggbeeswarm::geom_quasirandom(dodge.width = 0.85, size = 1, shape = 21, 
+                               color = "black", width = 0.1, alpha = 0.4, 
+                               show.legend = FALSE) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", linewidth = 0.5, 
+               width = 0.4, position = position_dodge(width = 0.85)) + 
+  stat_compare_means(method = "t.test", paired = FALSE, size = 2, 
+                     label.y = 0.380, label.x = 1) +
+  theme_bw() +
+  scale_fill_manual(name = "Conditioning", values = c("seagreen", "gold2")) + 
+  coord_cartesian(ylim = c(0, 0.40)) +
+  ggtitle("E3 - Fresh Weight Analysis") +  # Add a title
+  ylab("Fresh Weight") + 
+  scale_x_discrete(labels = c("WT", expression(italic("mmf1-1")), 
+                              expression(italic("mmf1-2")))) +  # Adjust x-axis labels
+  theme(
+    plot.title = element_text(size = 7, hjust = 0),  # Title aligned to the left
+    axis.title.x = element_blank(),  # Optional: Remove x-axis title
+    axis.title.y = element_text(size = 7),
+    axis.text.x = element_text(size = 7),
+    axis.text.y = element_text(size = 7),
+    legend.title = element_text(size = 7),
+    legend.text = element_text(size = 7),
+    strip.text = element_text(size = 7),  # Facet strip text size
+    legend.position = "bottom"
+  )
+
+# Display the plot
+print(fresh_weight_E3)
+# Purpose: Generate and display a boxplot for fresh weight data in MMF1 mutants.
+```
+
+## Plot Plant Area for MMF1 Mutants
+
+```{r}
+#| label: fig-mmf1-rosette-area-EV
+#| fig-cap: "Rosette area of mmf1 mutants (E-V)."
+#| warning: false
+# Generate the boxplot
+plant_area_E3 <- phenotypes_E3 %>%
+  ggplot(aes(x = genotype, y = plant_region_area, fill = soil)) + 
+  geom_boxplot(position = position_dodge(width = 0.85), alpha = 0.6, 
+               color = "grey35", outlier.colour = NA, size = 0.5) + 
+  ggbeeswarm::geom_quasirandom(dodge.width = 0.85, size = 1, shape = 21, 
+                               color = "black", width = 0.1, alpha = 0.4, 
+                               show.legend = FALSE) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", linewidth = 0.5, 
+               width = 0.4, position = position_dodge(width = 0.85)) + 
+  stat_compare_means(method = "t.test", paired = FALSE, size = 2, 
+                     label.y = 2800000, label.x = 1) +
+  theme_bw() +
+  scale_fill_manual(name = "Conditioning", values = c("seagreen", "gold2")) + 
+  coord_cartesian(ylim = c(0, 3000000)) +
+  ggtitle("E3 - Plant Area") +  # Add a title
+  ylab("Plant Area") + 
+  scale_x_discrete(labels = c("WT", expression(italic("mmf1-1")), 
+                              expression(italic("mmf1-2")))) +  # Adjust x-axis labels
+  theme(
+    plot.title = element_text(size = 7, hjust = 0),  # Title aligned to the left
+    axis.title.x = element_blank(),  # Optional: Remove x-axis title
+    axis.title.y = element_text(size = 7),
+    axis.text.x = element_text(size = 7),
+    axis.text.y = element_text(size = 7),
+    legend.title = element_text(size = 7),
+    legend.text = element_text(size = 7),
+    strip.text = element_text(size = 7),  # Facet strip text size
+    legend.position = "bottom"
+  )
+
+# Display the plot
+print(plant_area_E3)
+# Purpose: Generate and display a boxplot for plant area data in MMF1 mutants.
+```
+
+## Statistics
+
+```{r, echo=FALSE,  message=FALSE}
+# Perform ANOVA for MMF1 mutants
+# Fit the ANOVA model for fresh weight
+# Fit the ANOVA model
+MMF1_anova_model_Fw_E3 <- aov(fresh_weight ~ genotype * soil, data = weight_E3)
+
+# Extract the ANOVA table and format it with kable
+anova_table <- summary(MMF1_anova_model_Fw_E3)[[1]]  # Extract the ANOVA table as a data frame
+
+# Display the ANOVA table using kable
+library(knitr)
+kable(anova_table, caption = "ANOVA Table for Fresh Weight (E-V)")
+
+
+# Fit the ANOVA model for plant region area
+MMF1_anova_model_rosettearea_E3 <- aov(plant_region_area ~ genotype * soil, 
+                                       data = phenotypes_E3)
+
+# Extract the ANOVA table and format it with kable
+anova_table <- summary(MMF1_anova_model_rosettearea_E3)[[1]]  # Extract the ANOVA table as a data frame
+
+# Display the ANOVA table using kable
+kable(anova_table, caption = "ANOVA Table for Plant Region Area (E-V)")
+# Purpose: Perform ANOVA to analyze the effects of line and BX on fresh weight and plant region area in MMF1 mutants.
+```
+
+### Perform ANOVA and FDR Correction for fresh weight
+
+```{r}
+# Perform ANOVA and FDR correction for fresh weight
+stat.test_FW <- weight_E3 %>%
+  group_by(genotype) %>%
+  do({
+    model <- aov(fresh_weight ~ soil, data = .)
+    anova_results <- summary(model)[[1]]
+    p_value <- anova_results[["Pr(>F)"]][1]
+    data.frame(p_value = p_value)
+  }) %>%
+  ungroup() %>%
+  mutate(
+    p.adj = p.adjust(p_value, method = "fdr"),
+    significance = cut(p.adj, 
+                       breaks = c(0, 1e-04, 0.001, 0.01, 0.05, 1),
+                       labels = c("****", "***", "**", "*", "ns"))
+  )
+
+# Display the result using kable
+kable(stat.test_FW, caption = "Statistical Test Results for Fresh Weight (E-V)")
+```
+
+### Perform ANOVA and FDR Correction for Rosette Area
+
+```{r}
+
+stat.test_region_area <- phenotypes_E3 %>%
+  group_by(genotype) %>%
+  do({
+    model <- aov(plant_region_area ~ soil, data = .)
+    anova_results <- summary(model)[[1]]
+    p_value <- anova_results[["Pr(>F)"]][1]
+    data.frame(p_value = p_value)
+  }) %>%
+  ungroup() %>%
+  mutate(
+    p.adj = p.adjust(p_value, method = "fdr"),
+    significance = cut(
+      p.adj,
+      breaks = c(0, 1e-04, 0.001, 0.01, 0.05, 1),
+      labels = c("****", "***", "**", "*", "ns")
+    )
+  )
+
+# Display the results using kable
+library(knitr)
+kable(stat.test_region_area, caption = "Statistical Test Results for Plant Region Area (E-V)")
+
+```
+
+```{r}
+#| label: fig-mmf1-mutants-rep
+#| fig-cap: "Feedbacks of mmf1 mutants in repeat experiments."
+#| warning: false
+
+
+# Combine the three plots into one
+mmf1_mutants_feedbacks <- ggarrange(
+  plant_area_E1, 
+  plant_area_E3, 
+  nrow = 1, 
+  ncol = 2, 
+  common.legend = TRUE,  # Use a common legend
+  legend = "bottom"      # Place legend at the bottom
+)
+
+# Display the combined plot
+mmf1_mutants_feedbacks
+
+# Save the combined plot as a PDF
+ggsave(
+  filename = "mmf1_mutants_rep_feedbacks.pdf", 
+  plot = mmf1_mutants_feedbacks, 
+  width = 17.5, 
+  height = 9, 
+  units = "cm", 
+  path = "Output/figures/"
+)
+```
+
+```{r}
+#| label: fig-mmf1-mutants-rep_FW
+#| fig-cap: "Feedbacks in terms of Fresh weight of mmf1 mutants in repeat experiments."
+#| warning: false
+
+
+# Combine the three plots into one
+mmf1_mutants_feedbacks_FW <- ggarrange(
+  fresh_weight_E1, 
+  fresh_weight_E3, 
+  nrow = 1, 
+  ncol = 2, 
+  common.legend = TRUE,  # Use a common legend
+  legend = "bottom"      # Place legend at the bottom
+)
+
+# Display the combined plot
+mmf1_mutants_feedbacks_FW
+
+# Save the combined plot as a PDF
+ggsave(
+  filename = "mmf1_mutants_rep_feedbacks_FW.pdf", 
+  plot = mmf1_mutants_feedbacks_FW, 
+  width = 17.5, 
+  height = 9, 
+  units = "cm", 
+  path = "Output/figures/"
+)
+```
+
+# ETI mutants - Experiment VI
+
+## Import Phenotype Table for ETI Mutants
+
+```{r}
+# Read phenotype tables for ETI mutants
+plant_weight_ETI <- read_excel("Input/Dataset4.xlsx", 
+                               sheet = "ExpVI_ETI_weight")
+plant_region_area_ETI <- read_excel("Input/Dataset4.xlsx", 
+                                    sheet = "ExpVI_ETI_phenotypes")
+# Purpose: Load the phenotype data for ETI mutants into R.
+```
+
+## Display Number of Replicates for ETI Mutants
+
+```{r}
+# Create the table
+contingency_table <- table(plant_weight_ETI$BX, plant_weight_ETI$line)
+
+# Display the table with kable
+kable(contingency_table, caption = "Number of Replicates - weight (E-VI)")
+# Purpose: Display the number of replicates for each line and BX condition in ETI mutants.
+
+# Create the table
+contingency_table <- table(plant_region_area_ETI$BX, 
+                           plant_region_area_ETI$line)
+
+# Display the table with kable
+kable(contingency_table, caption = "Number of Replicates - plant area (E-VI)")
+
+# Export table to excel file
+
+write_xlsx(plant_weight_ETI, path = "Output/Tables/E4_ETI_weight.xlsx")
+write_xlsx(plant_region_area_ETI, path = "Output/Tables/E4_ETI_rosette_area.xlsx")
+```
+
+## Statistics
+
+### Perform ANOVA for ETI Mutants
+
+```{r}
+# Perform ANOVA for ETI mutants
+# Fit the ANOVA model
+ETI_anova_model_Fw <- aov(fresh_weight ~ line * BX, data = plant_weight_ETI)
+
+# Extract the ANOVA table
+anova_table <- summary(ETI_anova_model_Fw)[[1]]
+
+# Use kable to display the table
+kable(anova_table, caption = "ANOVA Table for Fresh Weight (E-VI)")
+
+# Fit the ANOVA model
+ETI_anova_model_rosettearea <- aov(plant_region_area ~ line * BX, 
+                                   data = plant_region_area_ETI)
+
+# Extract the ANOVA table
+anova_table <- summary(ETI_anova_model_rosettearea)[[1]]
+
+# Use kable to display the table
+kable(anova_table, caption = "ANOVA Table for Plant Region Area (E-VI)")
+
+
+# Fit the ANOVA model
+ETI_anova_model_Dw <- aov(dry_weight ~ line * BX, data = plant_weight_ETI)
+
+# Extract the ANOVA table
+anova_table <- summary(ETI_anova_model_Dw)[[1]]
+
+# Use kable to display the table
+kable(anova_table, caption = "ANOVA Table for Dry weight (E-VI)")
+```
+
+-   **Purpose**: We performed ANOVA to analyze the effects of line and BX on fresh weight and plant region area in ETI mutants.
+
+### Perform ANOVA and FDR Correction for ETI Mutants
+
+```{r}
+# Perform ANOVA and FDR correction for fresh weight
+ETI_stat.test_FW <- plant_weight_ETI %>%
+  group_by(line) %>%
+  do({
+    model <- aov(fresh_weight ~ BX, data = .)
+    anova_results <- summary(model)[[1]]
+    p_value <- anova_results[["Pr(>F)"]][1]
+    data.frame(p_value = p_value)
+  }) %>%
+  ungroup() %>%
+  mutate(
+    p.adj = p.adjust(p_value, method = "fdr"),
+    significance = cut(
+      p.adj, 
+      breaks = c(0, 1e-04, 0.001, 0.01, 0.05, 1), 
+      labels = c("****", "***", "**", "*", "ns")
+    )
+  )
+
+# Display fresh weight results using kable
+library(knitr)
+kable(ETI_stat.test_FW, caption = "Statistical Test Results for Fresh Weight (E-VI)")
+
+# Perform ANOVA and FDR correction for dry weight
+ETI_stat.test_dry_weight <- plant_weight_ETI %>%
+  group_by(line) %>%
+  do({
+    model <- aov(dry_weight ~ BX, data = .)
+    anova_results <- summary(model)[[1]]
+    p_value <- anova_results[["Pr(>F)"]][1]
+    data.frame(p_value = p_value)
+  }) %>%
+  ungroup() %>%
+  mutate(
+    p.adj = p.adjust(p_value, method = "fdr"),
+    significance = cut(
+      p.adj, 
+      breaks = c(0, 1e-04, 0.001, 0.01, 0.05, 1), 
+      labels = c("****", "***", "**", "*", "ns")
+    )
+  )
+
+# Display dry weight results using kable
+kable(ETI_stat.test_dry_weight, caption = "Statistical Test Results for Dry Weight (E-VI)")
+
+# Perform ANOVA and FDR correction for Rosette area
+ETI_stat.test_rosette_area <- plant_region_area_ETI %>%
+  group_by(line) %>%
+  do({
+    model <- aov(plant_region_area ~ BX, data = .)
+    anova_results <- summary(model)[[1]]
+    p_value <- anova_results[["Pr(>F)"]][1]
+    data.frame(p_value = p_value)
+  }) %>%
+  ungroup() %>%
+  mutate(
+    p.adj = p.adjust(p_value, method = "fdr"),
+    significance = cut(
+      p.adj, 
+      breaks = c(0, 1e-04, 0.001, 0.01, 0.05, 1), 
+      labels = c("****", "***", "**", "*", "ns")
+    )
+  )
+
+# Display dry weight results using kable
+kable(ETI_stat.test_rosette_area, caption = "Statistical Test Results for Rosette Area (E-VI)")
+# Purpose: Perform ANOVA and FDR correction to assess the statistical significance of differences in fresh and dry weight for ETI mutants.
+```
+
+-   **Purpose**: We performed ANOVA and FDR correction to assess the statistical significance of differences in fresh and dry weight for ETI mutants.
+
+## Plot Dry Weight for ETI Mutants
+
+```{r, echo=FALSE,  message=FALSE, fig.height=5}
+#| label: fig-ETI-mutants-Dw
+#| fig-cap: "Feedbacks of ET mutantss (E-VI)."
+#| warning: false
+#| 
+plant_weight_ETI_filter <- plant_weight_ETI %>%
+  mutate(line = factor(line, levels = c("Col0", "eds1", "pad4", "sag101")))
+
+
+# Generate the boxplot for dry weight
+dry_weight_ETI <- plant_weight_ETI %>%
+  mutate(line = factor(line, levels = c("Col0", "eds1", "pad4", "sag101"))) %>%
+  ggplot(aes(x = line, y = dry_weight, fill = BX)) + 
+  geom_boxplot(position = position_dodge(width = 0.85), alpha = 0.6, 
+               color = "grey35", outlier.colour = NA, size = 0.5) + 
+  ggbeeswarm::geom_quasirandom(dodge.width = 0.85, size = 1, shape = 21, 
+                               color = "black", width = 0.1, alpha = 0.4, 
+                               show.legend = FALSE) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", linewidth = 0.5, 
+               width = 0.4, position = position_dodge(width = 0.85)) + 
+  stat_compare_means(method = "t.test", paired = FALSE, size = 2, 
+                     label.y = 48, label.x = 1) +
+  theme_bw() +
+  scale_fill_manual(name = "Conditioning", values = c("seagreen", "gold2")) + 
+  coord_cartesian(ylim = c(0, 50)) +
+  ggtitle("ETI - Dry Weight") +  # Add a title
+  ylab("Dry Weight (mg)") + 
+  scale_x_discrete(labels = c("WT", expression(italic("eds1-12")), 
+                              expression(italic("pad4-1")), 
+                              expression(italic("sag101-3")))) +  # Adjust x-axis labels
+  theme(
+    plot.title = element_text(size = 7, hjust = 0),  # Title aligned to the left
+    axis.title.x = element_text(size = 7),
+    axis.title.y = element_text(size = 7),
+    axis.text.x = element_text(size = 7),
+    axis.text.y = element_text(size = 7),
+    legend.title = element_text(size = 7),
+    legend.text = element_text(size = 7),
+    strip.text = element_text(size = 7),  # Facet strip text size
+    legend.position = "bottom"
+  )
+
+# Display the plot
+print(dry_weight_ETI)
+# Purpose: Generate and display a boxplot for dry weight data in ETI mutants.
+```
+
+-   **Purpose**: We generated a boxplot to visualize the dry weight data in ETI mutants.
+
+## Plot Fresh Weight for ETI Mutants
+
+```{r}
+#| label: fig-ETI-mutants-Fw
+#| fig-cap: "Feedbacks of ET mutantss (E-VI)."
+#| warning: false
+# Generate the boxplot for fresh weight
+fresh_weight_ETI <- plant_weight_ETI %>%
+  ggplot(aes(x = line, y = fresh_weight, fill = BX)) + 
+  geom_boxplot(position = position_dodge(width = 0.85), alpha = 0.6, 
+               color = "grey35", outlier.colour = NA, size = 0.5) + 
+  ggbeeswarm::geom_quasirandom(dodge.width = 0.85, size = 1, shape = 21, 
+                               color = "black",
+                               width = 0.1, alpha = 0.4, 
+                               show.legend = FALSE) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", linewidth = 0.5, 
+               width = 0.4, position = position_dodge(width = 0.85)) + 
+  stat_compare_means(method = "t.test", paired = FALSE, size = 2, 
+                     label.y = 500, label.x = 1) +
+  theme_bw() +
+  scale_fill_manual(name = "Conditioning", values = c("seagreen", "gold2")) + 
+  coord_cartesian(ylim = c(0, 500)) +
+  ggtitle("ETI - Fresh Weight") +  # Add a title
+  ylab("Fresh Weight (mg)") + 
+  scale_x_discrete(labels = c("WT", expression(italic("eds1-12")), 
+                              expression(italic("pad4-1")), 
+                              expression(italic("sag101-3")))) +  # Adjust x-axis labels
+  theme(
+    plot.title = element_text(size = 7, hjust = 0),  # Title aligned to the left
+    axis.title.x = element_text(size = 7),
+    axis.title.y = element_text(size = 7),
+    axis.text.x = element_text(size = 7),
+    axis.text.y = element_text(size = 7),
+    legend.title = element_text(size = 7),
+    legend.text = element_text(size = 7),
+    strip.text = element_text(size = 7),  # Facet strip text size
+    legend.position = "bottom"
+  )
+
+# Display the plot
+print(fresh_weight_ETI)
+# Purpose: Generate and display a boxplot for fresh weight data in ETI mutants.
+```
+
+-   **Purpose**: We generated a boxplot to visualize the fresh weight data in ETI mutants.
+
+## Rosette area
+
+```{r}
+#| label: fig-ETI-mutants-area
+#| fig-cap: "Feedbacks of ETI mutantss (E-VI)."
+#| warning: false
+# Generate the boxplot for rosette area
+plant_area_ETI <- plant_region_area_ETI %>%
+  ggplot(aes(x = line, y = plant_region_area, fill = BX)) + 
+  geom_boxplot(position = position_dodge(width = 0.85), alpha = 0.6, 
+               color = "grey35", outlier.colour = NA, size = 0.5) + 
+  ggbeeswarm::geom_quasirandom(dodge.width = 0.85, size = 1, shape = 21, 
+                               color = "black", width = 0.1, alpha = 0.4, 
+                               show.legend = FALSE) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", linewidth = 0.5, 
+               width = 0.4, position = position_dodge(width = 0.85)) + 
+  stat_compare_means(method = "t.test", paired = FALSE, size = 2, 
+                     label.y = 4800000, label.x = 1) +
+  theme_bw() +
+  scale_fill_manual(name = "Conditioning", values = c("seagreen", "gold2")) + 
+  coord_cartesian(ylim = c(0, 5000000)) +
+  ggtitle("ETI - Rosette Area") +  # Add a title
+  ylab("Plant region area") + 
+  scale_x_discrete(labels = c("WT", expression(italic("eds1-12")), 
+                              expression(italic("pad4-1")), 
+                              expression(italic("sag101-3")))) +  # Adjust x-axis labels
+  theme(
+    plot.title = element_text(size = 7, hjust = 0),  # Title aligned to the left
+    axis.title.x = element_text(size = 7),
+    axis.title.y = element_text(size = 7),
+    axis.text.x = element_text(size = 7),
+    axis.text.y = element_text(size = 7),
+    legend.title = element_text(size = 7),
+    legend.text = element_text(size = 7),
+    strip.text = element_text(size = 7),  # Facet strip text size
+    legend.position = "bottom"
+  )
+
+# Display the plot
+print(plant_area_ETI)
+# Purpose: Generate and display a boxplot for fresh weight data in ETI mutants.
+```
+
+```{r}
+#| label: fig-ETI-mutants
+#| fig-cap: "Feedbacks of ETI mutants (E-VI)."
+#| warning: false
+library(tidyverse, quietly = TRUE)
+
+# Combine the three plots into one
+ETI_mutants_feedbacks <- ggarrange(
+  plant_area_ETI, 
+  dry_weight_ETI, 
+  nrow = 1, 
+  ncol = 2, 
+  common.legend = TRUE,  # Use a common legend
+  legend = "bottom"      # Place legend at the bottom
+)
+
+# Display the combined plot
+ETI_mutants_feedbacks
+
+# Save the combined plot as a PDF
+ggsave(
+  filename = "ETI_mutants_feedbacks.pdf", 
+  plot = ETI_mutants_feedbacks, 
+  width = 16.5, 
+  height = 9, 
+  units = "cm", 
+  path = "Output/figures/"
+)
+```
+
+# Export data as Datasets
+
+```{r}
+# Load the openxlsx package
+library(openxlsx)
+
+# Create a new workbook
+Dataset4 <- createWorkbook()
+
+# Add sheets from mmf1 mutants and write data frames to them
+addWorksheet(Dataset4, "ExpIII_mmf1_weight")
+writeData(Dataset4, "ExpIII_mmf1_weight", weight_E1)
+addWorksheet(Dataset4, "ExpIII_mmf1_phenotypes")
+writeData(Dataset4, "ExpIII_mmf1_phenotypes", phenotypes_E1)
+
+addWorksheet(Dataset4, "ExpIV_mmf1_weight")
+writeData(Dataset4, "ExpIV_mmf1_weight", weight_E2)
+addWorksheet(Dataset4, "ExpIV_mmf1_phenotypes")
+writeData(Dataset4, "ExpIV_mmf1_phenotypes", phenotypes_E2)
+
+addWorksheet(Dataset4, "ExpV_mmf1_weight")
+writeData(Dataset4, "ExpV_mmf1_weight", weight_E3)
+addWorksheet(Dataset4, "ExpV_mmf1_phenotypes")
+writeData(Dataset4, "ExpV_mmf1_phenotypes", phenotypes_E3)
+
+
+# Add sheets from ETI mutants and write data frames to them
+addWorksheet(Dataset4, "ExpVI_ETI_weight")
+writeData(Dataset4, "ExpVI_ETI_weight", plant_weight_ETI)
+addWorksheet(Dataset4, "ExpVI_ETI_phenotypes")
+writeData(Dataset4, "ExpVI_ETI_phenotypes", plant_region_area_ETI)
+
+
+
+# Save the workbook to an Excel file
+saveWorkbook(Dataset4, "Output/Tables/Dataset4.xlsx", overwrite = TRUE)
+```
+
+# Session information
+
+**Purpose**: Print the session information, including details about the R version, loaded packages, and the system environment. This is useful for reproducibility, as it documents the computational environment in which the analysis was performed.
+
+```{r}
+# Get session information
+SI <- sessionInfo()
+
+# Extract the attached packages and their versions
+attached_packages <- SI$otherPkgs
+
+# Print the R version
+cat("R version:", SI$R.version$version.string, "\n\n")
+
+# Print the attached packages and their versions
+cat("Attached packages:\n")
+invisible(lapply(attached_packages, function(pkg) {
+  cat(pkg$Package, "-", pkg$Version, "\n")
+}))
+
+```
+
+```{r create package library, echo = FALSE}
+knitr::write_bib(file = 'packages_mutants.bib')
+```
