@@ -1,0 +1,1247 @@
+---
+title: "02_GWAS_Analysis"
+author: "Henry Janse van Rensburg"
+date: "`r Sys.Date()`" 
+format:
+  pdf:
+    toc: true  # Adds a table of contents
+    toc-depth: 2  # Includes up to second-level headings in the TOC
+    number-sections: true  # Adds numbering to sections
+    keep-tex: true  # Retains the intermediate .tex file for debugging
+    documentclass: article  # Default LaTeX class for academic documents
+    fig-width: 6  # Adjust figure width
+    fig-height: 4  # Adjust figure height
+    fig-dpi: 300  # High-quality figures
+    highlight-style: tango  # Syntax highlighting style
+    fontsize: 11pt  # Adjust font size
+    mainfont: "Arial"  # Adjust font family
+    geometry: a4paper, margin=0.8in  # Use A4 paper size
+  html:
+    toc: true  # Adds a table of contents
+    toc-depth: 2  # Includes up to second-level headings in the TOC
+    number-sections: true  # Adds numbering to sections
+    highlight-style: tango  # Syntax highlighting style
+    code-fold: true # Allow users to fold/unfold code chunks
+    mainfont: "Arial" 
+execute:
+  echo: true  # Show code output in the document
+  warning: false  # Suppress warnings
+  message: false  # Suppress messages
+editor_options: 
+  chunk_output_type: inline
+---
+
+# Background
+
+We conducted this experiment to investigate the genetic components of BX-feedbacks. We have previously shown than BX-feedbacks are genetically imprinted in Arabidopsis accessions. We used a GWAS approach to identify candidate genes that are associated with BX-feedbacks. We grew 410 Arabidopsis accessions under controlled conditions on BXplus and BXminus soils and measured the growth feedback. We used LIMIX and the `gwaR` package to perform the GWAS analysis (@lippert2014) and extract candidate genes (@hüther2020).
+
+# Materials and methods
+
+We grew 410 Arabidopsis accessions under controlled conditions. We used a randomized block design with 3 replicates per accession. We grew the plants in a growth chamber with automated phenotyping and extracted phenotypes using ARADEEPOPSIS (@hüther2020). We measured the growth feedback as the plant_region_area between plants grown on BXplus and BXminus soils. We used the `gwaR` package to perform the GWAS analysis.
+
+-   **Purpose**: To identify candidate genes that are associated with BX-feedbacks.
+
+# Setup
+
+### Load Libraries and Install packages
+
+```{r setup, include=TRUE, message=FALSE, warning=FALSE}
+knitr::knit_hooks$set(purl = knitr::hook_purl)
+knitr::opts_chunk$set(echo = TRUE)
+
+## Clear the objects from memory
+rm(list=ls())
+# Purpose: Removes all objects from the R environment to ensure a clean workspace.
+
+devtools::install_github("Gregor-Mendel-Institute/gwaR")
+# Purpose: Installs the `gwaR` package from GitHub, a package for Genome-Wide Association Studies (GWAS).
+
+
+library(tidyverse)
+library(gwaR)  # Loads the `gwaR` package again after installation.
+library(magrittr)
+library(dplyr)
+library(ggplot2)
+library(cowplot)
+library(knitr)
+#Library to import xlsx files
+library(readxl)
+# Purpose: Loads necessary libraries for data manipulation, visualization, and analysis.
+```
+
+### Import Phenotype table and SNP Table
+
+```{r, echo=TRUE,include=TRUE, message=FALSE, warning=FALSE}
+#Import SNP table
+tot_plant_specific_snps <- read_excel("Input/Dataset3.xlsx", 
+                                      sheet = "SNP_table_dag20")
+
+#Import plant phenotypes
+plant_region_areas <- read_excel("Input/Dataset3.xlsx", 
+                                 sheet = "plant_region_area")
+# Purpose: Imports the files containing phenotype and SNP data into R.
+```
+
+# Data Preparation
+
+## Filter the SNP Table
+
+We filter the SNP table and phenotype table to include only the data for the first 20 days after germination (DAG 0 to DAG 20). A lot of accessions started to flower at this point which affected the phenotyping.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+#| label: table-SNP-table
+#| tbl-cap: "Table containing the SNP output data"
+# Filter SNPs for phenotypes from DAG 0 to DAG 20
+tot_plant_specific_snps_DAG20 <- filter(tot_plant_specific_snps, dag < 21)
+tot_plant_specific_snps_DAG20 <- 
+  tot_plant_specific_snps_DAG20[order(tot_plant_specific_snps_DAG20$log10_p, 
+                                      decreasing = TRUE),]
+
+# Modify the SNP table to correctly show the days after germination, starting from DAG=0 by adding +1 to each value in the "dag" column
+
+tot_plant_specific_snps_DAG20 <- tot_plant_specific_snps_DAG20 %>%
+  mutate(dag = dag + 1)
+
+kable(tot_plant_specific_snps_DAG20[1:5, ], caption = "SNP table for DAG<20.")
+
+# Purpose: Filters the SNP data to include only data from days after germination (DAG) 0 to 20.
+```
+
+## Manhattan plot
+
+```{r, echo=TRUE, message=TRUE, warning=FALSE, fig.height=5, fig.width=10}
+#| label: fig-Manhattan-plot
+#| fig-cap: "Manhattan plot showing the top 500 SNPs identified in the GWAS."
+# Create the Manhattan plot
+manhattan_plot <- tot_plant_specific_snps_DAG20 %>% 
+  ggplot(aes(x = pos, y = log10_p, label = pos)) +
+  
+  # Add alternating shading for every second facet
+  geom_rect(
+    data = tot_plant_specific_snps_DAG20 %>% 
+      distinct(chrom) %>% 
+      mutate(shade = row_number() %% 2 == 0), # Create a flag for shading
+    aes(
+      xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, 
+      fill = shade
+    ), 
+    inherit.aes = FALSE, alpha = 0.1
+  ) +
+  
+  # Add points
+  geom_point(aes(fill = Significant, color = Significant), 
+             size = 0.8, alpha = 0.6) +
+  
+  # Styling and themes
+  theme(
+    # Remove panel grid lines and background
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_blank(),
+    # Add axis line
+    axis.line = element_line(colour = "black"),
+    # Adjust legend position
+    legend.position = c(0.09, 0.80),
+    # Remove x-axis ticks and labels
+    axis.ticks.x = element_blank(),
+    axis.text.x = element_blank(),
+    # Set all text to size 7pt
+    axis.text = element_text(size = 7),
+    axis.title = element_text(size = 7),
+    legend.title = element_text(size = 7),
+    legend.text = element_text(size = 7),
+    strip.text = element_text(size = 7),
+    plot.title = element_text(size = 7)
+  ) +
+  
+  expand_limits(y = c(10, 5)) +
+  
+  facet_grid(~chrom, scales = "free_x", switch = "x") +
+  
+  scale_color_manual(values = c("red4", "slategray4", "slategray4")) +
+  
+  scale_fill_manual(values = c("grey", "grey", "grey","grey","grey"), 
+                    guide = "none") + # Alternate shading colors
+  
+  ggtitle("Manhattan plot")
+
+# Display the plot
+print(manhattan_plot)
+
+
+# Purpose: Displays the Manhattan plot.
+
+# Save the plot
+ggsave("Manhattan_plot.pdf", plot = manhattan_plot, height = 7.0, width = 16.3, units = "cm", path = "Output/Figures")
+# Purpose: Saves the Manhattan plot as a PDF file.
+```
+
+-   **Purpose**: The Manhattan plot visualizes the significance of SNPs across chromosomes, highlighting significant SNPs.
+
+## Find Closest Genes to Top SNPs
+
+We bioinformatically isolate the genes located closest to the top 10 SNPs identified in the GWAs analysis using the `get_nearest_genes` function.
+
+```{r, echo=TRUE ,message=FALSE, warning=FALSE}
+#| label: table-gene-table
+#| tbl-cap: "Table containing the SNPs and the genes located closest to each of the top SNPs"
+nearest_genes <- tot_plant_specific_snps_DAG20 %>% 
+  get_nearest_genes(n_hit = 100)
+# Purpose: Identifies the 20 closest genes to the top SNPs using the `get_nearest_genes` function.
+
+kable(nearest_genes[1:10, 1:7], caption = "Table with genes located closest to the top SNPs.")
+# Purpose: Displays the nearest genes to the top SNPs.
+```
+
+-   **Purpose**: Identifies the genes closest to the top 20 SNPs using the `get_nearest_genes` function.
+
+## Plot the SNPs on Chromosome 3 Surrounding SNPMMF1
+
+We zoom in on the top two genomic locations identified in the GWAS and add the genes located closest to the SNPs.
+
+```{r, echo=TRUE ,message=FALSE, warning=FALSE, fig.height=5}
+#| label: fig-Manhattan-plot-chrom3
+#| fig-cap: "Manhattan plot showing the top SNPs located on chromosome 3."
+# Subset data for Chromosome 3 and SNPs < DAG20
+tot_plant_specific_snps_DAG20_chrm3 <- subset(tot_plant_specific_snps_DAG20, 
+                                              chrom == "3")
+# Purpose: Filters the data to include only SNPs on Chromosome 3.
+
+# Create the Manhattan plot for Chromosome 3
+manhattan_plot_small <- tot_plant_specific_snps_DAG20_chrm3 %>%
+  ggplot(aes(x = pos, y = log10_p, label = pos)) +
+  geom_point(aes(fill = Significant, color = Significant), size = 2, 
+             alpha = 0.6) +
+  facet_grid(~chrom, scales = "free_x", switch = "x") +
+  expand_limits(y = c(5, 10)) + # Adjust y-axis limits as needed
+  theme(
+    # Remove panel grid lines
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    # Remove panel background
+    panel.background = element_blank(),
+    # Add axis line
+    axis.line = element_line(colour = "black")
+  ) +
+  scale_x_continuous(limits = c(12500000, 24437549)) +
+  scale_color_manual(values = c("red4", "slategray4")) +
+  theme(legend.position = c(0.2, 0.85)) +
+  geom_label(
+    label = "AT3G57890",
+    x = 21200000,
+    y = 9.4,
+    label.padding = unit(0.2, "lines"), # Rectangle size around label
+    label.size = 0.2,
+    color = "black",
+    fill = "#FFFFFF"
+  ) +
+  geom_label(
+    label = "AT3G44630",
+    x = 16200000,
+    y = 8.6,
+    label.padding = unit(0.2, "lines"), # Rectangle size around label
+    label.size = 0.2,
+    color = "black",
+    fill = "#FFFFFF"
+  ) +
+  labs(title = "Manhattan Plot for Chromosome 3", x = "Position", 
+       y = "-log10(p-value)")
+# Purpose: Creates a focused Manhattan plot for Chromosome 3, highlighting specific genes.
+
+# Display the plot
+print(manhattan_plot_small)
+# Purpose: Displays the Manhattan plot for Chromosome 3.
+
+# Save the plot
+ggsave("Manhattan_DAG<20_topSNP.pdf", plot = manhattan_plot_small, width = 15, height = 10, units = "cm", path = "Output/Figures")
+# Purpose: Saves the focused Manhattan plot as a PDF file.
+```
+
+-   **Purpose**: The Manhattan plot for Chromosome 3 visualizes the significance of SNPs surrounding SNPMMF1, highlighting specific genes.
+
+# Geographic distribution of Accessions
+
+We first create a world map that will be used to plot the geographic distribution of Arabidopsis accessions based on their SNP response to BX-feedbacks.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE, fig.show = 'none'}
+# Load necessary libraries
+library(maps)
+# Purpose: Loads the `maps` package for map plotting.
+
+# Load world map data
+world_map <- map_data("world")
+# Purpose: Loads data for the world map.
+
+# Load ACC coordinates data
+ACC_coordinates <- read_excel("Input/Dataset3.xlsx", 
+                              sheet = "Accessions_coordinates")
+# Purpose: Loads ACC coordinates data from a CSV file.
+
+# Subset the world map data for the region of interest
+World_map_small <- subset(world_map, long > -130 & long < 90)
+World_map_small <- subset(World_map_small, lat > -0 & lat < 90)
+# Purpose: Filters the world map data to focus on a specific region.
+
+# Create a base plot with ggplot2
+p <- ggplot() + coord_fixed() +
+  xlab("Longitude") + ylab("Latitude")
+# Purpose: Initializes a ggplot2 object for mapping with fixed coordinates.
+
+# Add map to base plot
+base_world_messy <- p + geom_polygon(data = World_map_small, aes(x = long, 
+                                                                 y = lat, 
+                                                                 group = group), 
+                                     colour = "grey90", fill = "grey90")
+# Purpose: Adds the filtered map data to the base plot as polygons.
+
+# Display the messy base world map
+#print(base_world_messy)
+# Purpose: Displays the unrefined world map.
+
+# Strip the map down to make it clean and beautiful
+cleanup <- theme(panel.grid.major = element_blank(), 
+                 panel.grid.minor = element_blank(), 
+                 panel.background = element_rect(fill = 'white', 
+                                                 colour = 'white'), 
+                 axis.line = element_line(colour = "grey50"))
+# Purpose: Cleans up the map by removing unnecessary elements and applying a minimalist theme.
+
+base_world <- base_world_messy + cleanup
+# Purpose: Applies the cleaned-up theme to the world map.
+
+# Display the clean base world map
+#print(base_world)
+# Purpose: Displays the refined world map.
+```
+
+## Plot the Geographic Distribution of Accessions
+
+We plot the distribution of accessions on the world map and color each accession based on their BX-feedback response (either positive or negative).
+
+```{r, echo=TRUE, message=FALSE, fig.height=5, warning=FALSE}
+#| label: fig-SNPMMF1-Geogr
+#| fig-cap: "Map showing the distribution of accessions carrying SNPMMF1."
+# Add simple data points to the map
+map_data <- base_world +
+  geom_point(data = ACC_coordinates, 
+             aes(x = Long, y = Lat, fill = factor(SNP)), colour = "grey30", 
+             pch = 21, size = 3, alpha = 0.6) +
+  theme(legend.position = c(0.1, 0.2)) +
+  scale_fill_manual(values = c("orange2", "deepskyblue4"))
+# Purpose: Adds data points representing ACC coordinates to the map, colored by SNP type.
+
+# Display the map with data points
+print(map_data)
+# Purpose: Displays the world map with ACC coordinate data points.
+
+# Save the plot
+ggsave("ACC_response_map_white.pdf", plot = map_data, height = 14, width = 16, units = "cm", dpi = 600, path = "Output/Figures")
+# Purpose: Saves the map with ACC coordinates as a PDF file.
+```
+
+-   **Purpose**: The world map displays the geographic distribution of Arabidopsis accessions based on their SNP response to BX-feedbacks.
+
+# Phenotypic effect of SNPMMF1
+
+We investigate the phenotypic effect of SNPMMF1 on the BX-feedback response of Arabidopsis accessions. We use the `phenotype_by_snp` function to extract the plant region area and days after germination (DAG) data for SNPMMF1.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+# Extract plant area
+temp1 <- tot_plant_specific_snps %>%
+  {gwaR::phenotype_by_snp(plant_region_areas %>% mutate(ACC_ID = genotype_id),
+                          "plant_region_area",
+                          gwas_table = .,
+                          specific = "bx",
+                          SNPrank = 7,
+                          plot = FALSE,
+                          SNPmatrix = "Input/SNPmatrix_full.fst", # Ensure this path is correct
+                          nobees = TRUE)}
+
+
+# Extract dag (days after germination)
+
+temp2 <- tot_plant_specific_snps %>%
+  {gwaR::phenotype_by_snp(plant_region_areas %>% mutate(ACC_ID = genotype_id),
+                          "dag",
+                          gwas_table = .,
+                          specific = "bx",
+                          SNPrank = 7,
+                          plot = FALSE,
+                          SNPmatrix = "Input/SNPmatrix_full.fst", # Ensure this path is correct
+                          nobees = TRUE)}
+
+# Combine extracted data into one data frame
+
+plant_region_areas_SNP <- data.frame(ACC_ID = temp1$ACC_ID,
+                          bx = temp1$bx,
+                          plant_region_area = temp1$phenotype_value,
+                          dag = as.integer(temp2$phenotype_value),
+                          SNP = temp1$SNP) # Convert dag to integers
+
+rm(temp1, temp2)
+
+kable(plant_region_areas_SNP[1:5, ], caption = "Table with plant region area by SNP.")
+```
+
+## Subset the Data to Phenotypes at Day 15
+
+We do this to focus on the phenotypic effects of SNPMM1 on growth. We choose DAG15, since this is the latest time when the genetic association of SNPMMF1 was still visible.
+
+```{r, echo=TRUE, include=TRUE, message=FALSE, warning=FALSE}
+
+# Subset to plants with exactly 15 days old
+plant_region_areas_DAG15 <- 
+  plant_region_areas_SNP[plant_region_areas_SNP$dag == 15, -6]
+# Purpose: Filters the data to include only plants that are exactly 15 days old.
+
+# Compute mean per ACC
+plant_region_areas_DAG15 <- plant_region_areas_DAG15 %>%
+  group_by(bx, ACC_ID) %>%
+  mutate(mean_ACC = mean(plant_region_area, na.rm = TRUE)) %>%
+  ungroup()
+# Purpose: Calculates the mean plant region area for each ACC_ID within each bx group.
+
+# Remove unnecessary columns and keep unique entries
+plant_region_areas_DAG15 <- plant_region_areas_DAG15 %>%
+  select(-plant_region_area, -dag) %>%
+  distinct()
+# Purpose: Removes unnecessary columns and retains only unique rows in the data frame.
+
+# Spread the data by bx treatment
+plant_region_areas_DAG15 <- plant_region_areas_DAG15 %>%
+  spread(key = bx, value = mean_ACC)
+# Purpose: Reshapes the data so that bx treatments are in separate columns.
+
+# Calculate the difference between treatments (bx+ - bx-)
+plant_region_areas_DAG15 <- plant_region_areas_DAG15 %>%
+  mutate(area_diff = `+` - `-`,
+         fold_change = `+` / `-`,
+         excessive = case_when(
+           fold_change >= 1.5 ~ "plus",
+           fold_change <= -1.5 ~ "minus",
+           fold_change < 1.5 ~ "neutral"
+         )) %>%
+  arrange(desc(area_diff))
+# Purpose: Calculates the difference in plant region area between bx+ and bx- treatments, and classifies the results.
+
+# Add preference column based on growth feedback
+plant_region_areas_DAG15 <- plant_region_areas_DAG15 %>%
+  mutate(preference = case_when(
+    area_diff >= 0 ~ "plus",
+    TRUE ~ "minus"
+  )) %>%
+  arrange(desc(area_diff)) %>%
+  mutate(rank = row_number())
+# Purpose: Assigns a preference (plus or minus) based on growth feedback and ranks the accessions by area difference.
+
+# Rank by area_diff
+plant_region_areas_DAG15 <- plant_region_areas_DAG15 %>%
+  mutate(rank = row_number(dplyr::desc(area_diff)))
+# Purpose: Ranks the accessions based on the area difference in descending order.
+
+# Save the result to a CSV file
+write.csv(plant_region_areas_DAG15, row.names = TRUE, file = "Output/Plant_region_areas_DAG15.csv")
+# Purpose: Saves the final data frame to a CSV file.
+
+# Display the final dataframe
+kable(plant_region_areas_DAG15[1:5, ], caption = "Table with accession growth feedback and feedback response")
+# Purpose: Displays the first few rows of the final data frame.
+
+```
+
+-   **Purpose**: The data is filtered to include only plants that are exactly 15 days old. The mean plant region area for each ACC_ID within each bx group is calculated. The data is reshaped so that bx treatments are in separate columns. The difference in plant region area between bx+ and bx- treatments is calculated, and the results are classified. The accessions are ranked based on the area difference, and the final data frame is saved to a CSV file.
+
+## Plot the Relative Growth Feedback distribution of Accessions with SNPMMF1
+
+```{r, echo=TRUE ,message=FALSE,include=TRUE, fig.height=5, warning=FALSE}
+#| label: fig-Growth-Feedback-SNPMMF1
+#| fig-cap: "Growth feedback distribution of accessions carrying SNPMMF1."
+# Create the plot for the relative growth feedback of all accessions
+# Prepare data for labeling specific genotypes
+# Prepare data for labeling specific genotypes
+# Prepare data for labeling specific genotypes
+
+# Prepare data for labeling specific genotypes
+labels_data <- plant_region_areas_DAG15 %>%
+  filter(ACC_ID %in% c("9851", "6909", "9392")) %>%
+  mutate(
+    genotype = case_when(
+      ACC_ID == "9851" ~ "IP-Hue-3",
+      ACC_ID == "6909" ~ "Col-0",
+      ACC_ID == "9392" ~ "Hadd-3"
+    ),
+    circle_type = "Labeled Genotypes", # Add a label type for the legend
+    text_position = ifelse(area_diff > 0, area_diff + 4000, area_diff - 5000) # Offset for labels
+  )
+
+# Add circle_type for SNPs
+snps_data <- plant_region_areas_DAG15 %>%
+  filter(SNP == TRUE) %>%
+  mutate(circle_type = "SNPs")
+
+# Combine circle data
+circle_data <- bind_rows(labels_data, snps_data)
+
+
+
+
+
+
+ACC_ratio <- ggplot(plant_region_areas_DAG15, aes(x = rank, 
+                                                  y = area_diff, 
+                                                  fill = preference)) +
+  
+  # Add bars with original fill color based on "preference"
+  geom_bar(stat = "identity", linewidth = 0.001, alpha = 0.8, width = 1) +
+  
+  # Add a second layer to highlight bars for genotypes with SNPs in black
+  geom_bar(
+    data = plant_region_areas_DAG15 %>% filter(SNP == TRUE),
+    aes(x = rank, y = area_diff),
+    stat = "identity", fill = "black", linewidth = 0.001, width = 1
+  ) +
+  
+  # Customize the fill scale for the legend
+  scale_fill_manual(
+    values = c("orange2", "#0072B2"),
+    name = "BX feedback",  # Update legend title
+    labels = c("negative", "positive")  # Update legend labels
+  ) +
+  
+  # Add circles for labeled genotypes and SNPs
+  geom_point(
+    data = circle_data,
+    aes(y = area_diff, shape = circle_type), # Map shape to circle_type for legend
+    color = "black", size = 1.0
+  ) +
+  
+  # Add text labels dynamically positioned for labeled genotypes
+  geom_text(
+    data = labels_data,
+    aes(y = text_position, label = genotype), # Use the "genotype" column for labels
+    color = "black", size = 2, hjust = 0.5
+  ) +
+  
+  xlim(-2, 412) +
+  
+  # Modify the y-axis label and scale
+  labs(
+    y = expression("Growth feedback (10"^4*")"), 
+    x = "Accession rank",
+    title = "SNP distribution and genotype highlights"
+  ) +
+  
+  # Scale y-axis to divide values by 10,000 for display
+  scale_y_continuous(labels = function(x) x / 10000) +
+  
+  # Customize shape legend
+  scale_shape_manual(
+    values = c("Labeled Genotypes" = 1, "SNPs" = 16), # Open circle for labeled genotypes, filled for SNPs
+    name = "Circle Type" # Legend title for circles
+  ) +
+  
+  # Styling and theme
+  theme_bw() +
+  theme(
+    axis.text = element_text(size = 7),
+    axis.title = element_text(size = 7), 
+    plot.title = element_text(size = 7),
+    legend.position = c(1, 1),  # Move legend to the very top-right corner
+    legend.justification = c(1, 1),   # Align legend box to the top-right
+    legend.background = element_rect(fill = "white", color = "black"),  # Optional: Add background
+    legend.title = element_text(size = 7),  # Smaller legend title
+    legend.text = element_text(size = 7)    # Smaller legend items
+  )
+
+# Display the plot
+ACC_ratio
+
+
+
+# Purpose: Displays the relative growth feedback plot.
+
+# Save the combined plot to a PDF file
+ggsave("SNPMMF1_ACC_feedback.pdf", plot = ACC_ratio, height = 7, width = 16, units = "cm", dpi = 600, path = "Output/Figures")
+# Purpose: Saves the plot as a PDF file.
+```
+
+-   **Purpose**: The bar plot visualizes the relative growth feedback for all accessions, highlighting specific accessions with SNPMMF1.
+
+## Boxplot illustrating SNP Effect on growth feedback
+
+```{r, echo=TRUE ,message=FALSE, include=TRUE, fig.height=5}
+#| label: fig-SNPMMF-growth-feedback
+#| fig-cap: "The growth feedback of accession with the major and minor allele at SNPMMF1."
+# Create the boxplot with jitter for SNP effect
+SNP_effect <- ggplot(plant_region_areas_DAG15, aes(SNP, area_diff, fill = SNP)) +
+  geom_boxplot(outlier.colour = NA, show.legend = FALSE, alpha = 0.6) +
+  geom_jitter(width = 0.15, alpha = 0.6, size = 0.8, show.legend = FALSE, 
+              aes(color = SNP)) +
+  labs(y = "Growth feedback", x = "Alternative allele", title = "SNP effect") +
+  scale_fill_manual(values = c("slategrey", "red3")) +
+  scale_color_manual(values = c("slategrey", "red3")) +
+  theme(panel.background = element_blank(),  # Remove panel background
+    panel.grid.minor = element_blank(),  # Remove minor grid lines
+    panel.border = element_rect(color = "black", fill = NA),  # Add border around the panel
+    panel.grid.major = element_line(color = "lightgrey", linewidth = 0.3),  # Show major grid lines
+    axis.text = element_text(size = 10),
+      legend.position = "none",
+      legend.text = element_text(size = 11),
+      plot.title = element_text(size = 12),
+      axis.title.y = element_text(size = 10),
+      axis.title.x = element_text(size = 10),
+      theme_bw())
+# Purpose: Creates a boxplot with jitter to visualize the effect of SNP on the growth feedback response.
+
+# Display the plot
+print(SNP_effect)
+# Purpose: Displays the boxplot for SNP effect.
+
+# Save the plot
+ggsave("SNPMMF1_effect_plot.pdf", plot = SNP_effect, width = 4.6, height = 6.6, units = "cm", dpi = 300, path = "Output/Figures")
+# Purpose: Saves the SNP effect plot as a PDF file.
+```
+
+-   **Purpose**: The boxplot with jitter visualizes the effect of SNPMMF1 on the growth feedback response.
+
+## Combined SNPMMF1 effect plots
+
+```{r, echo=TRUE ,message=FALSE,warning=FALSE, fig.height=5}
+#| label: fig-SNPMMF-gFeedback-com
+#| fig-cap: "The growth feedback of accession with the major and minor allele at SNPMMF1."
+#| echo: true
+#| fig-show: hide
+combined <- plot_grid(ACC_ratio, SNP_effect, labels = c("A.", "B."), ncol = 2, label_size = 12, rel_widths = c(4, 1.5), rel_heights = c(1,1))
+# Purpose: Combines the relative growth feedback plot and the SNP effect plot into a single plot grid.
+
+combined
+# Purpose: Displays the combined plot grid.
+
+ggsave("SNPMMF1_feedback.pdf", width = 24, height = 9, units = "cm", dpi = 600, plot = combined, path = "Output/Figures")
+# Purpose: Saves the combined plot grid as a PDF file.
+```
+
+-   **Purpose**: The relative growth feedback plot and the SNP effect plot are combined into a single plot grid.
+
+# **5. Effect of SNPs linked to SNPMMF1**
+
+Here we identify SNPs that are linked to SNPMMF1 using the `linkage_phenotypes` function and calculate the mean plant region area at each SNP for acessions with and without the SNP.
+
+## Identify linked SNPs
+
+```{r message=FALSE, warning=FALSE}
+#| eval: false
+#| include: false
+
+plant_region_areas_dag15 <- plant_region_areas %>% filter(dag == 15)
+# Purpose: Filters the plant region areas data to include only observations at 15 days after germination.
+
+linkage_Pheno_table <- linkage_phenotypes(plant_region_areas_dag15 %>% 
+                                            mutate(ACC_ID = genotype_id), 
+                   phenotype = "plant_region_area", 
+                   chrom = 3,
+                   pos = 16203882,
+                  nuc_range = 50000,
+                  ld_stats = "LLR",
+                  SNPmatrix = "Input/SNPmatrix_full.fst",
+                  specific = c("bx", "dag"),
+                  impacts = c("MODERATE", "HIGH"))
+kable(linkage_Pheno_table[1:5, ], caption = "Table with genomic region surrounding SNPMMF1.")
+```
+
+-   **Purpose**: The average plant region area at each SNP is calculated using the `linkage_phenotypes` function.
+
+### Calculate the Mean Plant Region Area at Each SNP for each accession
+
+```{r message=FALSE, warning=FALSE}
+#| eval: false
+#| include: false
+
+# Get mean per ACC
+linkage_Pheno_table_ACC <- linkage_Pheno_table
+linkage_Pheno_table_ACC$mean_ACC <- NA  # Initialize an empty vector
+# Loop through unique combinations of bx, pos, SNP, and ACC_ID
+for (bx in unique(linkage_Pheno_table_ACC$bx)) {
+  for (pos in unique(linkage_Pheno_table_ACC$pos)) {
+    for (SNP in unique(linkage_Pheno_table_ACC$SNP)) {
+      for (ACC_ID in unique(linkage_Pheno_table_ACC$ACC_ID)) {
+        # Compute the mean for the current combination of bx, pos, SNP, and ACC_ID
+        mean_ACC <- mean(linkage_Pheno_table_ACC$phenotype_value[
+                            linkage_Pheno_table_ACC$bx == bx &
+                            linkage_Pheno_table_ACC$pos == pos &
+                            linkage_Pheno_table_ACC$SNP == SNP &
+                            linkage_Pheno_table_ACC$ACC_ID == ACC_ID], 
+                         na.rm = TRUE)  # use na.rm=TRUE to handle missing values
+        
+        # Store the computed mean in the mean_ACC column
+        linkage_Pheno_table_ACC$mean_ACC[
+          linkage_Pheno_table_ACC$bx == bx &
+          linkage_Pheno_table_ACC$pos == pos &
+          linkage_Pheno_table_ACC$SNP == SNP &
+          linkage_Pheno_table_ACC$ACC_ID == ACC_ID
+        ] <- mean_ACC
+      }
+    }
+  }
+}
+                                                            
+# Remove replicates from the data frame
+linkage_Pheno_table_ACC <- linkage_Pheno_table_ACC[,c(-4, -5)] # Remove specific columns (area and dag)
+linkage_Pheno_table_ACC <- distinct(linkage_Pheno_table_ACC) # Keep only unique entries
+
+# Spread by bx treatment
+linkage_Pheno_table_ACC <- spread(linkage_Pheno_table_ACC, 
+                                  key = "bx", value = "mean_ACC")
+# Purpose: Reshapes the data so that bx treatments are in separate columns.
+
+# Calculate the difference between treatments (bx+ - bx-)
+linkage_Pheno_table_ACC$area_diff <- linkage_Pheno_table_ACC$`+` - linkage_Pheno_table_ACC$`-`
+linkage_Pheno_table_ACC <- linkage_Pheno_table_ACC[order(linkage_Pheno_table_ACC$pos, decreasing = F),]
+```
+
+### Plot the effect of this linked SNP inside MMF at position 16200156
+
+```{r fig.height=5, message=FALSE, warning=FALSE}
+#| label: fig-linkedSNP-16200156
+#| eval: false
+#| fig-cap: The growth feedback of accession with the the linked SNP at 16200156.
+#| include: false
+# Subset data for Chromosome 3 and SNPs < DAG20
+linkage_Pheno_table_ACC_pos16200156 <- subset(linkage_Pheno_table_ACC, pos == "16200156")
+# Purpose: Filters the data to include only SNPs at position 16200156 on Chromosome 3.
+
+# Create the boxplot for SNP position16200156
+
+SNP_effect_pos16200156 <- ggplot(linkage_Pheno_table_ACC_pos16200156, 
+                                 aes(SNP, area_diff, fill = SNP)) +
+  geom_boxplot(outlier.colour = NA, show.legend = FALSE, alpha = 0.4) +
+  geom_jitter(width = 0.15, alpha = 0.6, size = 0.5, show.legend = FALSE, 
+              aes(color = SNP)) +
+  ylab("Feedback response") +
+  xlab("Accession rank") +
+  scale_fill_manual(values = c("orange2", "deepskyblue4")) +
+  scale_color_manual(values = c("orange2", "deepskyblue4")) +
+  theme(panel.background = element_blank(),  # Remove panel background
+    panel.grid.minor = element_blank(),  # Remove minor grid lines
+    panel.border = element_rect(color = "black", fill = NA),  # Add border around the panel
+    panel.grid.major = element_line(color = "lightgrey", linewidth = 0.3),  # Show major grid lines
+    axis.text = element_text(size = 10),
+      legend.position = "none",
+      legend.text = element_text(size = 11),
+      plot.title = element_text(size = 18),
+      axis.title.y = element_text(size = 10),
+      axis.title.x = element_text(size = 10),
+      theme_bw())
+
+# Display the plot
+print(SNP_effect_pos16200156)
+# Purpose: Displays the boxplot for SNP position 16200156.
+
+# Save the plot
+ggsave("SNP_effect_plot_pos16200156.pdf", plot = SNP_effect_pos16200156, width = 10, height = 10, units = "cm", dpi = 300, path = "Output/Figures")
+
+```
+
+### Plot the effect of SNP at position 16218427
+
+```{r fig.height=5, message=FALSE, warning=FALSE}
+#| label: fig-linkedSNP-16218427
+#| eval: false
+#| fig-cap: The growth feedback of accession with the the linked SNP at 16218427.
+#| include: false
+# Subset data for Chromosome 3 and SNPs < DAG20
+linkage_Pheno_table_ACC_pos16218427 <- subset(linkage_Pheno_table_ACC, 
+                                              pos == "16218427")
+# Purpose: Filters the data to include only SNPs at position 16218427 on Chromosome 3.
+
+# Create the boxplot for SNP position16218427
+
+SNP_effect_pos16218427 <- ggplot(linkage_Pheno_table_ACC_pos16218427, 
+                                 aes(SNP, area_diff, fill = SNP)) +
+  geom_boxplot(outlier.colour = NA, show.legend = FALSE, alpha = 0.4) +
+  geom_jitter(width = 0.15, alpha = 0.6, size = 0.5, show.legend = FALSE, 
+              aes(color = SNP)) +
+  ylab("Feedback response") +
+  xlab("Accession rank") +
+  scale_fill_manual(values = c("orange2", "deepskyblue4")) +
+  scale_color_manual(values = c("orange2", "deepskyblue4")) +
+  theme(panel.background = element_blank(),  # Remove panel background
+    panel.grid.minor = element_blank(),  # Remove minor grid lines
+    panel.border = element_rect(color = "black", fill = NA),  # Add border around the panel
+    panel.grid.major = element_line(color = "lightgrey", linewidth = 0.3),  # Show major grid lines
+    axis.text = element_text(size = 10),
+      legend.position = "none",
+      legend.text = element_text(size = 11),
+      plot.title = element_text(size = 18),
+      axis.title.y = element_text(size = 10),
+      axis.title.x = element_text(size = 10),
+      theme_bw())
+
+# Display the plot
+print(SNP_effect_pos16218427)
+
+# Save the plot
+ggsave("SNP_effect_plot_pos16218427.pdf", plot = SNP_effect_pos16218427, width = 10, height = 10, units = "cm", dpi = 300, path = "Output/Figures")
+
+```
+
+## Calculate the Mean Plant Region Area at Each SNP
+
+```{r message=FALSE, warning=FALSE}
+#| eval: false
+#| include: false
+
+# Get mean per ACC
+linkage_Pheno_table$mean_ACC <- NA # Initialize an empty vector
+
+for (bx in unique(linkage_Pheno_table$bx)) {
+  for (pos in unique(linkage_Pheno_table$pos)) {
+    for (SNP in unique(linkage_Pheno_table$SNP)) {
+      # Compute mean
+      mean_ACC <- mean(linkage_Pheno_table$phenotype_value[linkage_Pheno_table$bx==bx &
+                                                            linkage_Pheno_table$pos==pos &
+                                                            linkage_Pheno_table$SNP==SNP])
+      # Store mean
+      linkage_Pheno_table$mean_ACC[linkage_Pheno_table$bx==bx &
+                                  linkage_Pheno_table$pos==pos &
+                                  linkage_Pheno_table$SNP==SNP] <- mean_ACC
+    }
+  }
+}
+# Purpose: Computes the mean plant region area for each combination of bx, pos, and SNP, and stores the results.
+
+# Remove replicates from the data frame
+linkage_Pheno_table <- linkage_Pheno_table[,c(-1,-4, -5)] # Remove specific columns (area and dag)
+linkage_Pheno_table <- distinct(linkage_Pheno_table) # Keep only unique entries
+# Purpose: Removes unnecessary columns and keeps only unique rows in the data frame.
+
+# Spread by bx treatment
+linkage_Pheno_table <- spread(linkage_Pheno_table, key = "bx", value = "mean_ACC")
+# Purpose: Reshapes the data so that bx treatments are in separate columns.
+
+# Calculate the difference between treatments (bx+ - bx-)
+linkage_Pheno_table$area_diff <- linkage_Pheno_table$`+` - linkage_Pheno_table$`-`
+linkage_Pheno_table <- linkage_Pheno_table[order(linkage_Pheno_table$pos, decreasing = F),] # Sort by difference
+# Purpose: Calculates the difference in plant region area between bx+ and bx- treatments and sorts the data by position.
+kable(linkage_Pheno_table[1:5, 1:7], caption = "Table with SNPs linked to SNPMMF1 and the effects on feedbacks.")
+
+```
+
+-   **Purpose**: The mean plant region area at each SNP is calculated, and the data is reshaped to show bx treatments in separate columns. The difference in plant region area between bx+ and bx- treatments is calculated, and the data is sorted by position.
+
+# Genomic exploration
+
+### Load Arabidopsis Genome Data
+
+We load the Arabidopsis genome data from the Ensembl Plants database using the `biomaRt` package.
+
+```{r, echo=TRUE ,message=FALSE, warning=FALSE}
+# Load necessary libraries
+library(biomaRt)
+library(stringr)
+library(plyranges)
+# Purpose: Loads the necessary libraries for working with genomic data.
+
+araGenome <- biomaRt::getBM(c("ensembl_gene_id",
+                              "chromosome_name",
+                              "start_position",
+                              "end_position",
+                              "strand",
+                              "description",
+                              "transcript_biotype"),
+                            mart = biomaRt::useMart(biomart = "plants_mart", 
+                                                    dataset = "athaliana_eg_gene", 
+                                                    host = 'plants.ensembl.org'))
+# Purpose: Retrieves genomic data for Arabidopsis thaliana from the Ensembl Plants database using `biomaRt`.
+```
+
+### Format Arabidopsis Genome Data as GRanges
+
+We format the Arabidopsis genome data as a GRanges object, which is suitable for genomic range operations. We also prepare gene labels for plotting by filtering and mutating the genomic data. Finally, we filter the Arabidopsis genome data to include only the specific region surrounding SNPMMMF1 on chromosome 3.
+
+```{r, echo=TRUE ,message=FALSE, warning=FALSE}
+
+#| label: tab-Gen-reg-SNPMMF1
+#| fig-cap: "The table of all the genes in the region of SNPMMF1."
+
+# Format araGenome as a GRanges object
+araGenes <- araGenome %>%
+  dplyr::rename(GeneId=ensembl_gene_id) %>%
+  dplyr::mutate(strand=dplyr::case_when(strand == 1 ~ "+",
+                                        strand == -1 ~ "-"),
+                start = start_position,
+                end = end_position) %>%
+  dplyr::filter(stringr::str_detect(chromosome_name,"[1-9]")) %>%
+  dplyr::mutate(seqnames=paste0("Chr",chromosome_name)) %>%
+  plyranges::as_granges()
+# Purpose: Formats the Arabidopsis genome data as a GRanges object, which is suitable for genomic range operations.
+
+gene_labels <- araGenome %>%
+      dplyr::filter(chromosome_name == chromosome_name,
+                    start_position %in% c(start_position:end_position),
+                    end_position %in% c(start_position:end_position)) %>%
+      dplyr::mutate(gene = ensembl_gene_id,
+                    molecule = 0,
+                    start = start_position,
+                    end = end_position,
+                    direction = strand,
+                    strand = dplyr::case_when(strand == -1 ~ "reverse", 
+                                              TRUE ~ "forward"),
+                    layer_var = "ORF")
+# Purpose: Prepares gene labels for plotting by filtering and mutating the genomic data.
+
+araGenome_filt <- araGenome %>% filter(chromosome_name == "3", 
+                                       start_position >= 16170000, 
+                                       end_position <= 16230000)
+# Purpose: Filters the Arabidopsis genome data to include only a specific region on chromosome 3.
+kable(araGenome_filt[1:5, 1:5], caption = "Table with genomic region surrounding SNPMMF1.")
+
+```
+
+### Plot the Genomic Region Surrounding SNPMMF1 and phenotypes
+
+We plot the phenotypic differences across SNPs and overlay gene annotations to visualize the relationship between SNPs, their location relative to genes and their effect on phenotypes.
+
+```{r fig.height=5, message=FALSE, warning=FALSE}
+#| label: fig-linkedSNPs-Genomic
+#| eval: false
+#| fig-cap: The growth feedback of accessions carrying all the linked SNPs around SNPMMF1.
+#| include: false
+# Filter data to keep only positions with both SNP = TRUE and SNP = FALSE
+linkage_Pheno_table <- linkage_Pheno_table %>%
+  group_by(pos) %>%
+  filter(all(c(TRUE, FALSE) %in% SNP)) %>%
+  ungroup()
+# Purpose: Filters the linkage phenotype data to keep only positions where both SNP = TRUE and SNP = FALSE exist.
+
+# Based on gwaR
+plot <- ggplot(data = linkage_Pheno_table) +
+
+      # Line denoting SNP of interest
+      geom_vline(aes(xintercept = 16203882), color = "darkred", 
+                 size = 1.0, alpha = 0.6) +
+      # SNPs
+  geom_rect(aes(xmin = 16195848, xmax = 16201225, ymin = -Inf, ymax = Inf), 
+            fill = "grey", alpha = 0.02)+
+      geom_point(aes(x= pos, y = area_diff, shape = type, color = SNP), 
+                 size = 2.0, alpha = 0.8,
+                 data = linkage_Pheno_table) +
+  geom_line(data = linkage_Pheno_table, 
+            aes(x = pos, y = area_diff, colour = SNP), alpha = 0.4)+
+  scale_colour_manual(values = c( "orange2","deepskyblue4"))+
+            scale_fill_manual(values = c( "orange2","deepskyblue4"))+
+  geom_label(aes(label = "SNPMMF1", x = 16203882, y = 19000), size = 3.5, 
+             fill = "white", color = "grey40")+
+      # Gene Arrows
+      gggenes::geom_gene_arrow(arrowhead_width = grid::unit(4, "mm"),
+  arrowhead_height = grid::unit(7, "mm"),
+  arrow_body_height = grid::unit(5, "mm"), aes(xmin = start_position,
+                                   xmax = end_position,
+                                   y = -7000,
+                                   forward = strand == "1"),  
+  fill = "lightblue2", data = araGenome_filt) +
+      # Gene labels
+      gggenes::geom_gene_label(aes(xmin = start_position,
+                                   xmax = end_position,
+                                   y = -7000,
+                                   label = ensembl_gene_id), min.size = 6, 
+                               data = araGenome_filt) + # Gene labels
+      # Minimal Theme
+      theme_minimal() +
+
+      # Theme adjusments, mainly removing the y-axis
+      theme(#axis.title.y = element_blank(),
+            axis.title.x = element_blank(),
+            #axis.text.y = element_blank(),
+            #axis.ticks.y = element_blank(),
+            panel.spacing.y = unit(0, "lines"),
+            plot.background = element_rect(fill = "white"),
+            legend.position = "bottom",
+            panel.border = element_rect(color = "black", fill = NA),
+            panel.grid.minor.y = element_blank())+
+expand_limits(y = c(-10000, 20000)) 
+# Purpose: Plots the phenotype differences across SNPs and overlays gene annotations to visualize the relationship between SNPs and genes.
+
+plot
+# Purpose: Displays the plot.
+
+ggsave("phenotype_by_SNP_Genes.pdf", height = 6, width = 20, units = "cm", dpi = 600, path = "Output/Figures")
+# Purpose: Saves the plot as a PDF file.
+```
+
+-   **Purpose**: The plot visualizes the phenotype differences across SNPs and overlays gene annotations to show the relationship between SNPs and genes.
+
+```{r}
+SNPMMF1_linkage <- tot_plant_specific_snps_DAG20 %>% 
+  snp_linkage(rank = 7, use_phenotype_table = plant_region_areas, 
+              plot = TRUE, acc_col = "genotype_id", 
+              nuc_range = 50000, ld_stats = "LLR", 
+              SNPmatrix = "Input/SNPmatrix_full.fst", anchored = TRUE)
+
+SNPMMF1_linkage <- SNPMMF1_linkage[[1]]
+```
+
+```{r}
+#| label: fig-SNPMMF1-linkage
+#| fig-cap: All the SNPs identified surrounding SNPMMF1, and the linked SNPs within the region.
+#| include: false
+
+library(ggnewscale)
+
+tot_plant_specific_snps_DAG20_chrm3_filt <- tot_plant_specific_snps_DAG20 %>% 
+  filter(chrom == 3) %>% 
+  filter(pos > 16170000 & pos < 16230000)
+
+# Ensure the effect_impact column has the desired order
+SNPMMF1_linkage$effect_impact <- factor(
+  SNPMMF1_linkage$effect_impact, 
+  levels = c("MODIFIER", "LOW", "MODERATE", "HIGH")
+)
+
+# Define manual positions for each `effect_impact`
+effect_positions <- c(
+  MODIFIER = 0.9,  # Manually set position
+  LOW = 1.7,
+  MODERATE = 2.5,
+  HIGH = 3.3
+)
+
+# Map `effect_impact` to the manual positions
+SNPMMF1_linkage$effect_position <- effect_positions[as.character(SNPMMF1_linkage$effect_impact)]
+
+# Define the primary plot
+plot_SNPs <- ggplot(data = tot_plant_specific_snps_DAG20_chrm3_filt) +
+   
+  # Horizontal shading
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = 3.5, ymax = 4.5, 
+           fill = "lightgrey", alpha = 0.4) +
+  # Horizontal shading
+  #annotate("rect", xmin = -Inf, xmax = Inf, ymin = 4.5, ymax = Inf, 
+           #fill = "lightgrey", alpha = 0.4) +
+  # Line denoting SNP of interest
+  geom_vline(aes(xintercept = 16203882), color = "darkred", 
+             size = 0.8, alpha = 0.6) +
+  
+  # SNPs
+  annotate("rect", xmin = 16195848, xmax = 16201225, ymin = -Inf, ymax = Inf, 
+           fill = "grey", alpha = 0.02) +
+  geom_point(aes(x = pos, y = log10_p, color = Significant), 
+             size = 2.0, alpha = 0.8) +
+  
+  # Color scale for `Significant`
+  scale_colour_manual(values = c("red4", "slategray4"), name = "Significant") +
+  
+  # Gene annotations
+  gggenes::geom_gene_arrow(arrowhead_width = grid::unit(4, "mm"),
+                           arrowhead_height = grid::unit(7, "mm"),
+                           arrow_body_height = grid::unit(5, "mm"),
+                           aes(xmin = start_position, xmax = end_position, 
+                               y = 4, forward = strand == "1"), 
+                           fill = "lightblue2", data = araGenome_filt) +
+  gggenes::geom_gene_label(aes(xmin = start_position, xmax = end_position, y = 4, 
+                               label = ensembl_gene_id), min.size = 6, 
+                           data = araGenome_filt) +
+  
+  # Minimal theme
+  theme_minimal() +
+  theme(
+    axis.title.x = element_blank(),
+    panel.spacing.y = unit(0, "lines"),
+    plot.background = element_rect(fill = "white"),
+    legend.position = "bottom",
+    panel.border = element_rect(color = "black", fill = NA),
+    panel.grid.minor.y = element_blank()
+  ) +
+  
+  expand_limits(y = c(0.9, 9), x = c(16198882, 16208882))  # Adjusted limits to move axis downward
+
+# Add the secondary plot
+combined_plot <- plot_SNPs +
+  new_scale_color() +  # Use a new color scale for the secondary plot
+  geom_point(data = SNPMMF1_linkage, 
+             aes(x = pos, y = effect_position,  # Use manual positions for y
+                 color = value, shape = effect_impact), 
+             size = 2.0, alpha = 0.8) +
+  
+  # Secondary y-axis for `effect_impact`
+  scale_y_continuous(
+    name = "log10_p",  # Left axis
+    sec.axis = sec_axis(
+      ~ .,  # No transformation needed
+      name = "Linkage Distance",
+      breaks = c(0.9, 1.7, 2.5, 3.3),  # Use manual positions
+      labels = c("MODIFIER", "LOW", "MODERATE", "HIGH")  # Explicit order
+    )
+  ) +
+ 
+  geom_label(aes(label = "SNPMMF1", x = 16203882, y = 9), size = 3.5, 
+             fill = "white", color = "grey40")+
+  # Color gradient for `value`
+  scale_color_gradient(low = "blue2", high = "yellow", name = "Effect Value") +
+  
+  # Adjust text for secondary axis
+  theme(
+    axis.title.y.right = element_text(color = "black"),
+    axis.text.y.right = element_text(color = "black")
+  )
+
+# Print the combined plot
+combined_plot
+
+
+
+
+```
+
+```{r}
+#| echo: true
+tot_plant_specific_snps_DAG20_chrm3_filt <- tot_plant_specific_snps_DAG20 %>% 
+          filter(chrom == 3) %>% 
+          filter(pos > 16170000 & pos < 16230000)
+
+
+
+# Define the primary plot
+plot_SNPs <- ggplot(data = tot_plant_specific_snps_DAG20_chrm3_filt) +
+    
+    # Horizontal shading
+    annotate("rect", xmin = -Inf, xmax = Inf, ymin = 3.5, ymax = 4.5, 
+             fill = "lightgrey", alpha = 0.4) +
+    geom_vline(aes(xintercept = 16203882), color = "darkred", size = 0.6, 
+               alpha = 0.6) +
+    
+    # SNPs
+    annotate("rect", xmin = 16195848, xmax = 16201225, ymin = -Inf, ymax = Inf, 
+             fill = "grey", alpha = 0.02) +
+    geom_point(aes(x = pos, y = log10_p, color = Significant), size = 2.0, 
+               alpha = 0.8) +
+    
+    # Color scale for `Significant`
+    scale_colour_manual(values = c("red4", "slategray4"), name = "Significant") +
+    
+    # Gene annotations with specific gene coloring and alpha
+    gggenes::geom_gene_arrow(
+        arrowhead_width = grid::unit(3, "mm"),
+        arrowhead_height = grid::unit(6, "mm"),
+        arrow_body_height = grid::unit(4, "mm"),
+        aes(
+            xmin = start_position, xmax = end_position, y = 4,
+            forward = strand == "1",
+            fill = ifelse(ensembl_gene_id %in% c("AT3G44630", "AT3G44670"), 
+                          "TNLs", "non-TNLs"),
+            alpha = ifelse(ensembl_gene_id %in% c("AT3G44630", "AT3G44670"), 
+                           0.5, 0.7) # Different alpha levels
+        ), 
+        data = araGenome_filt
+    ) +
+    scale_fill_manual(
+        values = c("TNLs" = "orange", "non-TNLs" = "lightblue2"),
+        name = "Genes"
+    ) +
+    scale_alpha_continuous(
+        range = c(0.8, 0.6), # Ensure alpha is within valid range
+        guide = "none"       # Suppress alpha legend
+    ) +
+    
+    # Gene labels
+    gggenes::geom_gene_label(
+        aes(xmin = start_position, xmax = end_position, y = 4, 
+            label = ensembl_gene_id), 
+        min.size = 4, 
+        data = araGenome_filt
+    ) +
+    
+    # Minimal theme
+    theme_minimal() +
+    theme(
+        axis.title.x = element_blank(),
+        panel.spacing.y = unit(0, "lines"),
+        plot.background = element_rect(fill = "white"),
+        legend.position = "bottom",
+        panel.border = element_rect(color = "black", fill = NA),
+        panel.grid.minor.y = element_blank()
+    ) +
+    
+    expand_limits(y = c(3.5, 9), x = c(16198882, 16208882)) +
+    geom_label(aes(label = "SNPMMF1", x = 16203882, y = 8.8), size = 2.5, 
+               fill = "white", color = "grey40") +
+    
+    # Adjust text for secondary axis
+    theme(
+        axis.title.y.right = element_text(color = "black"),
+        axis.text.y.right = element_text(color = "black")
+    )
+
+# Print the combined plot
+plot_SNPs
+ggsave("SNPs_MMF1_region.pdf", height = 6, width = 20, units = "cm", dpi = 600, path = "Output/Figures")
+```
+
+```{r, echo=TRUE ,message=FALSE,warning=FALSE, fig.height=5}
+#| label: fig-SNPMMF-Genomic
+#| fig-cap: "The position of SNPMMF1 and growth feedback of accession with the major and minor allele at SNPMMF1."
+#| echo: true
+#| fig-show: hide
+combined <- plot_grid(plot_SNPs, SNP_effect, labels = c("A.", "B."), 
+                      ncol = 2, label_size = 12, rel_widths = c(4, 1.5), 
+                      rel_heights = c(1,1))
+# Purpose: Combines the relative growth feedback plot and the SNP effect plot into a single plot grid.
+
+combined
+# Purpose: Displays the combined plot grid.
+
+ggsave("SNPMMF1_genomic_feedback.pdf", width = 24, height = 9, units = "cm", dpi = 600, plot = combined, path = "Output/Figures")
+# Purpose: Saves the combined plot grid as a PDF file.
+```
+
+# Export data to Dataset3
+
+```{r}
+# Load the package
+library(openxlsx)
+
+# Create a new workbook
+Dataset3 <- createWorkbook()
+
+# Add worksheets and data
+addWorksheet(Dataset3, "SNP_table_dag20")
+writeData(Dataset3, "SNP_table_dag20", tot_plant_specific_snps_DAG20)
+
+addWorksheet(Dataset3, "SNP_gene_table")
+writeData(Dataset3, "SNP_gene_table", nearest_genes)
+
+addWorksheet(Dataset3, "Accessions_SNPMMF1_DAG15")
+writeData(Dataset3, "Accessions_SNPMMF1_DAG15", plant_region_areas_DAG15)
+
+# Subset the required columns (1, 2, 7, 8, 9, and 10)
+subset_data <- ACC_coordinates[, c(1, 7, 8, 9, 10)]
+addWorksheet(Dataset3, "Accessions_coordinates")
+writeData(Dataset3, "Accessions_coordinates", subset_data)
+
+# Save the workbook to an Excel file
+saveWorkbook(Dataset3, file = "Output/Tables/Dataset3.xlsx", overwrite = TRUE)
+```
+
+# Session Information
+
+-   **Purpose**: Print the session information, including details about the R version, loaded packages, and the system environment. This is useful for reproducibility, as it documents the computational environment in which the analysis was performed.
+
+```{r message=FALSE, echo=F}
+# Get session information
+SI <- sessionInfo()
+
+# Extract the attached packages and their versions
+attached_packages <- SI$otherPkgs
+
+# Print the R version
+cat("R version:", SI$R.version$version.string, "\n\n")
+
+# Print the attached packages and their versions
+cat("Attached packages:\n")
+invisible(lapply(attached_packages, function(pkg) {
+  cat(pkg$Package, "-", pkg$Version, "\n")
+}))
+
+
+```
+
