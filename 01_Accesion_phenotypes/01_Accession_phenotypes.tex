@@ -1,0 +1,1808 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\PassOptionsToPackage{dvipsnames,svgnames,x11names}{xcolor}
+%
+\documentclass[
+  11pt,
+]{article}
+
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else  
+    % xetex/luatex font selection
+    \setmainfont[]{Arial}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage[a4paper, margin=0.8in]{geometry}
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\setcounter{secnumdepth}{5}
+% Make \paragraph and \subparagraph free-standing
+\makeatletter
+\ifx\paragraph\undefined\else
+  \let\oldparagraph\paragraph
+  \renewcommand{\paragraph}{
+    \@ifstar
+      \xxxParagraphStar
+      \xxxParagraphNoStar
+  }
+  \newcommand{\xxxParagraphStar}[1]{\oldparagraph*{#1}\mbox{}}
+  \newcommand{\xxxParagraphNoStar}[1]{\oldparagraph{#1}\mbox{}}
+\fi
+\ifx\subparagraph\undefined\else
+  \let\oldsubparagraph\subparagraph
+  \renewcommand{\subparagraph}{
+    \@ifstar
+      \xxxSubParagraphStar
+      \xxxSubParagraphNoStar
+  }
+  \newcommand{\xxxSubParagraphStar}[1]{\oldsubparagraph*{#1}\mbox{}}
+  \newcommand{\xxxSubParagraphNoStar}[1]{\oldsubparagraph{#1}\mbox{}}
+\fi
+\makeatother
+
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}\usepackage{longtable,booktabs,array}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\usepackage{graphicx}
+\makeatletter
+\newsavebox\pandoc@box
+\newcommand*\pandocbounded[1]{% scales image to fit in text height/width
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi% select the smaller of both
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi%
+}
+% Set default figure placement to htbp
+\def\fps@figure{htbp}
+\makeatother
+
+\makeatletter
+\@ifpackageloaded{caption}{}{\usepackage{caption}}
+\AtBeginDocument{%
+\ifdefined\contentsname
+  \renewcommand*\contentsname{Table of contents}
+\else
+  \newcommand\contentsname{Table of contents}
+\fi
+\ifdefined\listfigurename
+  \renewcommand*\listfigurename{List of Figures}
+\else
+  \newcommand\listfigurename{List of Figures}
+\fi
+\ifdefined\listtablename
+  \renewcommand*\listtablename{List of Tables}
+\else
+  \newcommand\listtablename{List of Tables}
+\fi
+\ifdefined\figurename
+  \renewcommand*\figurename{Figure}
+\else
+  \newcommand\figurename{Figure}
+\fi
+\ifdefined\tablename
+  \renewcommand*\tablename{Table}
+\else
+  \newcommand\tablename{Table}
+\fi
+}
+\@ifpackageloaded{float}{}{\usepackage{float}}
+\floatstyle{ruled}
+\@ifundefined{c@chapter}{\newfloat{codelisting}{h}{lop}}{\newfloat{codelisting}{h}{lop}[chapter]}
+\floatname{codelisting}{Listing}
+\newcommand*\listoflistings{\listof{codelisting}{List of Listings}}
+\makeatother
+\makeatletter
+\makeatother
+\makeatletter
+\@ifpackageloaded{caption}{}{\usepackage{caption}}
+\@ifpackageloaded{subcaption}{}{\usepackage{subcaption}}
+\makeatother
+
+\usepackage{bookmark}
+
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same} % disable monospaced font for URLs
+\hypersetup{
+  pdftitle={01\_Accession\_phenotypes},
+  pdfauthor={Henry Janse van Rensburg},
+  colorlinks=true,
+  linkcolor={blue},
+  filecolor={Maroon},
+  citecolor={Blue},
+  urlcolor={Blue},
+  pdfcreator={LaTeX via pandoc}}
+
+
+\title{01\_Accession\_phenotypes}
+\author{Henry Janse van Rensburg}
+\date{2025-02-05}
+
+\begin{document}
+\maketitle
+
+\renewcommand*\contentsname{Table of contents}
+{
+\hypersetup{linkcolor=}
+\setcounter{tocdepth}{2}
+\tableofcontents
+}
+
+\section{Background}\label{background}
+
+We conducted this experiment to study the phenotypic diversity within
+\emph{Arabidopsis} accession to BX-growth feedbacks. We screened 410
+accessions for their growth feedback on two different soils, BXplus and
+BXminus. The phenotypes were measured twice a day for 20 days after
+germination.
+
+Materials and methodsWe grew 410 Arabidopsis accessions in triplicate on
+BXplus and BXminus soils and phenotyped them twice a day. We extracted
+the rosette area using ARADEEPOPSIS. The list of accessions used in this
+study is available in the file \texttt{bx\_experiment\_genotypes.csv} in
+the input folder.
+
+\textbf{Purpose}: We performed this study to eventually perform GWAS on
+the phenotypes.
+
+\textbf{Important results:} We found that the phenotypes were
+significantly different between the two soil types, and varied based on
+plant genotype.
+
+\textbf{Conclusions:} We concluded that the phenotypic diversity within
+Arabidopsis accessions is significant and can be used for further
+genetic studies.
+
+\section{Setup}\label{setup}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{cat}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}\textbackslash{}}\StringTok{small"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+\small
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{knitr}\SpecialCharTok{::}\NormalTok{knit\_hooks}\SpecialCharTok{$}\FunctionTok{set}\NormalTok{(}\AttributeTok{purl =}\NormalTok{ knitr}\SpecialCharTok{::}\NormalTok{hook\_purl)}
+\NormalTok{knitr}\SpecialCharTok{::}\NormalTok{opts\_chunk}\SpecialCharTok{$}\FunctionTok{set}\NormalTok{(}\AttributeTok{echo =} \ConstantTok{TRUE}\NormalTok{)}
+
+\DocumentationTok{\#\#clear the objects from memory}
+\FunctionTok{rm}\NormalTok{(}\AttributeTok{list=}\FunctionTok{ls}\NormalTok{())}
+\CommentTok{\# Purpose: Clears all objects from the R environment to }
+\CommentTok{\#ensure a clean workspace.}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Load libraries}\label{load-libraries}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\#| label: Libraries}
+\CommentTok{\#| message: false}
+\CommentTok{\#| warning: false}
+\CommentTok{\#| paged{-}print: false}
+\FunctionTok{library}\NormalTok{(tidyverse)}
+\CommentTok{\#devtools::install\_github("Gregor{-}Mendel{-}Institute/gwaR"); }
+\CommentTok{\#https://github.com/Gregor{-}Mendel{-}Institute/gwaR}
+\FunctionTok{library}\NormalTok{(gwaR)}
+\FunctionTok{library}\NormalTok{(magrittr)}
+\FunctionTok{library}\NormalTok{(dplyr)}
+\FunctionTok{library}\NormalTok{(ggplot2)}
+\FunctionTok{library}\NormalTok{(tidyr)}
+\FunctionTok{library}\NormalTok{(DescTools)}
+\FunctionTok{library}\NormalTok{(ggpubr)}
+\FunctionTok{library}\NormalTok{(MESS)}
+\FunctionTok{library}\NormalTok{(cowplot)}
+\FunctionTok{library}\NormalTok{(knitr)}
+\FunctionTok{library}\NormalTok{(ggdendro)}
+\ControlFlowTok{if}\NormalTok{ (}\SpecialCharTok{!}\FunctionTok{requireNamespace}\NormalTok{(}\StringTok{"BiocManager"}\NormalTok{, }\AttributeTok{quietly =} \ConstantTok{TRUE}\NormalTok{))}
+    \FunctionTok{install.packages}\NormalTok{(}\StringTok{"BiocManager"}\NormalTok{)}
+\NormalTok{BiocManager}\SpecialCharTok{::}\FunctionTok{install}\NormalTok{(}\StringTok{"ComplexHeatmap"}\NormalTok{)}
+\FunctionTok{library}\NormalTok{(ComplexHeatmap)}
+\FunctionTok{library}\NormalTok{(circlize)}
+\FunctionTok{library}\NormalTok{(openxlsx)}
+\CommentTok{\# Purpose: Loads the necessary R packages for data manipulation, visualization, }
+\CommentTok{\#and GWAS analysis.}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Import phenotypic data}\label{import-phenotypic-data}
+
+\textbf{Purpose}: Imports the phenotype data as
+\texttt{plant\_region\_areas}and the SNPs identifid in the GWAs as
+\texttt{tot\_plant\_specific\_snps}from CSV files into R as data frames.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(}\StringTok{"readxl"}\NormalTok{)}
+\NormalTok{tot\_plant\_specific\_snps }\OtherTok{\textless{}{-}} \FunctionTok{read\_excel}\NormalTok{(}\StringTok{"Input/Dataset1.xlsx"}\NormalTok{, }\AttributeTok{sheet =} \StringTok{"SNP\_table"}\NormalTok{)}
+
+\CommentTok{\# Change the orde of the table to show highest log10\_p values first}
+\NormalTok{tot\_plant\_specific\_snps }\OtherTok{\textless{}{-}}\NormalTok{ tot\_plant\_specific\_snps[}\FunctionTok{order}\NormalTok{(tot\_plant\_specific\_snps}\SpecialCharTok{$}\NormalTok{log10\_p,}
+    \AttributeTok{decreasing =} \ConstantTok{TRUE}\NormalTok{), ]}
+\FunctionTok{kable}\NormalTok{(tot\_plant\_specific\_snps[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{, ], }\AttributeTok{caption =} \StringTok{"SNP table."}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{longtable}[]{@{}rrrrlrr@{}}
+\caption{SNP table.}\tabularnewline
+\toprule\noalign{}
+chrom & pos & log10\_p & pv & Significant & mac & dag \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+chrom & pos & log10\_p & pv & Significant & mac & dag \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+3 & 21437549 & 8.990193 & 0 & Bonferroni & 5 & 13 \\
+3 & 21437549 & 8.952353 & 0 & Bonferroni & 5 & 12 \\
+3 & 21437549 & 8.870501 & 0 & Bonferroni & 5 & 14 \\
+\end{longtable}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Import plant areas of accessions}
+\NormalTok{plant\_region\_areas }\OtherTok{\textless{}{-}} \FunctionTok{read\_excel}\NormalTok{(}\StringTok{"Input/Dataset1.xlsx"}\NormalTok{, }\AttributeTok{sheet =} \StringTok{"plant\_region\_area"}\NormalTok{)}
+
+\CommentTok{\# Purpose: Imports phenotype data files into R as data frames.}
+\end{Highlighting}
+\end{Shaded}
+
+\section{Phenotypes}\label{phenotypes}
+
+\subsection{Extract Phenotypes for SNP Rank
+7}\label{extract-phenotypes-for-snp-rank-7}
+
+\textbf{Purpose}: Extracts and combines phenotype data based on SNP rank
+7 and prepares it as the \texttt{plant\_region\_areas\_SNP} dataframe in
+for further analysis.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Extract plant area}
+\NormalTok{temp1 }\OtherTok{\textless{}{-}}\NormalTok{ tot\_plant\_specific\_snps }\SpecialCharTok{\%\textgreater{}\%}
+\NormalTok{  \{gwaR}\SpecialCharTok{::}\FunctionTok{phenotype\_by\_snp}\NormalTok{(plant\_region\_areas }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{mutate}\NormalTok{(}\AttributeTok{ACC\_ID =}\NormalTok{ genotype\_id),}
+                          \StringTok{"plant\_region\_area"}\NormalTok{,}
+                          \AttributeTok{gwas\_table =}\NormalTok{ .,}
+                          \AttributeTok{specific =} \StringTok{"bx"}\NormalTok{,}
+                          \AttributeTok{SNPrank =} \DecValTok{7}\NormalTok{,}
+                          \AttributeTok{plot =} \ConstantTok{FALSE}\NormalTok{, }
+                          \AttributeTok{SNPmatrix =} \StringTok{"Input/SNPmatrix\_full.fst"}\NormalTok{, }\CommentTok{\# Change this path!}
+                          \AttributeTok{nobees =} \ConstantTok{TRUE}\NormalTok{)\}}
+
+\CommentTok{\# Extract dag}
+\NormalTok{temp2 }\OtherTok{\textless{}{-}}\NormalTok{ tot\_plant\_specific\_snps }\SpecialCharTok{\%\textgreater{}\%} 
+\NormalTok{  \{gwaR}\SpecialCharTok{::}\FunctionTok{phenotype\_by\_snp}\NormalTok{(plant\_region\_areas }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{mutate}\NormalTok{(}\AttributeTok{ACC\_ID =}\NormalTok{ genotype\_id),}
+                          \StringTok{"dag"}\NormalTok{,}
+                          \AttributeTok{gwas\_table =}\NormalTok{ .,}
+                          \AttributeTok{specific =} \StringTok{"bx"}\NormalTok{,}
+                          \AttributeTok{SNPrank =} \DecValTok{7}\NormalTok{,}
+                          \AttributeTok{plot =} \ConstantTok{FALSE}\NormalTok{, }
+                          \AttributeTok{SNPmatrix =} \StringTok{"Input/SNPmatrix\_full.fst"}\NormalTok{, }\CommentTok{\# Change this path!}
+                          \AttributeTok{nobees =} \ConstantTok{TRUE}\NormalTok{)\}}
+
+\CommentTok{\# Combine to one df}
+\NormalTok{plant\_region\_areas\_SNP }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}
+  \AttributeTok{ACC\_ID =}\NormalTok{ temp1}\SpecialCharTok{$}\NormalTok{ACC\_ID, }
+  \AttributeTok{bx =}\NormalTok{ temp1}\SpecialCharTok{$}\NormalTok{bx, }
+  \AttributeTok{plant\_region\_area =}\NormalTok{ temp1}\SpecialCharTok{$}\NormalTok{phenotype\_value,}
+  \AttributeTok{dag =} \FunctionTok{as.integer}\NormalTok{(temp2}\SpecialCharTok{$}\NormalTok{phenotype\_value),  }\CommentTok{\# Convert dag to integers}
+  \AttributeTok{SNP =}\NormalTok{ temp1}\SpecialCharTok{$}\NormalTok{SNP}
+\NormalTok{)}
+
+\CommentTok{\# Remove temporary objects}
+\FunctionTok{rm}\NormalTok{(temp1, temp2)}
+
+\CommentTok{\# Purpose: Extracts and combines phenotype data based on SNP rank 7 and prepares it for further analysis.}
+\FunctionTok{kable}\NormalTok{(plant\_region\_areas\_SNP[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{, ], }\AttributeTok{caption =} \StringTok{"Phenotype table for SNP rank 7."}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{longtable}[]{@{}rlrrl@{}}
+\caption{Phenotype table for SNP rank 7.}\tabularnewline
+\toprule\noalign{}
+ACC\_ID & bx & plant\_region\_area & dag & SNP \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+ACC\_ID & bx & plant\_region\_area & dag & SNP \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+9830 & + & 636 & 1 & FALSE \\
+6092 & + & 413 & 1 & FALSE \\
+6022 & + & 380 & 1 & FALSE \\
+\end{longtable}
+
+\subsection{Extract phenotypes for DAG
+20}\label{extract-phenotypes-for-dag-20}
+
+\textbf{Purpose}: Create a new dataframe,
+\texttt{plant\_region\_areas\_DAG20}, filters the data to include only
+the first 20 days (DAG ≤ 20) for further analysis, calculates the mean
+plant region area for each combination of factors, removes duplicates
+and irrelevant columns, pivots the data to spread `bx' treatment values
+into separate columns, calculates the area difference, and ranks the
+genotypes by the area difference.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Filter the plant region areas for DAG ≤ 20}
+\NormalTok{plant\_region\_areas\_DAG20 }\OtherTok{\textless{}{-}} \FunctionTok{subset}\NormalTok{(plant\_region\_areas, }\AttributeTok{subset =}\NormalTok{ dag }\SpecialCharTok{\textless{}=} \DecValTok{21}\NormalTok{)}
+
+\CommentTok{\# Calculate mean plant region area for each combination of bx, dag, and genotype\_id}
+\NormalTok{plant\_region\_areas\_DAG20 }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_DAG20 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{group\_by}\NormalTok{(bx, dag, genotype\_id) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{mean =} \FunctionTok{mean}\NormalTok{(plant\_region\_area, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{ungroup}\NormalTok{()}
+
+\CommentTok{\# Remove duplicates and unnecessary columns}
+\NormalTok{plant\_region\_areas\_DAG20 }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_DAG20 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{select}\NormalTok{(}\SpecialCharTok{{-}}\FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{, }\DecValTok{6}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{distinct}\NormalTok{()}
+
+\CommentTok{\# Pivot data to spread \textquotesingle{}bx\textquotesingle{} treatment values into separate columns and calculate the difference}
+\NormalTok{plant\_region\_areas\_DAG20 }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_DAG20 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{spread}\NormalTok{(}\AttributeTok{key =} \StringTok{"bx"}\NormalTok{, }\AttributeTok{value =} \StringTok{"mean"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{area\_diff =} \StringTok{\textasciigrave{}}\AttributeTok{+}\StringTok{\textasciigrave{}} \SpecialCharTok{{-}} \StringTok{\textasciigrave{}}\AttributeTok{{-}}\StringTok{\textasciigrave{}}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{arrange}\NormalTok{(}\FunctionTok{desc}\NormalTok{(area\_diff))}
+
+\CommentTok{\# Rank the entries by area difference}
+\NormalTok{plant\_region\_areas\_DAG20 }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_DAG20 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{rank =} \FunctionTok{row\_number}\NormalTok{(}\FunctionTok{desc}\NormalTok{(area\_diff)))}
+
+\CommentTok{\# Purpose: Ranks the genotypes by the calculated area difference.}
+\FunctionTok{kable}\NormalTok{(plant\_region\_areas\_DAG20[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{, ], }\AttributeTok{caption =} \StringTok{"Phenotype table for DAG 20."}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{longtable}[]{@{}lrrrrrr@{}}
+\caption{Phenotype table for DAG 20.}\tabularnewline
+\toprule\noalign{}
+genotype & genotype\_id & dag & - & + & area\_diff & rank \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+genotype & genotype\_id & dag & - & + & area\_diff & rank \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+DraIV 3-7 & 5921 & 21 & 29516.83 & 115727.00 & 86210.17 & 1 \\
+DraIV 3-7 & 5921 & 20 & 23975.00 & 98518.33 & 74543.33 & 2 \\
+Hov1-10 & 6035 & 21 & 15445.25 & 86467.33 & 71022.08 & 3 \\
+\end{longtable}
+
+\subsection{Assign BX feedback and Prepare Data for
+Heatmap}\label{assign-bx-feedback-and-prepare-data-for-heatmap}
+
+\textbf{Purpose}: Assigns a preference (``plus'' or ``minus'') to each
+genotype based on the area difference at day 10 and merges the
+preference data back into the main dataframe. We chose DAG10, as this is
+where SNPMMF1 showed up in the GWAS analysis.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Step 1: Create a dataframe with preferences based on "dag" 15}
+\NormalTok{preferences }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_DAG20 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{filter}\NormalTok{(dag }\SpecialCharTok{==} \DecValTok{10}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{preference =} \FunctionTok{case\_when}\NormalTok{(}
+\NormalTok{    area\_diff }\SpecialCharTok{\textgreater{}=} \DecValTok{0} \SpecialCharTok{\textasciitilde{}} \StringTok{"plus"}\NormalTok{,}
+    \ConstantTok{TRUE} \SpecialCharTok{\textasciitilde{}} \StringTok{"minus"}
+\NormalTok{  )) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{select}\NormalTok{(genotype, preference)}
+\CommentTok{\# Purpose: Assigns a preference ("plus" or "minus") to each genotype based on the area difference at day 10.}
+
+\CommentTok{\# Step 2: Merge preferences back to the original dataframe}
+\NormalTok{plant\_region\_areas\_DAG20 }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_DAG20 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{left\_join}\NormalTok{(preferences, }\AttributeTok{by =} \StringTok{"genotype"}\NormalTok{)}
+\CommentTok{\# Purpose: Merges the preference data back into the main dataframe.}
+
+\CommentTok{\# Order by rank (if needed, depending on the requirement)}
+\NormalTok{plant\_region\_areas\_DAG20 }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_DAG20 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{arrange}\NormalTok{(}\FunctionTok{desc}\NormalTok{(rank))}
+\CommentTok{\# Purpose: Orders the dataframe by rank for consistent visualization.}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Prepare Data for Heatmap for All
+Accessions}\label{prepare-data-for-heatmap-for-all-accessions}
+
+\textbf{Purpose}: Prepares the genotype and time order for the heatmap.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{genotype\_DAG20 }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_DAG20 }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(dag }\SpecialCharTok{==} \DecValTok{20}\NormalTok{)}\CommentTok{\# dag 20 is the 20th day after germination was picked up}
+\NormalTok{genotype\_order }\OtherTok{\textless{}{-}}\NormalTok{ genotype\_DAG20}\SpecialCharTok{$}\NormalTok{genotype}
+\NormalTok{time\_order }\OtherTok{\textless{}{-}} \DecValTok{0}\SpecialCharTok{:}\DecValTok{20}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Plot Growth Over Time for All
+Accessions}\label{plot-growth-over-time-for-all-accessions}
+
+\textbf{Purpose}: Creates a heatmap showing the area differences over
+time for all accessions, grouped by preference.
+
+\subsection{Top 10 Positive and Negative
+Accessions}\label{top-10-positive-and-negative-accessions}
+
+\textbf{Purpose}: Filters the data from (\textbf{?@fig-heatmap-ACCs})
+include only the top 20 positive and negative accessions based on area
+difference and applies a pseudo-logarithmic transformation to the area
+difference for better visualization at early timepoints.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Filter for specific genotypes with the highest opposing feedbacks}
+\CommentTok{\#and days less than or equal to 20}
+
+\CommentTok{\# Filter top 20 positive and negative accessions based on area difference}
+\NormalTok{plant\_region\_areas\_DAG20\_extreme20 }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_DAG20 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{filter}\NormalTok{(genotype\_id }\SpecialCharTok{\%in\%} \FunctionTok{c}\NormalTok{(}\StringTok{"9851"}\NormalTok{, }\StringTok{"7350"}\NormalTok{, }\StringTok{"5867"}\NormalTok{, }\StringTok{"5921"}\NormalTok{, }\StringTok{"9972"}\NormalTok{, }\StringTok{"10006"}\NormalTok{, }
+                            \StringTok{"9823"}\NormalTok{, }\StringTok{"7161"}\NormalTok{, }\StringTok{"6088"}\NormalTok{, }\StringTok{"9084"}\NormalTok{, }\StringTok{"6909"}\NormalTok{, }\StringTok{"9392"}\NormalTok{, }
+                            \StringTok{"8365"}\NormalTok{, }\StringTok{"6136"}\NormalTok{, }\StringTok{"7217"}\NormalTok{, }\StringTok{"506"}\NormalTok{, }\StringTok{"7520"}\NormalTok{, }\StringTok{"6108"}\NormalTok{, }
+                            \StringTok{"9653"}\NormalTok{, }\StringTok{"9821"}\NormalTok{, }\StringTok{"9591"}\NormalTok{),}
+\NormalTok{         dag }\SpecialCharTok{\textless{}=} \DecValTok{20}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{group =} \FunctionTok{factor}\NormalTok{(genotype, }
+                        \AttributeTok{levels =} \FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}IP{-}Hue{-}3\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}Tac{-}0\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}DraIV 3{-}7\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}Dra2{-}1\textquotesingle{}}\NormalTok{, }
+                                   \StringTok{\textquotesingle{}Bozen{-}1.2\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}Kastel{-}1\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}IP{-}Bae{-}0\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}Gd{-}1\textquotesingle{}}\NormalTok{, }
+                                   \StringTok{\textquotesingle{}Stu1{-}1\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}Lerik2{-}6\textquotesingle{}}\NormalTok{, }\StringTok{"Col{-}0"}\NormalTok{, }\StringTok{"Hadd{-}3"}\NormalTok{, }
+                                   \StringTok{"Rak{-}2"}\NormalTok{, }\StringTok{"T840"}\NormalTok{, }\StringTok{"Lm{-}2"}\NormalTok{, }\StringTok{"BRR60"}\NormalTok{, }\StringTok{"Lp2{-}2"}\NormalTok{, }
+                                   \StringTok{"T480"}\NormalTok{, }\StringTok{"Giffo{-}1"}\NormalTok{, }\StringTok{"IP{-}Aru{-}0"}\NormalTok{, }\StringTok{"IP{-}Vad{-}0"}\NormalTok{)))}
+
+\CommentTok{\# Pseudo{-}log10 transformation function}
+\NormalTok{pseudoLog10 }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(x) \{ }
+  \FunctionTok{log}\NormalTok{((x }\SpecialCharTok{/} \DecValTok{2}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{sqrt}\NormalTok{((x }\SpecialCharTok{/} \DecValTok{2}\NormalTok{)}\SpecialCharTok{\^{}}\DecValTok{2} \SpecialCharTok{+} \DecValTok{1}\NormalTok{)) }\SpecialCharTok{/} \FunctionTok{log}\NormalTok{(}\DecValTok{10}\NormalTok{)}
+\NormalTok{\}}
+
+\CommentTok{\# Apply transformation}
+\NormalTok{plant\_region\_areas\_DAG20\_extreme20 }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_DAG20\_extreme20 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{pseudo\_log\_area\_diff =} \FunctionTok{pseudoLog10}\NormalTok{(area\_diff))}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Hierarchical Clustering and Heatmap
+Preparation}\label{hierarchical-clustering-and-heatmap-preparation}
+
+\textbf{Purpos}e: Transforms the data into a wide format suitable for
+clustering and performs hierarchical clustering on the distance matrix.
+The reordered groups are then used to arrange the data frame for
+visualization. Creates and displays a heatmap showing the growth
+feedback over time for the top 20 extreme accessions.
+
+\subsection{Hierarchical Clustering: Dynamic Time Warping
+(DTW)}\label{hierarchical-clustering-dynamic-time-warping-dtw}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Load required packages}
+\ControlFlowTok{if}\NormalTok{ (}\SpecialCharTok{!}\FunctionTok{requireNamespace}\NormalTok{(}\StringTok{"dtw"}\NormalTok{, }\AttributeTok{quietly =} \ConstantTok{TRUE}\NormalTok{)) }\FunctionTok{install.packages}\NormalTok{(}\StringTok{"dtw"}\NormalTok{)}
+\ControlFlowTok{if}\NormalTok{ (}\SpecialCharTok{!}\FunctionTok{requireNamespace}\NormalTok{(}\StringTok{"ComplexHeatmap"}\NormalTok{, }\AttributeTok{quietly =} \ConstantTok{TRUE}\NormalTok{)) }\FunctionTok{install.packages}\NormalTok{(}\StringTok{"ComplexHeatmap"}\NormalTok{)}
+\FunctionTok{library}\NormalTok{(dtw)}
+\FunctionTok{library}\NormalTok{(ComplexHeatmap)}
+\FunctionTok{library}\NormalTok{(circlize)}
+\FunctionTok{library}\NormalTok{(dplyr)}
+\FunctionTok{library}\NormalTok{(tidyr)}
+\end{Highlighting}
+\end{Shaded}
+
+\subsubsection{Prepare Data}\label{prepare-data}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Transform data into wide format}
+\NormalTok{wide\_data }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_DAG20\_extreme20 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{select}\NormalTok{(dag, group, pseudo\_log\_area\_diff) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{pivot\_wider}\NormalTok{(}\AttributeTok{names\_from =}\NormalTok{ dag, }\AttributeTok{values\_from =}\NormalTok{ pseudo\_log\_area\_diff)}
+
+\CommentTok{\# Ensure columns (days after germination) are sorted numerically}
+\NormalTok{col\_order }\OtherTok{\textless{}{-}} \FunctionTok{order}\NormalTok{(}\FunctionTok{as.numeric}\NormalTok{(}\FunctionTok{colnames}\NormalTok{(wide\_data)[}\SpecialCharTok{{-}}\DecValTok{1}\NormalTok{]))  }\CommentTok{\# Exclude \textquotesingle{}group\textquotesingle{} column}
+\NormalTok{wide\_data }\OtherTok{\textless{}{-}}\NormalTok{ wide\_data }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{select}\NormalTok{(group, }\FunctionTok{colnames}\NormalTok{(wide\_data)[}\SpecialCharTok{{-}}\DecValTok{1}\NormalTok{][col\_order])}
+
+\CommentTok{\# Convert to matrix}
+\NormalTok{heatmap\_matrix }\OtherTok{\textless{}{-}} \FunctionTok{as.matrix}\NormalTok{(wide\_data[, }\SpecialCharTok{{-}}\DecValTok{1}\NormalTok{])  }\CommentTok{\# Exclude \textquotesingle{}group\textquotesingle{}}
+\FunctionTok{rownames}\NormalTok{(heatmap\_matrix) }\OtherTok{\textless{}{-}}\NormalTok{ wide\_data}\SpecialCharTok{$}\NormalTok{group   }\CommentTok{\# Set row names to genotypes}
+
+\CommentTok{\# **2. Calculate DTW Distance Matrix**}
+\CommentTok{\# Using vectorized computation}
+\NormalTok{dtw\_dist }\OtherTok{\textless{}{-}}\NormalTok{ proxy}\SpecialCharTok{::}\FunctionTok{dist}\NormalTok{(heatmap\_matrix, }\AttributeTok{method =} \ControlFlowTok{function}\NormalTok{(x, y) }\FunctionTok{dtw}\NormalTok{(x, y)}\SpecialCharTok{$}\NormalTok{distance)}
+\end{Highlighting}
+\end{Shaded}
+
+\subsubsection{Perform Hierarchical
+Clustering}\label{perform-hierarchical-clustering}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fit }\OtherTok{\textless{}{-}} \FunctionTok{hclust}\NormalTok{(dtw\_dist, }\AttributeTok{method =} \StringTok{"ward.D2"}\NormalTok{)}
+
+\CommentTok{\# Reverse row order for visualization (optional)}
+\NormalTok{row\_order }\OtherTok{\textless{}{-}} \FunctionTok{rev}\NormalTok{(}\DecValTok{1}\SpecialCharTok{:}\FunctionTok{nrow}\NormalTok{(heatmap\_matrix))}
+\end{Highlighting}
+\end{Shaded}
+
+\subsubsection{Heatmap}\label{heatmap}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# **4. Create and Customize the Heatmap**}
+\NormalTok{ht }\OtherTok{\textless{}{-}} \FunctionTok{Heatmap}\NormalTok{(}
+\NormalTok{  heatmap\_matrix,}
+  \AttributeTok{name =} \StringTok{"Phenotype Change"}\NormalTok{,}
+  \AttributeTok{col =} \FunctionTok{colorRamp2}\NormalTok{(}
+    \FunctionTok{c}\NormalTok{(}\FunctionTok{min}\NormalTok{(heatmap\_matrix), }\DecValTok{0}\NormalTok{, }\FunctionTok{max}\NormalTok{(heatmap\_matrix)),}
+    \FunctionTok{c}\NormalTok{(}\StringTok{"orange2"}\NormalTok{, }\StringTok{"white"}\NormalTok{, }\StringTok{"\#0072B2"}\NormalTok{),}
+\NormalTok{  ),}
+  \AttributeTok{cluster\_rows =}\NormalTok{ fit,}
+  \AttributeTok{cluster\_columns =} \ConstantTok{FALSE}\NormalTok{,}
+  \AttributeTok{row\_order =}\NormalTok{ row\_order,}
+  \AttributeTok{show\_row\_dend =} \ConstantTok{TRUE}\NormalTok{,}
+  \AttributeTok{row\_dend\_side =} \StringTok{"right"}\NormalTok{,}
+  \AttributeTok{row\_names\_side =} \StringTok{"left"}\NormalTok{,}
+  \AttributeTok{row\_title =} \StringTok{""}\NormalTok{,}
+  \AttributeTok{row\_dend\_width =} \FunctionTok{unit}\NormalTok{(}\DecValTok{30}\NormalTok{, }\StringTok{"mm"}\NormalTok{),}
+  \AttributeTok{row\_names\_gp =} \FunctionTok{gpar}\NormalTok{(}\AttributeTok{fontsize =} \DecValTok{7}\NormalTok{),}
+  \AttributeTok{column\_names\_gp =} \FunctionTok{gpar}\NormalTok{(}\AttributeTok{fontsize =} \DecValTok{7}\NormalTok{),}
+  \AttributeTok{column\_title =} \StringTok{"Days after germination"}\NormalTok{,}
+  \AttributeTok{column\_title\_gp =} \FunctionTok{gpar}\NormalTok{(}\AttributeTok{fontsize =} \DecValTok{7}\NormalTok{),}
+  \AttributeTok{column\_title\_side =} \StringTok{"bottom"}\NormalTok{,}
+  \AttributeTok{column\_names\_rot =} \DecValTok{0}\NormalTok{,}
+  \AttributeTok{heatmap\_legend\_param =} \FunctionTok{list}\NormalTok{(}\AttributeTok{title =} \StringTok{"Log Area Diff"}\NormalTok{, }\AttributeTok{legend\_direction =} \StringTok{"horizontal"}\NormalTok{),}
+  \AttributeTok{show\_heatmap\_legend =} \ConstantTok{TRUE}
+\NormalTok{)}
+
+\CommentTok{\# Draw the heatmap in the document}
+\FunctionTok{draw}\NormalTok{(ht, }\AttributeTok{heatmap\_legend\_side =} \StringTok{"bottom"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{figure}[H]
+
+{\centering \pandocbounded{\includegraphics[keepaspectratio]{01_Accession_phenotypes_files/figure-pdf/FigS1b-heatmap-ACCs20-1.pdf}}
+
+}
+
+\caption{Heatmap showing the evolution of growth feedbacks as Pseudo-log
+transformed values over time for the top 20 accessions, grouped by
+preference. Hierarchical clustering was performed using the Dynamic Time
+Warping method to account for changes over time.}
+
+\end{figure}%
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# **5. Export Heatmap to PDF**}
+\NormalTok{output\_dir }\OtherTok{\textless{}{-}} \StringTok{"Output/Figures"}
+\ControlFlowTok{if}\NormalTok{ (}\SpecialCharTok{!}\FunctionTok{dir.exists}\NormalTok{(output\_dir)) }\FunctionTok{dir.create}\NormalTok{(output\_dir, }\AttributeTok{recursive =} \ConstantTok{TRUE}\NormalTok{)}
+\FunctionTok{pdf}\NormalTok{(}\FunctionTok{file.path}\NormalTok{(output\_dir, }\StringTok{"ACC20\_rel\_growth\_time\_DTW.pdf"}\NormalTok{), }\AttributeTok{width =} \DecValTok{6}\NormalTok{, }\AttributeTok{height =} \DecValTok{5}\NormalTok{)}
+\FunctionTok{draw}\NormalTok{(ht, }\AttributeTok{heatmap\_legend\_side =} \StringTok{"bottom"}\NormalTok{)}
+\FunctionTok{dev.off}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+pdf 
+  2 
+\end{verbatim}
+
+\subsection{Accession feedback
+distribution}\label{accession-feedback-distribution}
+
+\subsubsection{Prepare data}\label{prepare-data-1}
+
+We filter the data for DAG 15, where SNPMMF1 was still showing up.
+
+\textbf{Purpose}: Filters the data for day 15, assigns a preference
+(``plus'' or ``minus'') based on area difference, and ranks the
+accessions accordingly. We used dag 15 as this was the last day where
+SNPMMF1 showed up in the GWAS analysis and where all the accessions were
+still prsent.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Filter for observations on day 15, assign preference, and sort}
+\NormalTok{plant\_region\_areas\_DAG15 }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_DAG20 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{filter}\NormalTok{(dag }\SpecialCharTok{==} \DecValTok{15}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{preference =} \FunctionTok{case\_when}\NormalTok{(}
+\NormalTok{    area\_diff }\SpecialCharTok{\textgreater{}=} \DecValTok{0} \SpecialCharTok{\textasciitilde{}} \StringTok{"plus"}\NormalTok{,}
+    \ConstantTok{TRUE} \SpecialCharTok{\textasciitilde{}} \StringTok{"minus"}
+\NormalTok{  )) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{arrange}\NormalTok{(}\FunctionTok{desc}\NormalTok{(area\_diff)) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{rank =} \FunctionTok{row\_number}\NormalTok{())}
+\end{Highlighting}
+\end{Shaded}
+
+Plot relative growth feedbacks
+
+\textbf{Purpose}: Creates a bar plot showing the relative growth
+feedback for each accession at day 15, ranked and colored by preference.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Prepare data for specific genotypes to label}
+\NormalTok{labels\_data }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_DAG15 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{filter}\NormalTok{(genotype }\SpecialCharTok{\%in\%} \FunctionTok{c}\NormalTok{(}\StringTok{"IP{-}Hue{-}3"}\NormalTok{, }\StringTok{"Col{-}0"}\NormalTok{, }\StringTok{"Hadd{-}3"}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}
+    \AttributeTok{text\_position =} \FunctionTok{ifelse}\NormalTok{(area\_diff }\SpecialCharTok{\textgreater{}} \DecValTok{0}\NormalTok{, area\_diff }\SpecialCharTok{+} \DecValTok{4000}\NormalTok{, area\_diff }\SpecialCharTok{{-}} \DecValTok{5000}\NormalTok{) }\CommentTok{\# Offset for labels}
+\NormalTok{  )}
+
+\CommentTok{\# Create the plot}
+\NormalTok{ACC\_ratio }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{(plant\_region\_areas\_DAG15, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ rank, }\AttributeTok{y =}\NormalTok{ area\_diff, }\AttributeTok{fill =}\NormalTok{ preference)) }\SpecialCharTok{+}
+  
+  \CommentTok{\# Add bars with original fill color based on "preference"}
+  \FunctionTok{geom\_bar}\NormalTok{(}\AttributeTok{stat =} \StringTok{"identity"}\NormalTok{, }\AttributeTok{linewidth =} \FloatTok{0.001}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.8}\NormalTok{, }\AttributeTok{width =} \DecValTok{1}\NormalTok{) }\SpecialCharTok{+}
+  
+  \CommentTok{\# Add a second layer to highlight specific genotypes in black}
+  \FunctionTok{geom\_bar}\NormalTok{(}
+    \AttributeTok{data =}\NormalTok{ plant\_region\_areas\_DAG15 }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(genotype }\SpecialCharTok{\%in\%} \FunctionTok{c}\NormalTok{(}\StringTok{"IP{-}Hue{-}3"}\NormalTok{, }\StringTok{"Col{-}0"}\NormalTok{, }\StringTok{"Hadd{-}3"}\NormalTok{)),}
+    \FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ rank, }\AttributeTok{y =}\NormalTok{ area\_diff),}
+    \AttributeTok{stat =} \StringTok{"identity"}\NormalTok{, }\AttributeTok{fill =} \StringTok{"black"}\NormalTok{, }\AttributeTok{linewidth =} \FloatTok{0.001}\NormalTok{, }\AttributeTok{width =} \DecValTok{1}
+\NormalTok{  ) }\SpecialCharTok{+}
+  
+  \CommentTok{\# Customize the fill scale for the legend}
+  \FunctionTok{scale\_fill\_manual}\NormalTok{(}
+    \AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"orange2"}\NormalTok{, }\StringTok{"\#0072B2"}\NormalTok{),}
+    \AttributeTok{name =} \StringTok{"BX feedback"}\NormalTok{,  }\CommentTok{\# Update legend title}
+    \AttributeTok{labels =} \FunctionTok{c}\NormalTok{(}\StringTok{"negative"}\NormalTok{, }\StringTok{"positive"}\NormalTok{)  }\CommentTok{\# Update legend labels}
+\NormalTok{  ) }\SpecialCharTok{+}
+  
+  \CommentTok{\# Add points at the exact value of area\_diff}
+  \FunctionTok{geom\_point}\NormalTok{(}\AttributeTok{data =}\NormalTok{ labels\_data,}
+             \FunctionTok{aes}\NormalTok{(}\AttributeTok{y =}\NormalTok{ area\_diff), }
+             \AttributeTok{color =} \StringTok{"black"}\NormalTok{, }\AttributeTok{size =} \FloatTok{1.2}\NormalTok{) }\SpecialCharTok{+}
+  
+  \CommentTok{\# Add text labels dynamically positioned}
+  \FunctionTok{geom\_text}\NormalTok{(}\AttributeTok{data =}\NormalTok{ labels\_data,}
+            \FunctionTok{aes}\NormalTok{(}\AttributeTok{y =}\NormalTok{ text\_position, }\AttributeTok{label =}\NormalTok{ genotype), }
+            \AttributeTok{color =} \StringTok{"black"}\NormalTok{, }\AttributeTok{size =} \DecValTok{3}\NormalTok{, }\AttributeTok{hjust =} \FloatTok{0.5}\NormalTok{, }\AttributeTok{vjust =} \SpecialCharTok{{-}}\FloatTok{0.2}\NormalTok{) }\SpecialCharTok{+}  \CommentTok{\# Increased text size}
+  
+  \FunctionTok{xlim}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{2}\NormalTok{, }\DecValTok{412}\NormalTok{) }\SpecialCharTok{+}
+  
+  \CommentTok{\# Modify the y{-}axis label and scale}
+  \FunctionTok{labs}\NormalTok{(}
+    \AttributeTok{y =} \FunctionTok{expression}\NormalTok{(}\StringTok{"Growth feedback (10"}\SpecialCharTok{\^{}}\DecValTok{4}\SpecialCharTok{*}\StringTok{")"}\NormalTok{), }
+    \AttributeTok{x =} \StringTok{"Accession rank"}
+\NormalTok{  ) }\SpecialCharTok{+}
+  
+  \CommentTok{\# Scale y{-}axis to divide values by 10,000 for display}
+  \FunctionTok{scale\_y\_continuous}\NormalTok{(}\AttributeTok{labels =} \ControlFlowTok{function}\NormalTok{(x) x }\SpecialCharTok{/} \DecValTok{10000}\NormalTok{) }\SpecialCharTok{+}
+  
+  \FunctionTok{ggtitle}\NormalTok{(}\StringTok{"Growth feedback distribution of accessions"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{theme}\NormalTok{(}
+    \AttributeTok{axis.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{8}\NormalTok{),  }\CommentTok{\# Slightly increased font size}
+    \AttributeTok{axis.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{9}\NormalTok{), }
+    \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{9}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
+    \AttributeTok{legend.position =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.95}\NormalTok{, }\FloatTok{0.95}\NormalTok{),  }\CommentTok{\# Custom position for the top{-}right corner}
+    \AttributeTok{legend.justification =} \FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{),   }\CommentTok{\# Align legend box to top{-}right}
+    \AttributeTok{legend.background =} \FunctionTok{element\_rect}\NormalTok{(}\AttributeTok{fill =} \StringTok{"white"}\NormalTok{, }\AttributeTok{color =} \StringTok{"black"}\NormalTok{),  }\CommentTok{\# Optional: Add background}
+    \AttributeTok{legend.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),  }\CommentTok{\# Increased legend title size}
+    \AttributeTok{legend.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{6}\NormalTok{)    }\CommentTok{\# Increased legend items size}
+\NormalTok{  )}
+
+\CommentTok{\# Display the plot}
+\NormalTok{ACC\_ratio}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{figure}[H]
+
+{\centering \pandocbounded{\includegraphics[keepaspectratio]{01_Accession_phenotypes_files/figure-pdf/Fig1c-ACC-Distribution-1.pdf}}
+
+}
+
+\caption{Distribution of growth feedbackas for all 410 accesions used in
+the GWAS. The most extreme accessions and Col-0 is indicated on the
+plot.}
+
+\end{figure}%
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Save the plot}
+\FunctionTok{ggsave}\NormalTok{(}\StringTok{"ACC\_distr\_rel\_feedback.pdf"}\NormalTok{, }\AttributeTok{plot =}\NormalTok{ ACC\_ratio, }\AttributeTok{width =} \DecValTok{16}\NormalTok{, }\AttributeTok{height =} \DecValTok{8}\NormalTok{, }\AttributeTok{units =} \StringTok{"cm"}\NormalTok{, }\AttributeTok{path =} \StringTok{"Output/Figures/"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Growth of extreme
+accessions}\label{growth-of-extreme-accessions}
+
+\subsubsection{IP-Hue-3}\label{ip-hue-3}
+
+Filter for IP-Hue-3 and Plot the Growth Over Time
+
+\textbf{Purpose}: Filters the data to include only the genotype with
+genotype\_id 9851 (IP-Hue-3), calculates the mean plant region area for
+each combination of bx and dag, removes duplicates and irrelevant
+columns, pivots the data to spread `bx' treatment values into separate
+columns, calculates the area difference, and ranks the genotypes by the
+area difference.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Filter data for genotype\_id 9851 (IP{-}Hue{-}3) and DAG ≤ 20}
+\NormalTok{plant\_region\_areas\_IPHue3 }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{filter}\NormalTok{(dag }\SpecialCharTok{\textless{}=} \DecValTok{20}\NormalTok{, genotype\_id }\SpecialCharTok{==} \DecValTok{9851}\NormalTok{)}
+
+\CommentTok{\# Calculate mean plant region area for each bx and dag combination}
+\NormalTok{plant\_region\_areas\_IPHue3 }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_IPHue3 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{group\_by}\NormalTok{(bx, dag) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{summarise}\NormalTok{(}\AttributeTok{mean =} \FunctionTok{mean}\NormalTok{(plant\_region\_area, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{), }\AttributeTok{.groups =} \StringTok{"drop"}\NormalTok{)}
+
+\CommentTok{\# Remove unnecessary columns and ensure unique rows}
+\NormalTok{plant\_region\_areas\_IPHue3 }\OtherTok{\textless{}{-}} \FunctionTok{distinct}\NormalTok{(plant\_region\_areas\_IPHue3)}
+
+\CommentTok{\# Transform data: separate columns for each treatment}
+\NormalTok{shaded\_data\_IP\_Hue }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_IPHue3 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{pivot\_wider}\NormalTok{(}\AttributeTok{names\_from =}\NormalTok{ bx, }\AttributeTok{values\_from =}\NormalTok{ mean, }\AttributeTok{names\_prefix =} \StringTok{"mean\_"}\NormalTok{)}
+
+\CommentTok{\# Ensure correct column names (assuming \textasciigrave{}+\textasciigrave{} and \textasciigrave{}{-}\textasciigrave{} are original bx values)}
+\NormalTok{shaded\_data\_IP\_Hue }\OtherTok{\textless{}{-}}\NormalTok{ shaded\_data\_IP\_Hue }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{rename\_with}\NormalTok{(}\SpecialCharTok{\textasciitilde{}} \FunctionTok{gsub}\NormalTok{(}\StringTok{"mean\_}\SpecialCharTok{\textbackslash{}\textbackslash{}}\StringTok{+"}\NormalTok{, }\StringTok{"mean\_group1"}\NormalTok{, .x)) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{rename\_with}\NormalTok{(}\SpecialCharTok{\textasciitilde{}} \FunctionTok{gsub}\NormalTok{(}\StringTok{"mean\_}\SpecialCharTok{\textbackslash{}\textbackslash{}}\StringTok{{-}"}\NormalTok{, }\StringTok{"mean\_group2"}\NormalTok{, .x)) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}
+    \AttributeTok{lower =} \FunctionTok{pmin}\NormalTok{(mean\_group1, mean\_group2, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{),}
+    \AttributeTok{upper =} \FunctionTok{pmax}\NormalTok{(mean\_group1, mean\_group2, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)}
+\NormalTok{  )}
+
+\CommentTok{\# Define x{-}axis breaks and labels}
+\NormalTok{x\_breaks }\OtherTok{\textless{}{-}} \FunctionTok{seq}\NormalTok{(}\FunctionTok{floor}\NormalTok{(}\FunctionTok{min}\NormalTok{(plant\_region\_areas\_IPHue3}\SpecialCharTok{$}\NormalTok{dag)), }
+                \FunctionTok{ceiling}\NormalTok{(}\FunctionTok{max}\NormalTok{(plant\_region\_areas\_IPHue3}\SpecialCharTok{$}\NormalTok{dag)), }\AttributeTok{by =} \DecValTok{5}\NormalTok{)}
+\NormalTok{x\_labels }\OtherTok{\textless{}{-}} \FunctionTok{as.character}\NormalTok{(x\_breaks)}
+
+\CommentTok{\# Display final data structure}
+\CommentTok{\#head(shaded\_data\_IP\_Hue)}
+\end{Highlighting}
+\end{Shaded}
+
+Plot the growth for IP-Hue-3 over time
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Create the plot}
+\NormalTok{IP\_Hue\_3 }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{() }\SpecialCharTok{+}
+  \CommentTok{\# Add ribbon without legend}
+  \FunctionTok{geom\_ribbon}\NormalTok{(}
+    \AttributeTok{data =}\NormalTok{ shaded\_data\_IP\_Hue,}
+    \FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ dag, }\AttributeTok{ymin =}\NormalTok{ lower, }\AttributeTok{ymax =}\NormalTok{ upper),}
+    \AttributeTok{fill =} \StringTok{"\#0072B2"}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.2}\NormalTok{,}
+    \AttributeTok{show.legend =} \ConstantTok{FALSE}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \CommentTok{\# Add points with legend}
+  \FunctionTok{geom\_point}\NormalTok{(}
+    \AttributeTok{data =}\NormalTok{ plant\_region\_areas\_IPHue3,}
+    \FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ dag, }\AttributeTok{y =}\NormalTok{ mean, }\AttributeTok{colour =}\NormalTok{ bx, }\AttributeTok{fill =}\NormalTok{ bx),}
+    \AttributeTok{shape =} \DecValTok{21}\NormalTok{, }\AttributeTok{size =} \FloatTok{2.5}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.4}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \CommentTok{\# Add line without legend}
+  \FunctionTok{geom\_line}\NormalTok{(}
+    \AttributeTok{data =}\NormalTok{ plant\_region\_areas\_IPHue3,}
+    \FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ dag, }\AttributeTok{y =}\NormalTok{ mean, }\AttributeTok{colour =}\NormalTok{ bx),}
+    \AttributeTok{show.legend =} \ConstantTok{FALSE}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \CommentTok{\# Modify the y{-}axis label and scale}
+  \FunctionTok{ggtitle}\NormalTok{(}\StringTok{"Daily rosette area: IP{-}Hue{-}3"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}
+    \AttributeTok{y =} \FunctionTok{expression}\NormalTok{(}\StringTok{"Rosette area (10"}\SpecialCharTok{\^{}}\DecValTok{4}\SpecialCharTok{*}\StringTok{")"}\NormalTok{), }
+    \AttributeTok{x =} \StringTok{"Days after germination"}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \FunctionTok{scale\_y\_continuous}\NormalTok{(}\AttributeTok{labels =} \ControlFlowTok{function}\NormalTok{(x) x }\SpecialCharTok{/} \DecValTok{10000}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{scale\_x\_continuous}\NormalTok{(}\AttributeTok{breaks =}\NormalTok{ x\_breaks, }\AttributeTok{labels =}\NormalTok{ x\_labels) }\SpecialCharTok{+}
+  \CommentTok{\# Define manual color and fill scales with legend settings}
+  \FunctionTok{scale\_colour\_manual}\NormalTok{(}
+    \AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"seagreen"}\NormalTok{, }\StringTok{"gold2"}\NormalTok{),}
+    \AttributeTok{guide =} \StringTok{"none"} \CommentTok{\# Suppress colour legend}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \FunctionTok{scale\_fill\_manual}\NormalTok{(}
+    \AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"seagreen"}\NormalTok{, }\StringTok{"gold2"}\NormalTok{),}
+    \AttributeTok{name =} \StringTok{"Microbiome"}\NormalTok{,  }\CommentTok{\# Update legend title}
+    \AttributeTok{labels =} \FunctionTok{c}\NormalTok{(}\StringTok{"BX{-}"}\NormalTok{, }\StringTok{"BX+"}\NormalTok{),  }\CommentTok{\# Update legend labels}
+    \AttributeTok{guide =} \FunctionTok{guide\_legend}\NormalTok{(}
+      \AttributeTok{override.aes =} \FunctionTok{list}\NormalTok{(}\AttributeTok{shape =} \DecValTok{21}\NormalTok{, }\AttributeTok{size =} \FloatTok{2.5}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.4}\NormalTok{) }\CommentTok{\# Match point aesthetics}
+\NormalTok{    )}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{theme}\NormalTok{(}
+    \AttributeTok{axis.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+    \AttributeTok{legend.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+    \AttributeTok{legend.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+    \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+    \AttributeTok{axis.title.y =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+    \AttributeTok{axis.title.x =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+    \AttributeTok{legend.position =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.2}\NormalTok{, }\FloatTok{0.95}\NormalTok{),  }\CommentTok{\# Position legend in top{-}right}
+    \AttributeTok{legend.justification =} \FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{),   }\CommentTok{\# Align legend box to top{-}right}
+    \AttributeTok{legend.background =} \FunctionTok{element\_rect}\NormalTok{(}\AttributeTok{fill =} \StringTok{"white"}\NormalTok{, }\AttributeTok{color =} \StringTok{"black"}\NormalTok{)}
+\NormalTok{  )}
+
+\CommentTok{\# Display the plot}
+\FunctionTok{print}\NormalTok{(IP\_Hue\_3)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Purpose: Displays the plot.}
+
+\CommentTok{\# Save the plot}
+\FunctionTok{ggsave}\NormalTok{(}\StringTok{"IP\_hue\_3\_growth.pdf"}\NormalTok{, }\AttributeTok{plot =}\NormalTok{ IP\_Hue\_3, }\AttributeTok{width =} \DecValTok{10}\NormalTok{, }\AttributeTok{height =} \DecValTok{10}\NormalTok{, }\AttributeTok{units =} \StringTok{"cm"}\NormalTok{, }\AttributeTok{path =} \StringTok{"Output/Figures/"}\NormalTok{)}
+\CommentTok{\# Purpose: Saves the plot as a pdf file.}
+\end{Highlighting}
+\end{Shaded}
+
+Plot the growth feedback for IP-Hue-3 over time
+
+\textbf{Purpose}: Calculates the difference in mean plant region area
+between the two treatments for each day and creates a bar plot showing
+the \emph{daily growth feedback} for IP-Hue-3.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Compute the difference between the two groups}
+\NormalTok{shaded\_data\_IP\_Hue }\OtherTok{\textless{}{-}}\NormalTok{ shaded\_data\_IP\_Hue }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{difference =}\NormalTok{ mean\_group1 }\SpecialCharTok{{-}}\NormalTok{ mean\_group2)}
+\CommentTok{\# Purpose: Calculates the difference in mean plant region area between the two treatments for each day.}
+
+\CommentTok{\# Plot with shaded area and differences as bars}
+\NormalTok{IP\_Hue\_3\_response }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{geom\_bar}\NormalTok{(}\AttributeTok{data =}\NormalTok{ shaded\_data\_IP\_Hue, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ dag, }\AttributeTok{y =}\NormalTok{ difference), }\AttributeTok{stat =} \StringTok{"identity"}\NormalTok{, }\AttributeTok{fill =} \StringTok{"\#0072B2"}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.8}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{ggtitle}\NormalTok{(}\StringTok{"Daily growth feeedbacks: IP{-}Hue{-}3"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}
+    \AttributeTok{y =} \FunctionTok{expression}\NormalTok{(}\StringTok{"Growth feedback (10"}\SpecialCharTok{\^{}}\DecValTok{4}\SpecialCharTok{*}\StringTok{")"}\NormalTok{), }
+    \AttributeTok{x =} \StringTok{"Days after germination"}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \FunctionTok{scale\_y\_continuous}\NormalTok{(}\AttributeTok{labels =} \ControlFlowTok{function}\NormalTok{(x) x }\SpecialCharTok{/} \DecValTok{10000}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{scale\_x\_continuous}\NormalTok{(}\AttributeTok{breaks =}\NormalTok{ x\_breaks, }\AttributeTok{labels =}\NormalTok{ x\_labels) }\SpecialCharTok{+}
+  \FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{theme}\NormalTok{(}\AttributeTok{axis.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+        \AttributeTok{legend.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+        \AttributeTok{legend.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+        \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+        \AttributeTok{axis.title.y =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+        \AttributeTok{axis.title.x =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+        \AttributeTok{legend.position =} \StringTok{"none"}\NormalTok{)       }\CommentTok{\# Remove legend}
+\CommentTok{\# Purpose: Creates a bar plot showing the daily growth feedback for IP{-}Hue{-}3, calculated as the difference between the two treatments.}
+
+\CommentTok{\# Display the plot}
+\FunctionTok{print}\NormalTok{(IP\_Hue\_3\_response)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Purpose: Displays the plot.}
+
+\CommentTok{\# Save the plot}
+\FunctionTok{ggsave}\NormalTok{(}\StringTok{"IP\_Hue\_3\_response.pdf"}\NormalTok{, }\AttributeTok{plot =}\NormalTok{ IP\_Hue\_3\_response, }\AttributeTok{width =} \DecValTok{10}\NormalTok{, }\AttributeTok{height =} \DecValTok{10}\NormalTok{, }\AttributeTok{units =} \StringTok{"cm"}\NormalTok{, }\AttributeTok{path =} \StringTok{"Output/Figures/"}\NormalTok{)}
+\CommentTok{\# Purpose: Saves the plot as a PNG file.}
+\end{Highlighting}
+\end{Shaded}
+
+\subsubsection{Hadd-3}\label{hadd-3}
+
+Filter for Hadd-3 and Plot the Growth Over Time
+
+\textbf{Purpose}: Filters the data to include only the genotype with
+genotype\_id 9392 (Hadd-3), calculates the mean plant region area for
+each combination of bx and dag, removes duplicates and irrelevant
+columns, pivots the data to spread `bx' treatment values into separate
+columns, calculates the area difference, and ranks the genotypes by the
+area difference.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Filter data for genotype\_id 9392}
+\NormalTok{plant\_region\_areas\_Hadd3 }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas }\SpecialCharTok{\%\textgreater{}\%} 
+  \FunctionTok{filter}\NormalTok{(dag }\SpecialCharTok{\textless{}} \DecValTok{21}\NormalTok{, genotype\_id }\SpecialCharTok{==} \DecValTok{9392}\NormalTok{)}
+\CommentTok{\# Purpose: Filters the dataset to include only data for the accession with genotype\_id 9392 (Hadd{-}3) and days less than 20.}
+
+\CommentTok{\# Calculate mean plant region area for each combination of bx and dag}
+\NormalTok{plant\_region\_areas\_Hadd3 }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_Hadd3 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{group\_by}\NormalTok{(bx, dag) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{mean =} \FunctionTok{mean}\NormalTok{(plant\_region\_area, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{ungroup}\NormalTok{()}
+\CommentTok{\# Purpose: Calculates the mean plant region area for each treatment (bx) and day (dag) combination.}
+
+\CommentTok{\# Remove unnecessary columns and keep only unique entries}
+\NormalTok{plant\_region\_areas\_Hadd3 }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_Hadd3 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{select}\NormalTok{(}\SpecialCharTok{{-}}\FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{, }\DecValTok{6}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{distinct}\NormalTok{()}
+\CommentTok{\# Purpose: Removes unnecessary columns and ensures that only unique rows remain in the dataset.}
+
+\CommentTok{\# Create a new data frame for the shaded area between curves}
+\CommentTok{\# Spread the data to have separate columns for each group}
+\NormalTok{shaded\_data\_Hadd3 }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_Hadd3 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{pivot\_wider}\NormalTok{(}\AttributeTok{names\_from =}\NormalTok{ bx, }\AttributeTok{values\_from =}\NormalTok{ mean)}
+\CommentTok{\# Purpose: Transforms the data to have separate columns for each treatment, preparing it for shaded area plotting.}
+
+\CommentTok{\# Ensure the correct names for the new columns}
+\CommentTok{\# Assuming the groups are "group1" and "group2"}
+\NormalTok{shaded\_data\_Hadd3 }\OtherTok{\textless{}{-}}\NormalTok{ shaded\_data\_Hadd3 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{rename}\NormalTok{(}\AttributeTok{mean\_group1 =} \StringTok{\textasciigrave{}}\AttributeTok{+}\StringTok{\textasciigrave{}}\NormalTok{, }\AttributeTok{mean\_group2 =} \StringTok{\textasciigrave{}}\AttributeTok{{-}}\StringTok{\textasciigrave{}}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{lower =} \FunctionTok{pmin}\NormalTok{(mean\_group1, mean\_group2, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{),}
+         \AttributeTok{upper =} \FunctionTok{pmax}\NormalTok{(mean\_group1, mean\_group2, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{))}
+\CommentTok{\# Purpose: Renames the columns for clarity and calculates the lower and upper bounds for the shaded area.}
+\end{Highlighting}
+\end{Shaded}
+
+Plot the growth for Hadd-3 over time
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Create the plot}
+\NormalTok{Hadd\_3 }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{() }\SpecialCharTok{+}
+  \CommentTok{\# Add ribbon without legend}
+  \FunctionTok{geom\_ribbon}\NormalTok{(}
+    \AttributeTok{data =}\NormalTok{ shaded\_data\_Hadd3,}
+    \FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ dag, }\AttributeTok{ymin =}\NormalTok{ lower, }\AttributeTok{ymax =}\NormalTok{ upper),}
+    \AttributeTok{fill =} \StringTok{"orange2"}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.2}\NormalTok{,}
+    \AttributeTok{show.legend =} \ConstantTok{FALSE}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \CommentTok{\# Add points with legend}
+  \FunctionTok{geom\_point}\NormalTok{(}
+    \AttributeTok{data =}\NormalTok{ plant\_region\_areas\_Hadd3,}
+    \FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ dag, }\AttributeTok{y =}\NormalTok{ mean, }\AttributeTok{colour =}\NormalTok{ bx, }\AttributeTok{fill =}\NormalTok{ bx),}
+    \AttributeTok{shape =} \DecValTok{21}\NormalTok{, }\AttributeTok{size =} \FloatTok{2.5}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.4}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \CommentTok{\# Add line without legend}
+  \FunctionTok{geom\_line}\NormalTok{(}
+    \AttributeTok{data =}\NormalTok{ plant\_region\_areas\_Hadd3,}
+    \FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ dag, }\AttributeTok{y =}\NormalTok{ mean, }\AttributeTok{colour =}\NormalTok{ bx),}
+    \AttributeTok{show.legend =} \ConstantTok{FALSE}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \CommentTok{\# Title and axis labels}
+  \FunctionTok{ggtitle}\NormalTok{(}\StringTok{"Daily rosette area: Hadd{-}3"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}
+    \AttributeTok{y =} \FunctionTok{expression}\NormalTok{(}\StringTok{"Rosette area (10"}\SpecialCharTok{\^{}}\DecValTok{4}\SpecialCharTok{*}\StringTok{")"}\NormalTok{), }
+    \AttributeTok{x =} \StringTok{"Days after germination"}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \CommentTok{\# Scales for y{-}axis and x{-}axis}
+  \FunctionTok{scale\_y\_continuous}\NormalTok{(}\AttributeTok{labels =} \ControlFlowTok{function}\NormalTok{(x) x }\SpecialCharTok{/} \DecValTok{10000}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{scale\_x\_continuous}\NormalTok{(}\AttributeTok{breaks =}\NormalTok{ x\_breaks, }\AttributeTok{labels =}\NormalTok{ x\_labels) }\SpecialCharTok{+}
+  \CommentTok{\# Define manual color and fill scales with legend settings}
+  \FunctionTok{scale\_colour\_manual}\NormalTok{(}
+    \AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"seagreen"}\NormalTok{, }\StringTok{"gold2"}\NormalTok{),}
+    \AttributeTok{guide =} \StringTok{"none"} \CommentTok{\# Suppress colour legend}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \FunctionTok{scale\_fill\_manual}\NormalTok{(}
+    \AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"seagreen"}\NormalTok{, }\StringTok{"gold2"}\NormalTok{),}
+    \AttributeTok{name =} \StringTok{"Microbiome"}\NormalTok{,  }\CommentTok{\# Update legend title}
+    \AttributeTok{labels =} \FunctionTok{c}\NormalTok{(}\StringTok{"BX{-}"}\NormalTok{, }\StringTok{"BX+"}\NormalTok{),  }\CommentTok{\# Update legend labels}
+    \AttributeTok{guide =} \FunctionTok{guide\_legend}\NormalTok{(}
+      \AttributeTok{override.aes =} \FunctionTok{list}\NormalTok{(}\AttributeTok{shape =} \DecValTok{21}\NormalTok{, }\AttributeTok{size =} \FloatTok{2.5}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.4}\NormalTok{) }\CommentTok{\# Match point aesthetics}
+\NormalTok{    )}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \CommentTok{\# Theme adjustments}
+  \FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{theme}\NormalTok{(}
+    \AttributeTok{axis.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+    \AttributeTok{legend.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+    \AttributeTok{legend.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+    \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+    \AttributeTok{axis.title.y =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+    \AttributeTok{axis.title.x =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+    \AttributeTok{legend.position =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.2}\NormalTok{, }\FloatTok{0.95}\NormalTok{),  }\CommentTok{\# Position legend in top{-}right}
+    \AttributeTok{legend.justification =} \FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{),   }\CommentTok{\# Align legend box to top{-}right}
+    \AttributeTok{legend.background =} \FunctionTok{element\_rect}\NormalTok{(}\AttributeTok{fill =} \StringTok{"white"}\NormalTok{, }\AttributeTok{color =} \StringTok{"black"}\NormalTok{)}
+\NormalTok{  )}
+
+\CommentTok{\# Display the plot}
+\NormalTok{Hadd\_3}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{ggsave}\NormalTok{(}\StringTok{"Hadd\_3\_growth.pdf"}\NormalTok{, }\AttributeTok{plot =}\NormalTok{ Hadd\_3, }\AttributeTok{width =} \DecValTok{10}\NormalTok{, }\AttributeTok{height =} \DecValTok{10}\NormalTok{, }\AttributeTok{units =} \StringTok{"cm"}\NormalTok{, }\AttributeTok{path =} \StringTok{"Output/Figures/"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+Plot the growth feedback for Hadd-3 over time
+
+\textbf{Purpose}: Calculates the difference in mean plant region area
+between the two treatments for each day and creates a bar plot showing
+the \emph{daily growth feedback} for Hadd-3.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Compute the difference between the two groups}
+\NormalTok{shaded\_data\_Hadd3 }\OtherTok{\textless{}{-}}\NormalTok{ shaded\_data\_Hadd3 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{difference =}\NormalTok{ mean\_group1 }\SpecialCharTok{{-}}\NormalTok{ mean\_group2)}
+\CommentTok{\# Purpose: Calculates the difference in mean plant region area between the two treatments for each day.}
+
+\CommentTok{\# Plot with shaded area and differences as bars}
+\NormalTok{Hadd3\_response }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{geom\_bar}\NormalTok{(}\AttributeTok{data =}\NormalTok{ shaded\_data\_Hadd3, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ dag, }\AttributeTok{y =}\NormalTok{ difference), }\AttributeTok{stat =} \StringTok{"identity"}\NormalTok{, }\AttributeTok{fill =} \StringTok{"orange2"}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.8}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{ggtitle}\NormalTok{(}\StringTok{"Daily growth feeedbacks: Hadd{-}3"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}
+    \AttributeTok{y =} \FunctionTok{expression}\NormalTok{(}\StringTok{"Growth feedback (10"}\SpecialCharTok{\^{}}\DecValTok{4}\SpecialCharTok{*}\StringTok{")"}\NormalTok{), }
+    \AttributeTok{x =} \StringTok{"Days after germination"}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \FunctionTok{scale\_y\_continuous}\NormalTok{(}\AttributeTok{labels =} \ControlFlowTok{function}\NormalTok{(x) x }\SpecialCharTok{/} \DecValTok{10000}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{scale\_x\_continuous}\NormalTok{(}\AttributeTok{breaks =}\NormalTok{ x\_breaks, }\AttributeTok{labels =}\NormalTok{ x\_labels) }\SpecialCharTok{+}
+  \FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{theme}\NormalTok{(}\AttributeTok{axis.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+        \AttributeTok{legend.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+        \AttributeTok{legend.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+        \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+        \AttributeTok{axis.title.y =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+        \AttributeTok{axis.title.x =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+        \CommentTok{\#axis.text.y = element\_blank(),  \# Remove y{-}axis text}
+        \AttributeTok{legend.position =} \StringTok{"none"}\NormalTok{)       }\CommentTok{\# Remove legend}
+\CommentTok{\# Purpose: Creates a bar plot showing the daily growth feedback for Hadd{-}3, calculated as the difference between the two treatments.}
+
+\CommentTok{\# Display the plot}
+\FunctionTok{print}\NormalTok{(Hadd3\_response)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Purpose: Displays the plot.}
+
+\CommentTok{\# Save the plot}
+\FunctionTok{ggsave}\NormalTok{(}\StringTok{"Hadd\_3\_response.pdf"}\NormalTok{, }\AttributeTok{plot =}\NormalTok{ Hadd3\_response, }\AttributeTok{width =} \DecValTok{10}\NormalTok{, }\AttributeTok{height =} \DecValTok{10}\NormalTok{, }\AttributeTok{units =} \StringTok{"cm"}\NormalTok{, }\AttributeTok{path =} \StringTok{"Output/Figures/"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{figure}[H]
+
+{\centering \pandocbounded{\includegraphics[keepaspectratio]{01_Accession_phenotypes_files/figure-pdf/Fig1b-Growth-feedback-extremeACC-1.pdf}}
+
+}
+
+\caption{Combined plots showing the growth and growth feedbacks of the
+two most exctreme accessions.}
+
+\end{figure}%
+
+\section{Geographic distribution}\label{geographic-distribution}
+
+\subsection{Import data}\label{import-data}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{ACC\_coordinates }\OtherTok{\textless{}{-}} \FunctionTok{read\_excel}\NormalTok{(}\StringTok{"Input/Dataset1.xlsx"}\NormalTok{, }\AttributeTok{sheet =} \StringTok{"accession\_coordinates"}\NormalTok{)}
+\FunctionTok{kable}\NormalTok{(ACC\_coordinates[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{, ], }\AttributeTok{caption =} \StringTok{"Coordinate table."}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{longtable}[]{@{}rllrr@{}}
+\caption{Coordinate table.}\tabularnewline
+\toprule\noalign{}
+ACC\_ID & Country & Region & Lat & Long \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+ACC\_ID & Country & Region & Lat & Long \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+5921 & CZE & DraIV 3 & 49.4112 & 16.2815 \\
+5867 & SWE & Dra2 & 55.7600 & 14.1200 \\
+10006 & UKR & Kastel Mountain & 44.6419 & 34.3814 \\
+\end{longtable}
+
+\subsection{Correlation of growth feedback and geographical
+location}\label{correlation-of-growth-feedback-and-geographical-location}
+
+\subsubsection{Prepare data for correlation and regression
+analysis}\label{prepare-data-for-correlation-and-regression-analysis}
+
+\textbf{Purpose:} Filters the data to include only observations from day
+10, assigns a preference based on the area difference, sorts by area
+difference, and ranks the accessions.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Filter for observations on day 10, assign preference, and sort}
+\NormalTok{plant\_region\_areas\_DAG10 }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_DAG20 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{filter}\NormalTok{(dag }\SpecialCharTok{==} \DecValTok{15}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{preference =} \FunctionTok{case\_when}\NormalTok{(}
+\NormalTok{    area\_diff }\SpecialCharTok{\textgreater{}=} \DecValTok{0} \SpecialCharTok{\textasciitilde{}} \StringTok{"plus"}\NormalTok{,}
+    \ConstantTok{TRUE} \SpecialCharTok{\textasciitilde{}} \StringTok{"minus"}
+\NormalTok{  )) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{arrange}\NormalTok{(}\FunctionTok{desc}\NormalTok{(area\_diff)) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{rank =} \FunctionTok{row\_number}\NormalTok{())}
+\end{Highlighting}
+\end{Shaded}
+
+Merge the data tables
+
+\textbf{Purpose:} Merges the phenotype data
+(plant\_region\_areas\_DAG10) with the coordinates data
+(ACC\_coordinates) based on genotype IDs.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Merge the data tables and include only Lat and Long columns from ACC\_coordinates}
+\NormalTok{coordinates\_merged\_data }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_DAG10 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{left\_join}\NormalTok{(}
+\NormalTok{    ACC\_coordinates }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{select}\NormalTok{(ACC\_ID, Lat, Long),  }\CommentTok{\# Select only relevant columns}
+    \AttributeTok{by =} \FunctionTok{c}\NormalTok{(}\StringTok{"genotype\_id"} \OtherTok{=} \StringTok{"ACC\_ID"}\NormalTok{)               }\CommentTok{\# Specify the join key}
+\NormalTok{  )}
+\end{Highlighting}
+\end{Shaded}
+
+\subsubsection{\texorpdfstring{\textbf{Pearson correlation} and
+Regression
+Analysis}{Pearson correlation and Regression Analysis}}\label{pearson-correlation-and-regression-analysis}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Perform Pearson correlation test for Latitude}
+\NormalTok{cor\_test\_lat }\OtherTok{\textless{}{-}} \FunctionTok{cor.test}\NormalTok{(coordinates\_merged\_data}\SpecialCharTok{$}\NormalTok{Lat, coordinates\_merged\_data}\SpecialCharTok{$}\NormalTok{area\_diff, }
+                         \AttributeTok{method =} \StringTok{"pearson"}\NormalTok{, }\AttributeTok{use =} \StringTok{"complete.obs"}\NormalTok{)}
+
+\CommentTok{\# Perform Pearson correlation test for Longitude}
+\NormalTok{cor\_test\_long }\OtherTok{\textless{}{-}} \FunctionTok{cor.test}\NormalTok{(coordinates\_merged\_data}\SpecialCharTok{$}\NormalTok{Long, coordinates\_merged\_data}\SpecialCharTok{$}\NormalTok{area\_diff, }
+                          \AttributeTok{method =} \StringTok{"pearson"}\NormalTok{, }\AttributeTok{use =} \StringTok{"complete.obs"}\NormalTok{)}
+
+\CommentTok{\# Function to extract correlation test results safely}
+\NormalTok{extract\_cor\_results }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(test\_result, variable\_name) \{}
+  \FunctionTok{data.frame}\NormalTok{(}
+    \AttributeTok{Variable =}\NormalTok{ variable\_name,}
+    \AttributeTok{Correlation =} \FunctionTok{round}\NormalTok{(test\_result}\SpecialCharTok{$}\NormalTok{estimate, }\DecValTok{3}\NormalTok{),  }\CommentTok{\# Rounded for readability}
+    \AttributeTok{p\_value =} \FunctionTok{round}\NormalTok{(test\_result}\SpecialCharTok{$}\NormalTok{p.value, }\DecValTok{4}\NormalTok{),}
+    \AttributeTok{CI\_lower =} \ControlFlowTok{if}\NormalTok{ (}\SpecialCharTok{!}\FunctionTok{is.null}\NormalTok{(test\_result}\SpecialCharTok{$}\NormalTok{conf.int)) }\FunctionTok{round}\NormalTok{(test\_result}\SpecialCharTok{$}\NormalTok{conf.int[}\DecValTok{1}\NormalTok{], }\DecValTok{3}\NormalTok{) }\ControlFlowTok{else} \ConstantTok{NA}\NormalTok{,}
+    \AttributeTok{CI\_upper =} \ControlFlowTok{if}\NormalTok{ (}\SpecialCharTok{!}\FunctionTok{is.null}\NormalTok{(test\_result}\SpecialCharTok{$}\NormalTok{conf.int)) }\FunctionTok{round}\NormalTok{(test\_result}\SpecialCharTok{$}\NormalTok{conf.int[}\DecValTok{2}\NormalTok{], }\DecValTok{3}\NormalTok{) }\ControlFlowTok{else} \ConstantTok{NA}
+\NormalTok{  )}
+\NormalTok{\}}
+
+\CommentTok{\# Extract results}
+\NormalTok{lat\_results }\OtherTok{\textless{}{-}} \FunctionTok{extract\_cor\_results}\NormalTok{(cor\_test\_lat, }\StringTok{"Latitude"}\NormalTok{)}
+\NormalTok{long\_results }\OtherTok{\textless{}{-}} \FunctionTok{extract\_cor\_results}\NormalTok{(cor\_test\_long, }\StringTok{"Longitude"}\NormalTok{)}
+
+\CommentTok{\# Combine both results into a single table}
+\NormalTok{cor\_results }\OtherTok{\textless{}{-}} \FunctionTok{bind\_rows}\NormalTok{(lat\_results, long\_results)}
+
+\CommentTok{\# Display the results as a neat table}
+\FunctionTok{kable}\NormalTok{(cor\_results, }\AttributeTok{caption =} \StringTok{"Correlation Test Results for Latitude and Longitude"}\NormalTok{, }\AttributeTok{digits =} \DecValTok{4}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{longtable}[]{@{}llrrrr@{}}
+\caption{Correlation Test Results for Latitude and
+Longitude}\tabularnewline
+\toprule\noalign{}
+& Variable & Correlation & p\_value & CI\_lower & CI\_upper \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+& Variable & Correlation & p\_value & CI\_lower & CI\_upper \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+cor\ldots1 & Latitude & 0.002 & 0.9751 & -0.096 & 0.099 \\
+cor\ldots2 & Longitude & 0.058 & 0.2398 & -0.039 & 0.155 \\
+\end{longtable}
+
+\subsubsection{\texorpdfstring{\textbf{Linear regression
+model}}{Linear regression model}}\label{linear-regression-model}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Linear regression with Latitude}
+\NormalTok{model\_lat }\OtherTok{\textless{}{-}} \FunctionTok{lm}\NormalTok{(area\_diff }\SpecialCharTok{\textasciitilde{}}\NormalTok{ Lat }\SpecialCharTok{+}\NormalTok{ genotype\_id, }\AttributeTok{data =}\NormalTok{ coordinates\_merged\_data)}
+\NormalTok{summary\_lat }\OtherTok{\textless{}{-}} \FunctionTok{summary}\NormalTok{(model\_lat)}
+
+\CommentTok{\# Extract coefficients and R{-}squared}
+\NormalTok{intercept\_lat }\OtherTok{\textless{}{-}} \FunctionTok{coef}\NormalTok{(summary\_lat)[}\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{]}
+\NormalTok{slope\_lat }\OtherTok{\textless{}{-}} \FunctionTok{coef}\NormalTok{(summary\_lat)[}\DecValTok{2}\NormalTok{, }\DecValTok{1}\NormalTok{]}
+\NormalTok{r\_squared\_lat }\OtherTok{\textless{}{-}}\NormalTok{ summary\_lat}\SpecialCharTok{$}\NormalTok{r.squared}
+\NormalTok{p\_value\_lat }\OtherTok{\textless{}{-}} \FunctionTok{coef}\NormalTok{(summary\_lat)[}\DecValTok{2}\NormalTok{, }\DecValTok{4}\NormalTok{]}
+\NormalTok{p\_value\_f\_lat }\OtherTok{\textless{}{-}}\NormalTok{ summary\_lat}\SpecialCharTok{$}\NormalTok{fstatistic[}\DecValTok{1}\NormalTok{] }\CommentTok{\# F{-}statistic value}
+\FunctionTok{print}\NormalTok{(summary\_lat)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+
+Call:
+lm(formula = area_diff ~ Lat + genotype_id, data = coordinates_merged_data)
+
+Residuals:
+   Min     1Q Median     3Q    Max 
+-29305  -4220    489   4132  47752 
+
+Coefficients:
+              Estimate Std. Error t value Pr(>|t|)
+(Intercept) -948.88265 3679.18872  -0.258    0.797
+Lat           -0.86992   62.11497  -0.014    0.989
+genotype_id   -0.03179    0.18395  -0.173    0.863
+
+Residual standard error: 8755 on 405 degrees of freedom
+Multiple R-squared:  7.612e-05, Adjusted R-squared:  -0.004862 
+F-statistic: 0.01542 on 2 and 405 DF,  p-value: 0.9847
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\ControlFlowTok{if}\NormalTok{ (p\_value\_lat }\SpecialCharTok{\textless{}} \FloatTok{0.05}\NormalTok{) \{}
+    \FunctionTok{print}\NormalTok{(}\StringTok{"Latitude significantly affects area\_diff."}\NormalTok{)}
+\NormalTok{\} }\ControlFlowTok{else}\NormalTok{ \{}
+    \FunctionTok{print}\NormalTok{(}\StringTok{"Latitude does not significantly affect area\_diff."}\NormalTok{)}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+[1] "Latitude does not significantly affect area_diff."
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Purpose: Performs a linear regression to examine the effect of latitude on area difference, extracting relevant statistics and checking significance.}
+
+\CommentTok{\# Linear regression with Longitude}
+\NormalTok{model\_long }\OtherTok{\textless{}{-}} \FunctionTok{lm}\NormalTok{(area\_diff }\SpecialCharTok{\textasciitilde{}}\NormalTok{ Long }\SpecialCharTok{+}\NormalTok{ genotype\_id, }\AttributeTok{data =}\NormalTok{ coordinates\_merged\_data)}
+\NormalTok{summary\_long }\OtherTok{\textless{}{-}} \FunctionTok{summary}\NormalTok{(model\_long)}
+
+\CommentTok{\# Extract coefficients and R{-}squared}
+\NormalTok{intercept\_long }\OtherTok{\textless{}{-}} \FunctionTok{coef}\NormalTok{(summary\_long)[}\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{]}
+\NormalTok{slope\_long }\OtherTok{\textless{}{-}} \FunctionTok{coef}\NormalTok{(summary\_long)[}\DecValTok{2}\NormalTok{, }\DecValTok{1}\NormalTok{]}
+\NormalTok{r\_squared\_long }\OtherTok{\textless{}{-}}\NormalTok{ summary\_long}\SpecialCharTok{$}\NormalTok{r.squared}
+\NormalTok{p\_value\_long }\OtherTok{\textless{}{-}} \FunctionTok{coef}\NormalTok{(summary\_long)[}\DecValTok{2}\NormalTok{, }\DecValTok{4}\NormalTok{]}
+\NormalTok{p\_value\_f\_long }\OtherTok{\textless{}{-}}\NormalTok{ summary\_long}\SpecialCharTok{$}\NormalTok{fstatistic[}\DecValTok{1}\NormalTok{] }\CommentTok{\# F{-}statistic value}
+\FunctionTok{print}\NormalTok{(summary\_long)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+
+Call:
+lm(formula = area_diff ~ Long + genotype_id, data = coordinates_merged_data)
+
+Residuals:
+   Min     1Q Median     3Q    Max 
+-29382  -4218    614   4153  48129 
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)
+(Intercept) -499.8901  1509.2140  -0.331    0.741
+Long          18.4793    14.2306   1.299    0.195
+genotype_id   -0.1080     0.1871  -0.577    0.564
+
+Residual standard error: 8737 on 405 degrees of freedom
+Multiple R-squared:  0.004222,  Adjusted R-squared:  -0.0006958 
+F-statistic: 0.8585 on 2 and 405 DF,  p-value: 0.4246
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\ControlFlowTok{if}\NormalTok{ (p\_value\_lat }\SpecialCharTok{\textless{}} \FloatTok{0.05}\NormalTok{) \{}
+    \FunctionTok{print}\NormalTok{(}\StringTok{"Longitute significantly affects area\_diff."}\NormalTok{)}
+\NormalTok{\} }\ControlFlowTok{else}\NormalTok{ \{}
+    \FunctionTok{print}\NormalTok{(}\StringTok{"Longitue does not significantly affect area\_diff."}\NormalTok{)}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+[1] "Longitue does not significantly affect area_diff."
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Linear regression with Latitude}
+\NormalTok{model\_lat }\OtherTok{\textless{}{-}} \FunctionTok{lm}\NormalTok{(area\_diff }\SpecialCharTok{\textasciitilde{}}\NormalTok{ Lat, }\AttributeTok{data =}\NormalTok{ coordinates\_merged\_data)}
+\NormalTok{summary\_lat }\OtherTok{\textless{}{-}} \FunctionTok{summary}\NormalTok{(model\_lat)}
+
+\CommentTok{\# Extract coefficients and R{-}squared for Latitude}
+\NormalTok{lat\_results }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}
+  \AttributeTok{Variable =} \StringTok{"Latitude"}\NormalTok{,}
+  \AttributeTok{Intercept =} \FunctionTok{coef}\NormalTok{(summary\_lat)[}\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{],}
+  \AttributeTok{Slope =} \FunctionTok{coef}\NormalTok{(summary\_lat)[}\DecValTok{2}\NormalTok{, }\DecValTok{1}\NormalTok{],}
+  \AttributeTok{R\_squared =}\NormalTok{ summary\_lat}\SpecialCharTok{$}\NormalTok{r.squared,}
+  \AttributeTok{p\_value\_slope =} \FunctionTok{coef}\NormalTok{(summary\_lat)[}\DecValTok{2}\NormalTok{, }\DecValTok{4}\NormalTok{],}
+  \AttributeTok{F\_statistic =}\NormalTok{ summary\_lat}\SpecialCharTok{$}\NormalTok{fstatistic[}\DecValTok{1}\NormalTok{]}
+\NormalTok{)}
+
+\CommentTok{\# Linear regression with Longitude}
+\NormalTok{model\_long }\OtherTok{\textless{}{-}} \FunctionTok{lm}\NormalTok{(area\_diff }\SpecialCharTok{\textasciitilde{}}\NormalTok{ Long, }\AttributeTok{data =}\NormalTok{ coordinates\_merged\_data)}
+\NormalTok{summary\_long }\OtherTok{\textless{}{-}} \FunctionTok{summary}\NormalTok{(model\_long)}
+
+\CommentTok{\# Extract coefficients and R{-}squared for Longitude}
+\NormalTok{long\_results }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}
+  \AttributeTok{Variable =} \StringTok{"Longitude"}\NormalTok{,}
+  \AttributeTok{Intercept =} \FunctionTok{coef}\NormalTok{(summary\_long)[}\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{],}
+  \AttributeTok{Slope =} \FunctionTok{coef}\NormalTok{(summary\_long)[}\DecValTok{2}\NormalTok{, }\DecValTok{1}\NormalTok{],}
+  \AttributeTok{R\_squared =}\NormalTok{ summary\_long}\SpecialCharTok{$}\NormalTok{r.squared,}
+  \AttributeTok{p\_value\_slope =} \FunctionTok{coef}\NormalTok{(summary\_long)[}\DecValTok{2}\NormalTok{, }\DecValTok{4}\NormalTok{],}
+  \AttributeTok{F\_statistic =}\NormalTok{ summary\_long}\SpecialCharTok{$}\NormalTok{fstatistic[}\DecValTok{1}\NormalTok{]}
+\NormalTok{)}
+
+\CommentTok{\# Combine the results for Latitude and Longitude}
+\NormalTok{regression\_results }\OtherTok{\textless{}{-}} \FunctionTok{rbind}\NormalTok{(lat\_results, long\_results)}
+
+\CommentTok{\# Display the results as a neat table}
+\FunctionTok{kable}\NormalTok{(regression\_results, }\AttributeTok{caption =} \StringTok{"Linear Regression Results for Latitude and Longitude"}\NormalTok{, }\AttributeTok{digits =} \DecValTok{4}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.0986}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1408}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1408}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1127}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1408}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1972}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1690}}@{}}
+\caption{Linear Regression Results for Latitude and
+Longitude}\tabularnewline
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Variable
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+Intercept
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+Slope
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+R\_squared
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+p\_value\_slope
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+F\_statistic
+\end{minipage} \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Variable
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+Intercept
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+Slope
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+R\_squared
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+p\_value\_slope
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+F\_statistic
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+value & Latitude & -1331.343 & 1.8718 & 0.0000 & 0.9751 & 0.001 \\
+value1 & Longitude & -1333.361 & 15.8797 & 0.0034 & 0.2398 & 1.386 \\
+\end{longtable}
+
+\subsubsection{Scatter Plots with Regression
+Statistics}\label{scatter-plots-with-regression-statistics}
+
+\textbf{Purpose:} Creates scatter plots of latitude and longitude
+against area difference, including regression lines and displaying R²
+and p-values.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Compute linear regression model}
+\NormalTok{lm\_lat }\OtherTok{\textless{}{-}} \FunctionTok{lm}\NormalTok{(area\_diff }\SpecialCharTok{\textasciitilde{}}\NormalTok{ Lat, }\AttributeTok{data =}\NormalTok{ coordinates\_merged\_data, }\AttributeTok{na.action =}\NormalTok{ na.omit)}
+
+\CommentTok{\# Extract R² and p{-}value}
+\NormalTok{r\_squared\_lat }\OtherTok{\textless{}{-}} \FunctionTok{summary}\NormalTok{(lm\_lat)}\SpecialCharTok{$}\NormalTok{r.squared}
+\NormalTok{p\_value\_lat }\OtherTok{\textless{}{-}} \FunctionTok{summary}\NormalTok{(lm\_lat)}\SpecialCharTok{$}\NormalTok{fstatistic[}\DecValTok{1}\NormalTok{] }\SpecialCharTok{\%\textgreater{}\%} 
+  \FunctionTok{pf}\NormalTok{(}\AttributeTok{df1 =} \DecValTok{1}\NormalTok{, }\AttributeTok{df2 =}\NormalTok{ lm\_lat}\SpecialCharTok{$}\NormalTok{df.residual, }\AttributeTok{lower.tail =} \ConstantTok{FALSE}\NormalTok{)}
+
+\CommentTok{\# Define y{-}axis limits dynamically (prevents cut{-}off issues)}
+\NormalTok{y\_limits }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\FunctionTok{min}\NormalTok{(coordinates\_merged\_data}\SpecialCharTok{$}\NormalTok{area\_diff, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{) }\SpecialCharTok{*} \FloatTok{1.1}\NormalTok{, }
+              \FunctionTok{max}\NormalTok{(coordinates\_merged\_data}\SpecialCharTok{$}\NormalTok{area\_diff, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{) }\SpecialCharTok{*} \FloatTok{1.1}\NormalTok{)}
+
+\CommentTok{\# Create the scatter plot}
+\NormalTok{corr\_plot\_lat }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{(coordinates\_merged\_data, }
+                        \FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Lat, }\AttributeTok{y =}\NormalTok{ area\_diff, }\AttributeTok{color =}\NormalTok{ preference)) }\SpecialCharTok{+}
+  
+  \CommentTok{\# Scatter points}
+  \FunctionTok{geom\_point}\NormalTok{(}\AttributeTok{size =} \DecValTok{1}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.8}\NormalTok{) }\SpecialCharTok{+}
+  
+  \CommentTok{\# Custom color scale}
+  \FunctionTok{scale\_colour\_manual}\NormalTok{(}
+    \AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"orange2"}\NormalTok{, }\StringTok{"\#0072B2"}\NormalTok{),}
+    \AttributeTok{name =} \StringTok{"BX feedback"}\NormalTok{,}
+    \AttributeTok{labels =} \FunctionTok{c}\NormalTok{(}\StringTok{"negative"}\NormalTok{, }\StringTok{"positive"}\NormalTok{)}
+\NormalTok{  ) }\SpecialCharTok{+}
+  
+  \CommentTok{\# Regression line}
+  \FunctionTok{geom\_smooth}\NormalTok{(}\AttributeTok{method =} \StringTok{"lm"}\NormalTok{, }\AttributeTok{se =} \ConstantTok{FALSE}\NormalTok{, }\AttributeTok{linetype =} \StringTok{"solid"}\NormalTok{, }
+              \AttributeTok{color =} \StringTok{"red4"}\NormalTok{, }\AttributeTok{linewidth =} \DecValTok{1}\NormalTok{) }\SpecialCharTok{+}
+  
+  \CommentTok{\# Labels}
+  \FunctionTok{labs}\NormalTok{(}
+    \AttributeTok{title =} \StringTok{"Phenotype vs. Latitude with Regression Line"}\NormalTok{,}
+    \AttributeTok{x =} \StringTok{"Latitude"}\NormalTok{,}
+    \AttributeTok{y =} \StringTok{"Phenotype (Area Diff)"}
+\NormalTok{  ) }\SpecialCharTok{+}
+  
+  \CommentTok{\# Theme modifications for A4 compatibility}
+  \FunctionTok{theme\_classic}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{ylim}\NormalTok{(y\_limits) }\SpecialCharTok{+}
+  \FunctionTok{theme}\NormalTok{(}
+    \AttributeTok{legend.position =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.97}\NormalTok{, }\FloatTok{0.03}\NormalTok{),  }\CommentTok{\# Bottom{-}right inside plot}
+    \AttributeTok{legend.justification =} \FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{, }\DecValTok{0}\NormalTok{),  }
+    \AttributeTok{legend.background =} \FunctionTok{element\_rect}\NormalTok{(}\AttributeTok{fill =} \StringTok{"white"}\NormalTok{, }\AttributeTok{color =} \StringTok{"black"}\NormalTok{),}
+    \AttributeTok{legend.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{6}\NormalTok{),}
+    \AttributeTok{legend.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{5}\NormalTok{),}
+    \AttributeTok{panel.border =} \FunctionTok{element\_rect}\NormalTok{(}\AttributeTok{color =} \StringTok{"black"}\NormalTok{, }\AttributeTok{fill =} \ConstantTok{NA}\NormalTok{, }\AttributeTok{size =} \FloatTok{0.5}\NormalTok{),}
+    \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{8}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
+    \AttributeTok{axis.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+    \AttributeTok{axis.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{6}\NormalTok{)}
+\NormalTok{  ) }\SpecialCharTok{+}
+  
+  \CommentTok{\# Add R² and p{-}value annotation}
+  \FunctionTok{annotate}\NormalTok{(}
+    \StringTok{"text"}\NormalTok{, }\AttributeTok{x =} \FunctionTok{max}\NormalTok{(coordinates\_merged\_data}\SpecialCharTok{$}\NormalTok{Lat, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{), }
+    \AttributeTok{y =} \FunctionTok{min}\NormalTok{(y\_limits) }\SpecialCharTok{+}\NormalTok{ (}\FunctionTok{max}\NormalTok{(y\_limits) }\SpecialCharTok{{-}} \FunctionTok{min}\NormalTok{(y\_limits)) }\SpecialCharTok{*} \FloatTok{0.85}\NormalTok{,  }\CommentTok{\# Position dynamically}
+    \AttributeTok{label =} \FunctionTok{sprintf}\NormalTok{(}\StringTok{"R² = \%.2f}\SpecialCharTok{\textbackslash{}n}\StringTok{p (F) = \%.3g"}\NormalTok{, r\_squared\_lat, p\_value\_lat),}
+    \AttributeTok{hjust =} \DecValTok{1}\NormalTok{, }\AttributeTok{vjust =} \DecValTok{0}\NormalTok{, }\AttributeTok{size =} \DecValTok{3}\NormalTok{, }\AttributeTok{color =} \StringTok{"black"}
+\NormalTok{  )}
+
+\CommentTok{\# Display the plot}
+\FunctionTok{print}\NormalTok{(corr\_plot\_lat)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Compute linear regression model}
+\NormalTok{lm\_long }\OtherTok{\textless{}{-}} \FunctionTok{lm}\NormalTok{(area\_diff }\SpecialCharTok{\textasciitilde{}}\NormalTok{ Long, }\AttributeTok{data =}\NormalTok{ coordinates\_merged\_data, }
+              \AttributeTok{na.action =}\NormalTok{ na.omit)}
+
+\CommentTok{\# Extract R² and p{-}value}
+\NormalTok{r\_squared\_long }\OtherTok{\textless{}{-}} \FunctionTok{summary}\NormalTok{(lm\_long)}\SpecialCharTok{$}\NormalTok{r.squared}
+\NormalTok{p\_value\_long }\OtherTok{\textless{}{-}} \FunctionTok{summary}\NormalTok{(lm\_long)}\SpecialCharTok{$}\NormalTok{fstatistic[}\DecValTok{1}\NormalTok{] }\SpecialCharTok{\%\textgreater{}\%} 
+  \FunctionTok{pf}\NormalTok{(}\AttributeTok{df1 =} \DecValTok{1}\NormalTok{, }\AttributeTok{df2 =}\NormalTok{ lm\_long}\SpecialCharTok{$}\NormalTok{df.residual, }\AttributeTok{lower.tail =} \ConstantTok{FALSE}\NormalTok{)}
+
+\CommentTok{\# Define y{-}axis limits dynamically (prevents cut{-}off issues)}
+\NormalTok{y\_limits }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\FunctionTok{min}\NormalTok{(coordinates\_merged\_data}\SpecialCharTok{$}\NormalTok{area\_diff, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{) }\SpecialCharTok{*} \FloatTok{1.1}\NormalTok{, }
+              \FunctionTok{max}\NormalTok{(coordinates\_merged\_data}\SpecialCharTok{$}\NormalTok{area\_diff, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{) }\SpecialCharTok{*} \FloatTok{1.1}\NormalTok{)}
+
+\CommentTok{\# Create the scatter plot}
+\NormalTok{corr\_plot\_long }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{(coordinates\_merged\_data, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Long, }\AttributeTok{y =}\NormalTok{ area\_diff, }
+                                                      \AttributeTok{color =}\NormalTok{ preference)) }\SpecialCharTok{+}
+  
+  \CommentTok{\# Scatter points}
+  \FunctionTok{geom\_point}\NormalTok{(}\AttributeTok{size =} \DecValTok{1}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.8}\NormalTok{) }\SpecialCharTok{+}
+  
+  \CommentTok{\# Custom color scale}
+  \FunctionTok{scale\_colour\_manual}\NormalTok{(}
+    \AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"orange2"}\NormalTok{, }\StringTok{"\#0072B2"}\NormalTok{),}
+    \AttributeTok{name =} \StringTok{"BX feedback"}\NormalTok{,}
+    \AttributeTok{labels =} \FunctionTok{c}\NormalTok{(}\StringTok{"negative"}\NormalTok{, }\StringTok{"positive"}\NormalTok{)}
+\NormalTok{  ) }\SpecialCharTok{+}
+  
+  \CommentTok{\# Regression line}
+  \FunctionTok{geom\_smooth}\NormalTok{(}\AttributeTok{method =} \StringTok{"lm"}\NormalTok{, }\AttributeTok{se =} \ConstantTok{FALSE}\NormalTok{, }\AttributeTok{linetype =} \StringTok{"solid"}\NormalTok{, }
+              \AttributeTok{color =} \StringTok{"red4"}\NormalTok{, }\AttributeTok{linewidth =} \DecValTok{1}\NormalTok{) }\SpecialCharTok{+}
+  
+  \CommentTok{\# Labels}
+  \FunctionTok{labs}\NormalTok{(}
+    \AttributeTok{title =} \StringTok{"Phenotype vs. Longitude with Regression Line"}\NormalTok{,}
+    \AttributeTok{x =} \StringTok{"Longitude"}\NormalTok{,}
+    \AttributeTok{y =} \StringTok{"Phenotype (Area Diff)"}
+\NormalTok{  ) }\SpecialCharTok{+}
+  
+  \CommentTok{\# Theme modifications for A4 compatibility}
+  \FunctionTok{theme\_classic}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{ylim}\NormalTok{(y\_limits) }\SpecialCharTok{+}
+  \FunctionTok{theme}\NormalTok{(}
+    \AttributeTok{legend.position =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.97}\NormalTok{, }\FloatTok{0.03}\NormalTok{),  }\CommentTok{\# Bottom{-}right inside plot (same as lat plot)}
+    \AttributeTok{legend.justification =} \FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{, }\DecValTok{0}\NormalTok{),  }
+    \AttributeTok{legend.background =} \FunctionTok{element\_rect}\NormalTok{(}\AttributeTok{fill =} \StringTok{"white"}\NormalTok{, }\AttributeTok{color =} \StringTok{"black"}\NormalTok{),}
+    \AttributeTok{legend.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{6}\NormalTok{),}
+    \AttributeTok{legend.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{5}\NormalTok{),}
+    \AttributeTok{panel.border =} \FunctionTok{element\_rect}\NormalTok{(}\AttributeTok{color =} \StringTok{"black"}\NormalTok{, }\AttributeTok{fill =} \ConstantTok{NA}\NormalTok{, }\AttributeTok{size =} \FloatTok{0.5}\NormalTok{),}
+    \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{8}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
+    \AttributeTok{axis.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
+    \AttributeTok{axis.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{6}\NormalTok{)}
+\NormalTok{  ) }\SpecialCharTok{+}
+  
+  \CommentTok{\# Add R² and p{-}value annotation}
+  \FunctionTok{annotate}\NormalTok{(}
+    \StringTok{"text"}\NormalTok{, }\AttributeTok{x =} \FunctionTok{max}\NormalTok{(coordinates\_merged\_data}\SpecialCharTok{$}\NormalTok{Long, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{), }
+    \AttributeTok{y =} \FunctionTok{min}\NormalTok{(y\_limits) }\SpecialCharTok{+}\NormalTok{ (}\FunctionTok{max}\NormalTok{(y\_limits) }\SpecialCharTok{{-}} \FunctionTok{min}\NormalTok{(y\_limits)) }\SpecialCharTok{*} \FloatTok{0.85}\NormalTok{,  }\CommentTok{\# Position dynamically}
+    \AttributeTok{label =} \FunctionTok{sprintf}\NormalTok{(}\StringTok{"R² = \%.2f}\SpecialCharTok{\textbackslash{}n}\StringTok{p (F) = \%.3g"}\NormalTok{, r\_squared\_long, p\_value\_long),}
+    \AttributeTok{hjust =} \DecValTok{1}\NormalTok{, }\AttributeTok{vjust =} \DecValTok{0}\NormalTok{, }\AttributeTok{size =} \DecValTok{3}\NormalTok{, }\AttributeTok{color =} \StringTok{"black"}
+\NormalTok{  )}
+
+\CommentTok{\# Display the plot}
+\FunctionTok{print}\NormalTok{(corr\_plot\_long)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{figure}[H]
+
+{\centering \pandocbounded{\includegraphics[keepaspectratio]{01_Accession_phenotypes_files/figure-pdf/FigS1a-Corr-Plots-1.pdf}}
+
+}
+
+\caption{Correlation of geographic distribution of accessions used in
+the GWASand their growth feedbacks.}
+
+\end{figure}%
+
+\subsection{Plot Accession Locations on a World
+Map}\label{plot-accession-locations-on-a-world-map}
+
+\textbf{Purpos}e: Prepares the world map data and creates a base plot
+for plotting the locations of positive and negative accessions.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Load necessary libraries}
+\FunctionTok{library}\NormalTok{(maps)}
+\CommentTok{\# Purpose: Loads the \textasciigrave{}maps\textasciigrave{} package for map plotting.}
+
+\CommentTok{\# Obtain world map data}
+\NormalTok{world\_map }\OtherTok{\textless{}{-}} \FunctionTok{map\_data}\NormalTok{(}\StringTok{"world"}\NormalTok{)}
+\CommentTok{\# Purpose: Retrieves the data necessary to create a world map.}
+
+\CommentTok{\# Subset the world map data for the region of interest}
+\NormalTok{World\_map\_small }\OtherTok{\textless{}{-}} \FunctionTok{subset}\NormalTok{(world\_map, long }\SpecialCharTok{\textgreater{}} \SpecialCharTok{{-}}\DecValTok{130} \SpecialCharTok{\&}\NormalTok{ long }\SpecialCharTok{\textless{}} \DecValTok{90}\NormalTok{)}
+\NormalTok{World\_map\_small }\OtherTok{\textless{}{-}} \FunctionTok{subset}\NormalTok{(World\_map\_small, lat }\SpecialCharTok{\textgreater{}} \SpecialCharTok{{-}}\DecValTok{0} \SpecialCharTok{\&}\NormalTok{ lat }\SpecialCharTok{\textless{}} \DecValTok{110}\NormalTok{)}
+\CommentTok{\# Purpose: Limits the map data to the specific region of interest by filtering longitude and latitude ranges.}
+
+\CommentTok{\# Create a base plot with ggplot2}
+\NormalTok{p }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{() }\SpecialCharTok{+} \FunctionTok{coord\_fixed}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{xlab}\NormalTok{(}\StringTok{"Longitude"}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{ylab}\NormalTok{(}\StringTok{"Latitude"}\NormalTok{)}
+\CommentTok{\# Purpose: Sets up the basic structure for the map plot with fixed coordinates.}
+
+\CommentTok{\# Add map to base plot}
+\NormalTok{base\_world\_messy }\OtherTok{\textless{}{-}}\NormalTok{ p }\SpecialCharTok{+} \FunctionTok{geom\_polygon}\NormalTok{(}\AttributeTok{data =}\NormalTok{ World\_map\_small, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ long, }
+                                                                 \AttributeTok{y =}\NormalTok{ lat, }
+                                                                 \AttributeTok{group =}\NormalTok{ group), }
+                                     \AttributeTok{colour =} \StringTok{"grey"}\NormalTok{, }\AttributeTok{fill =} \StringTok{"grey"}\NormalTok{)}
+\CommentTok{\# Purpose: Adds the filtered map data to the plot as polygons representing countries.}
+
+\CommentTok{\# Display the messy base world map}
+\CommentTok{\#print(base\_world\_messy)}
+\CommentTok{\# Purpose: Displays the initial, unrefined world map.}
+
+\CommentTok{\# Strip the map down to make it clean and beautiful}
+\NormalTok{cleanup }\OtherTok{\textless{}{-}} \FunctionTok{theme}\NormalTok{(}\AttributeTok{panel.grid.major =} \FunctionTok{element\_blank}\NormalTok{(), }
+                 \AttributeTok{panel.grid.minor =} \FunctionTok{element\_blank}\NormalTok{(), }
+                 \AttributeTok{panel.background =} \FunctionTok{element\_rect}\NormalTok{(}\AttributeTok{fill =} \StringTok{\textquotesingle{}white\textquotesingle{}}\NormalTok{, }
+                                                 \AttributeTok{colour =} \StringTok{\textquotesingle{}white\textquotesingle{}}\NormalTok{), }
+                 \AttributeTok{axis.line =} \FunctionTok{element\_line}\NormalTok{(}\AttributeTok{colour =} \StringTok{"grey50"}\NormalTok{))}
+\CommentTok{\# Purpose: Cleans up the map by removing unnecessary elements and setting a minimalist theme.}
+
+\NormalTok{base\_world }\OtherTok{\textless{}{-}}\NormalTok{ base\_world\_messy }\SpecialCharTok{+}\NormalTok{ cleanup}
+\CommentTok{\# Purpose: Applies the cleaned{-}up theme to the world map.}
+
+\CommentTok{\# Display the clean base world map}
+\CommentTok{\#print(base\_world)}
+\CommentTok{\# Purpose: Displays the refined world map.}
+
+\CommentTok{\# Separate data for layers}
+\NormalTok{df\_layer\_1 }\OtherTok{\textless{}{-}}\NormalTok{ coordinates\_merged\_data[coordinates\_merged\_data}\SpecialCharTok{$}\NormalTok{preference }\SpecialCharTok{==} \StringTok{"plus"}\NormalTok{, ]}
+\NormalTok{df\_layer\_2 }\OtherTok{\textless{}{-}}\NormalTok{ coordinates\_merged\_data[coordinates\_merged\_data}\SpecialCharTok{$}\NormalTok{preference }\SpecialCharTok{==} \StringTok{"minus"}\NormalTok{, ]}
+\CommentTok{\# Purpose: Separates the coordinates data into two layers based on whether the response is positive or negative.}
+\end{Highlighting}
+\end{Shaded}
+
+Plot the map and overlay with the accessions used in the GWAS
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Add simple data points to the map}
+\NormalTok{ACC\_map }\OtherTok{\textless{}{-}}\NormalTok{ base\_world }\SpecialCharTok{+}
+  \FunctionTok{geom\_point}\NormalTok{(}
+    \AttributeTok{data =}\NormalTok{ df\_layer\_2,}
+    \FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Long, }\AttributeTok{y =}\NormalTok{ Lat, }\AttributeTok{fill =} \StringTok{"minus"}\NormalTok{),}
+    \AttributeTok{colour =} \StringTok{"black"}\NormalTok{,}
+    \AttributeTok{pch =} \DecValTok{21}\NormalTok{,}
+    \AttributeTok{size =} \DecValTok{2}\NormalTok{,}
+    \AttributeTok{alpha =} \FloatTok{0.5}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \FunctionTok{geom\_point}\NormalTok{(}
+    \AttributeTok{data =}\NormalTok{ df\_layer\_1,}
+    \FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Long, }\AttributeTok{y =}\NormalTok{ Lat, }\AttributeTok{fill =} \StringTok{"plus"}\NormalTok{),}
+    \AttributeTok{colour =} \StringTok{"black"}\NormalTok{,}
+    \AttributeTok{pch =} \DecValTok{21}\NormalTok{,}
+    \AttributeTok{size =} \DecValTok{2}\NormalTok{,}
+    \AttributeTok{alpha =} \FloatTok{0.5}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \FunctionTok{scale\_fill\_manual}\NormalTok{(}
+    \AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"plus"} \OtherTok{=} \StringTok{"\#0072B2"}\NormalTok{, }\StringTok{"minus"} \OtherTok{=} \StringTok{"orange2"}\NormalTok{),}
+    \AttributeTok{name =} \StringTok{"Growth feedback"}\NormalTok{,}
+    \AttributeTok{labels =} \FunctionTok{c}\NormalTok{(}\StringTok{"negative"}\NormalTok{, }\StringTok{"positive"}\NormalTok{)}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \FunctionTok{theme}\NormalTok{(}
+    \AttributeTok{legend.position =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.01}\NormalTok{, }\FloatTok{0.01}\NormalTok{),  }\CommentTok{\# Bottom{-}left corner}
+    \AttributeTok{legend.justification =} \FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{, }\DecValTok{0}\NormalTok{),  }\CommentTok{\# Align legend to bottom{-}left}
+    \AttributeTok{legend.background =} \FunctionTok{element\_rect}\NormalTok{(}\AttributeTok{fill =} \StringTok{"white"}\NormalTok{, }\AttributeTok{color =} \StringTok{"black"}\NormalTok{),  }\CommentTok{\# Optional: Add legend background}
+    \AttributeTok{legend.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),  }\CommentTok{\# Adjust legend text size}
+    \AttributeTok{legend.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{)  }\CommentTok{\# Adjust legend title}
+\NormalTok{  )}
+
+\CommentTok{\# Display the map with data points}
+\FunctionTok{print}\NormalTok{(ACC\_map)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{figure}[H]
+
+{\centering \pandocbounded{\includegraphics[keepaspectratio]{01_Accession_phenotypes_files/figure-pdf/Fig1d-ACC-Geographic-1.pdf}}
+
+}
+
+\caption{Geographic distribution of accessions used in the GWAS.}
+
+\end{figure}%
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Purpose: Displays the world map with the positive and negative accession data points.}
+
+\CommentTok{\# Save the plot as a PDF}
+\FunctionTok{ggsave}\NormalTok{(}\StringTok{"ACC\_response\_map\_white.pdf"}\NormalTok{, }\AttributeTok{plot =}\NormalTok{ ACC\_map, }\AttributeTok{height =} \DecValTok{15}\NormalTok{, }\AttributeTok{width =} \DecValTok{20}\NormalTok{, }\AttributeTok{units =} \StringTok{"cm"}\NormalTok{, }\AttributeTok{path =} \StringTok{"Output/Figures/"}\NormalTok{)}
+\CommentTok{\# Purpose: Saves the map with data points as a PDF file.}
+\end{Highlighting}
+\end{Shaded}
+
+\section{Session information}\label{session-information}
+
+\textbf{Purpose}: Print the session information, including details about
+the R version, loaded packages, and the system environment. This is
+useful for reproducibility, as it documents the computational
+environment in which the analysis was performed.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Get session information}
+\NormalTok{SI }\OtherTok{\textless{}{-}} \FunctionTok{sessionInfo}\NormalTok{()}
+
+\CommentTok{\# Extract the attached packages and their versions}
+\NormalTok{attached\_packages }\OtherTok{\textless{}{-}}\NormalTok{ SI}\SpecialCharTok{$}\NormalTok{otherPkgs}
+
+\CommentTok{\# Print the R version}
+\FunctionTok{cat}\NormalTok{(}\StringTok{"R version:"}\NormalTok{, SI}\SpecialCharTok{$}\NormalTok{R.version}\SpecialCharTok{$}\NormalTok{version.string, }\StringTok{"}\SpecialCharTok{\textbackslash{}n\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+R version: R version 4.4.2 (2024-10-31) 
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Print the attached packages and their versions}
+\FunctionTok{cat}\NormalTok{(}\StringTok{"Attached packages:}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+Attached packages:
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{invisible}\NormalTok{(}\FunctionTok{lapply}\NormalTok{(attached\_packages, }\ControlFlowTok{function}\NormalTok{(pkg) \{}
+  \FunctionTok{cat}\NormalTok{(pkg}\SpecialCharTok{$}\NormalTok{Package, }\StringTok{"{-}"}\NormalTok{, pkg}\SpecialCharTok{$}\NormalTok{Version, }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\NormalTok{\}))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+maps - 3.4.2.1 
+dtw - 1.23-1 
+proxy - 0.4-27 
+fstcore - 0.9.18 
+readxl - 1.4.3 
+openxlsx - 4.2.7.1 
+circlize - 0.4.16 
+ComplexHeatmap - 2.22.0 
+ggdendro - 0.2.0 
+knitr - 1.49 
+cowplot - 1.1.3 
+MESS - 0.5.12 
+ggpubr - 0.6.0 
+DescTools - 0.99.58 
+magrittr - 2.0.3 
+gwaR - 0.6 
+lubridate - 1.9.4 
+forcats - 1.0.0 
+stringr - 1.5.1 
+dplyr - 1.1.4 
+purrr - 1.0.2 
+readr - 2.1.5 
+tidyr - 1.3.1 
+tibble - 3.2.1 
+ggplot2 - 3.5.1 
+tidyverse - 2.0.0 
+\end{verbatim}
+
+
+
+
+\end{document}
