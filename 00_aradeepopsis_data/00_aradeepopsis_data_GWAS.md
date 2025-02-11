@@ -239,11 +239,11 @@ pr_area_specific_snps  %>%
 
 ![](00_aradeepopsis_data_GWAS_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
 
-More stringent mac filtering:
+More stringent n and mac filtering:
 
 ``` r
 pr_area_specific_snps  %>% 
-  filter(n > 5) %>% 
+  filter(n > 10) %>% 
   filter(log10_p > 6) %>% 
   filter(mac > 10) %>% 
   ggplot(aes(x = pos, y = dag)) +
