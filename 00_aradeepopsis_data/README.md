@@ -41,16 +41,27 @@ bx_soil_areas <- read_csv("Inputs/aradeepopsis.plant_region_area.metadata.csv.gz
 The table contains the `plant_region_area` column from `aradeepopsis`,
 and several columns that are metadata.
 
-Metadata columns are: - `Date`, `year`, `month`, `day`, `hour`,
-`minute`: Image timestamp - `removed`: logical column whether the
-individual images was still in the chamber; used to remove images where
-the pot was removed (plant flowered) - `Date_day`: Days since the start
-of the experiment - `germination_date`: date where green pixels were
-identified for the first time since the start of the experiment, used to
-compute dag - `dag`: days since germination, difference between `Date`
-and `germination_date` - `genotype`: Name of the accession -
-`genotype_id`: numeric ID of the accession (compare 1001genomes.org) -
-`bx`: column indicating the soil bx status.
+Metadata columns are:
+
+- `Date`, `year`, `month`, `day`, `hour`, `minute`: Image timestamp
+
+- `removed`: logical column whether the individual images was still in
+  the chamber; used to remove images where the pot was removed (plant
+  flowered)
+
+- `Date_day`: Days since the start of the experiment
+
+- `germination_date`: date where green pixels were identified for the
+  first time since the start of the experiment, used to compute dag
+
+- `dag`: days since germination, difference between `Date` and
+  `germination_date`
+
+- `genotype`: Name of the accession
+
+- `genotype_id`: numeric ID of the accession (compare 1001genomes.org)
+
+- `bx`: column indicating the soil bx status.
 
 # GWAS
 
