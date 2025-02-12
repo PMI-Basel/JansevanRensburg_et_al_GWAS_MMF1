@@ -11,7 +11,7 @@ The plant_region_area output from
 has been joined to a table containing image metadata and saved to
 `aradeepopsis.plant_region_area.metadata.csv.gz`.
 [`aradeepopsis`](https://github.com/Gregor-Mendel-Institute/aradeepopsis)
-was run in `multitrait` mode.
+was run in `multiscale` mode.
 
 Metadata can be found in `metadata_2018.csv` and `metadata_2020.csv`,
 joining was done based on `Snapshot_ID_Tag` (2018 metadata) or
