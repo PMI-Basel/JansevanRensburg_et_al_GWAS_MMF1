@@ -45,7 +45,7 @@ Metadata columns are:
 
 - `Date`, `year`, `month`, `day`, `hour`, `minute`: Image timestamp
 
-- `removed`: logical column whether the individual images was still in
+- `removed`: logical column whether the individual imaged was still in
   the chamber, used to remove images where the pot was removed (plant
   flowered). This variable is based on detecting a drop in plant size
   that occurred after 10dag. The ratio of plant size relative to plant
