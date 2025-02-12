@@ -16,7 +16,7 @@ was run in `multitrait` mode.
 Metadata can be found in `metadata_2018.csv` and `metadata_2020.csv`,
 joining was done based on `Snapshot_ID_Tag` (2018 metadata) or
 `plant_id`(2020 metadata), extracted from the image filename. Images are
-available at <PLACEHOLDER>.
+available at `<PLACEHOLDER>`.
 
 # Analysis
 
@@ -46,8 +46,14 @@ Metadata columns are:
 - `Date`, `year`, `month`, `day`, `hour`, `minute`: Image timestamp
 
 - `removed`: logical column whether the individual images was still in
-  the chamber; used to remove images where the pot was removed (plant
-  flowered)
+  the chamber, used to remove images where the pot was removed (plant
+  flowered). This variable is based on detecting a drop in plant size
+  that occurred after 10dag. The ratio of plant size relative to plant
+  size at the previous time-point was calculated for each individual and
+  time-point. We considered spontaneous shrinkage of plants by 75%
+  unlikely. If the ratio was less that 0.25, and dag was greater than
+  10, the individual was therefore assumed to have been removed and this
+  and all subsequent observations were flagged as `removed = TRUE`.
 
 - `Date_day`: Days since the start of the experiment
 
