@@ -15,8 +15,8 @@ was run in `multitrait` mode.
 
 Metadata can be found in `metadata_2018.csv` and `metadata_2020.csv`,
 joining was done based on `Snapshot_ID_Tag` (2018 metadata) or
-`plant_id`(2020 metadata), extracted from the image filename. Images are
-available at `<PLACEHOLDER>`.
+`plant_id`(2020 metadata), extracted from the image filename. Original
+images (250GB archive) are available from Niklas Schandry upon request.
 
 # Analysis
 
