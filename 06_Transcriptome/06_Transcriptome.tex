@@ -194,7 +194,7 @@
 
 \title{06\_Transcriptome}
 \author{Henry Janse van Rensburg}
-\date{2025-02-03}
+\date{2025-06-27}
 
 \begin{document}
 \maketitle
@@ -245,49 +245,6 @@ influence on gene expression. \#\#\# Conclusions
 
 \section{Setup}\label{setup}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\DocumentationTok{\#\#clear the object from memory}
-\FunctionTok{rm}\NormalTok{(}\AttributeTok{list=}\FunctionTok{ls}\NormalTok{())}
-
-\NormalTok{knitr}\SpecialCharTok{::}\NormalTok{opts\_chunk}\SpecialCharTok{$}\FunctionTok{set}\NormalTok{(}\AttributeTok{echo =} \ConstantTok{TRUE}\NormalTok{, }\AttributeTok{warning =} \ConstantTok{FALSE}\NormalTok{)}
-
-\CommentTok{\#load libraries}
-\FunctionTok{library}\NormalTok{(DESeq2)}
-\FunctionTok{library}\NormalTok{(ggplot2)}
-\FunctionTok{library}\NormalTok{(apeglm)}
-\FunctionTok{library}\NormalTok{(ggplot2)}
-\FunctionTok{library}\NormalTok{(scales) }
-\FunctionTok{library}\NormalTok{(viridis)}
-\FunctionTok{library}\NormalTok{(vsn)}
-\FunctionTok{library}\NormalTok{(RColorBrewer)}
-\FunctionTok{library}\NormalTok{(hexbin)}
-\FunctionTok{library}\NormalTok{(dplyr)}
-\FunctionTok{library}\NormalTok{(ggrepel)}
-\FunctionTok{library}\NormalTok{(ComplexHeatmap)}
-\FunctionTok{library}\NormalTok{(glmpca)}
-\FunctionTok{library}\NormalTok{(tibble)}
-\FunctionTok{library}\NormalTok{(PoiClaClu)}
-\FunctionTok{library}\NormalTok{(gridExtra)}
-\FunctionTok{library}\NormalTok{(ggVennDiagram)}
-\FunctionTok{library}\NormalTok{(tidyverse)}
-\FunctionTok{library}\NormalTok{(magrittr)}
-\FunctionTok{library}\NormalTok{(Cairo)}
-\FunctionTok{library}\NormalTok{(ggnewscale)}
-
-\NormalTok{knitr}\SpecialCharTok{::}\NormalTok{opts\_chunk}\SpecialCharTok{$}\FunctionTok{set}\NormalTok{(}\AttributeTok{echo =} \ConstantTok{TRUE}\NormalTok{)}
-\FunctionTok{library}\NormalTok{(knitr)}
-
-\CommentTok{\#setwd}
-\DocumentationTok{\#\# set source to file location}
-\FunctionTok{library}\NormalTok{(rstudioapi)}
-
-
-\CommentTok{\#set seed}
-\FunctionTok{set.seed}\NormalTok{(}\DecValTok{100}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
 \section{Sample exploring}\label{sample-exploring}
 
 \textbf{Method:} We import the (not normalized) gene count table, the
@@ -298,62 +255,6 @@ visualize the samples in a heatmap and a principle component analysis.
 
 \subsection{Reading Data}\label{reading-data}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Load required package}
-\FunctionTok{library}\NormalTok{(openxlsx)}
-
-\CommentTok{\# Read the count data from the "Counts\_Table" sheet}
-\NormalTok{cts }\OtherTok{\textless{}{-}} \FunctionTok{read.xlsx}\NormalTok{(}\StringTok{"Input/Dataset6.xlsx"}\NormalTok{, }\AttributeTok{sheet =} \StringTok{"Counts\_Table"}\NormalTok{, }\AttributeTok{rowNames =} \ConstantTok{TRUE}\NormalTok{)}
-
-\CommentTok{\# Read the metadata from the "Meta\_Data" sheet}
-\NormalTok{meta }\OtherTok{\textless{}{-}} \FunctionTok{read.xlsx}\NormalTok{(}\StringTok{"Input/Dataset6.xlsx"}\NormalTok{, }\AttributeTok{sheet =} \StringTok{"Meta\_Data"}\NormalTok{, }\AttributeTok{rowNames =} \ConstantTok{TRUE}\NormalTok{)}
-
-\CommentTok{\# Display as tables }
-\FunctionTok{kable}\NormalTok{(cts[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{, }\DecValTok{1}\SpecialCharTok{:}\DecValTok{5}\NormalTok{], }\AttributeTok{caption =} \StringTok{"Counts Table"}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{longtable}[]{@{}lrrrrr@{}}
-\caption{Counts Table}\tabularnewline
-\toprule\noalign{}
-& mmf1m1 & mmf1m2 & mmf1m3 & mmf1m4 & mmf1m5 \\
-\midrule\noalign{}
-\endfirsthead
-\toprule\noalign{}
-& mmf1m1 & mmf1m2 & mmf1m3 & mmf1m4 & mmf1m5 \\
-\midrule\noalign{}
-\endhead
-\bottomrule\noalign{}
-\endlastfoot
-AT1G01010 & 1779 & 1981 & 1792 & 1795 & 1725 \\
-AT1G01020 & 508 & 610 & 444 & 473 & 423 \\
-AT1G03987 & 0 & 0 & 0 & 0 & 0 \\
-\end{longtable}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\FunctionTok{kable}\NormalTok{(meta[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{, ], }\AttributeTok{caption =} \StringTok{"Meta Data Table"}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{longtable}[]{@{}lll@{}}
-\caption{Meta Data Table}\tabularnewline
-\toprule\noalign{}
-& genotype & conditioning \\
-\midrule\noalign{}
-\endfirsthead
-\toprule\noalign{}
-& genotype & conditioning \\
-\midrule\noalign{}
-\endhead
-\bottomrule\noalign{}
-\endlastfoot
-mmf1m1 & mmf1 & minus \\
-mmf1m2 & mmf1 & minus \\
-mmf1m3 & mmf1 & minus \\
-\end{longtable}
-
 \begin{itemize}
 \tightlist
 \item
@@ -363,20 +264,6 @@ mmf1m3 & mmf1 & minus \\
 \end{itemize}
 
 \subsection{Preparing Metadata}\label{preparing-metadata}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Convert the \textquotesingle{}genotype\textquotesingle{} column in the metadata to a factor, specifying the order of levels.}
-\NormalTok{meta}\SpecialCharTok{$}\NormalTok{genotype }\OtherTok{\textless{}{-}} \FunctionTok{factor}\NormalTok{(meta}\SpecialCharTok{$}\NormalTok{genotype, }\AttributeTok{levels=}\FunctionTok{c}\NormalTok{(}\StringTok{"WT"}\NormalTok{,}\StringTok{"mmf1"}\NormalTok{))}
-
-\CommentTok{\# Convert the \textquotesingle{}conditioning\textquotesingle{} column in the metadata to a factor, specifying the order of levels.}
-\NormalTok{meta}\SpecialCharTok{$}\NormalTok{conditioning }\OtherTok{\textless{}{-}} \FunctionTok{factor}\NormalTok{(meta}\SpecialCharTok{$}\NormalTok{conditioning, }\AttributeTok{levels=}\FunctionTok{c}\NormalTok{(}\StringTok{"minus"}\NormalTok{, }\StringTok{"plus"}\NormalTok{))}
-
-\CommentTok{\# Define colors for the \textquotesingle{}conditioning\textquotesingle{} factor, which will be used in plots.}
-\NormalTok{cols\_condition }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{"gold2"}\NormalTok{, }\StringTok{"seagreen"}\NormalTok{)}
-\FunctionTok{names}\NormalTok{(cols\_condition) }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{"plus"}\NormalTok{, }\StringTok{"minus"}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{itemize}
 \tightlist
@@ -390,23 +277,7 @@ mmf1m3 & mmf1 & minus \\
 \subsection{Sequencing Depth
 Visualization}\label{sequencing-depth-visualization}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Calculate the total number of reads (sequencing depth) for each sample by summing the counts across all genes.}
-\NormalTok{meta}\SpecialCharTok{$}\NormalTok{n\_reads }\OtherTok{\textless{}{-}} \FunctionTok{colSums}\NormalTok{(cts)}
-
-\CommentTok{\# Create a boxplot of sequencing depth by genotype, with points colored by conditioning.}
-\NormalTok{meta }\SpecialCharTok{|\textgreater{}}
-  \FunctionTok{ggplot}\NormalTok{(}\FunctionTok{aes}\NormalTok{(genotype, n\_reads)) }\SpecialCharTok{+}
-    \FunctionTok{geom\_boxplot}\NormalTok{(}\AttributeTok{fill=}\StringTok{"grey90"}\NormalTok{, }\AttributeTok{outlier.shape =} \ConstantTok{NA}\NormalTok{, }\AttributeTok{alpha=}\FloatTok{0.5}\NormalTok{) }\SpecialCharTok{+}
-    \FunctionTok{geom\_jitter}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{fill=}\NormalTok{conditioning), }\AttributeTok{size=}\DecValTok{3}\NormalTok{, }\AttributeTok{width =} \FloatTok{0.2}\NormalTok{, }\AttributeTok{pch=}\DecValTok{21}\NormalTok{) }\SpecialCharTok{+}
-    \FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+}
-    \FunctionTok{labs}\NormalTok{(}\AttributeTok{x=}\StringTok{"Genotype"}\NormalTok{, }\AttributeTok{y=}\StringTok{"Number of reads"}\NormalTok{) }\SpecialCharTok{+}
-    \FunctionTok{scale\_fill\_manual}\NormalTok{(}\AttributeTok{values=}\NormalTok{cols\_condition)}
-\end{Highlighting}
-\end{Shaded}
-
-\pandocbounded{\includegraphics[keepaspectratio]{06_Transcriptome_files/figure-pdf/unnamed-chunk-4-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{06_Transcriptome_files/figure-pdf/Read count-1.pdf}}
 
 \begin{itemize}
 \tightlist
@@ -420,80 +291,6 @@ Visualization}\label{sequencing-depth-visualization}
 \subsection{Creating DESeq2 Object and Running Differential Expression
 Analysis}\label{creating-deseq2-object-and-running-differential-expression-analysis}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Create a DESeq2 object using the count data and metadata, specifying a design formula that includes genotype and conditioning.}
-\NormalTok{dds }\OtherTok{\textless{}{-}} \FunctionTok{DESeqDataSetFromMatrix}\NormalTok{(}\AttributeTok{countData =}\NormalTok{ cts,}
-                              \AttributeTok{colData =}\NormalTok{ meta,}
-                              \AttributeTok{design =} \SpecialCharTok{\textasciitilde{}}\NormalTok{ conditioning }\SpecialCharTok{+}\NormalTok{ genotype }\SpecialCharTok{+}\NormalTok{ conditioning}\SpecialCharTok{:}\NormalTok{genotype)}
-
-\CommentTok{\# Filter out genes with very low counts across all samples, as they are unlikely to be informative.}
-\NormalTok{keep }\OtherTok{\textless{}{-}} \FunctionTok{rowSums}\NormalTok{(}\FunctionTok{counts}\NormalTok{(dds)) }\SpecialCharTok{\textgreater{}=} \DecValTok{10}
-\NormalTok{dds }\OtherTok{\textless{}{-}}\NormalTok{ dds[keep,]}
-
-\CommentTok{\# Relevel the genotype factor in the DESeq2 object to set WT as the reference level for comparisons.}
-\NormalTok{dds}\SpecialCharTok{$}\NormalTok{condition }\OtherTok{\textless{}{-}} \FunctionTok{relevel}\NormalTok{(dds}\SpecialCharTok{$}\NormalTok{genotype, }\AttributeTok{ref =} \StringTok{"WT"}\NormalTok{)}
-
-\CommentTok{\# Run the differential expression analysis, which includes normalization and model fitting.}
-\NormalTok{dds }\OtherTok{\textless{}{-}} \FunctionTok{DESeq}\NormalTok{(dds)}
-\NormalTok{res }\OtherTok{\textless{}{-}} \FunctionTok{results}\NormalTok{(dds)}
-\FunctionTok{kable}\NormalTok{(res[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{, ], }\AttributeTok{caption =} \StringTok{"Differential expression."}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1316}}
-  >{\raggedleft\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1316}}
-  >{\raggedleft\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1974}}
-  >{\raggedleft\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1316}}
-  >{\raggedleft\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1447}}
-  >{\raggedleft\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1316}}
-  >{\raggedleft\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1316}}@{}}
-\caption{Differential expression.}\tabularnewline
-\toprule\noalign{}
-\begin{minipage}[b]{\linewidth}\raggedright
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
-baseMean
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
-log2FoldChange
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
-lfcSE
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
-stat
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
-pvalue
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
-padj
-\end{minipage} \\
-\midrule\noalign{}
-\endfirsthead
-\toprule\noalign{}
-\begin{minipage}[b]{\linewidth}\raggedright
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
-baseMean
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
-log2FoldChange
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
-lfcSE
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
-stat
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
-pvalue
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
-padj
-\end{minipage} \\
-\midrule\noalign{}
-\endhead
-\bottomrule\noalign{}
-\endlastfoot
-AT1G01010 & 1792.0811 & -0.1719165 & 0.0919871 & -1.8689193 & 0.0616340
-& 0.3972075 \\
-AT1G01020 & 509.4902 & 0.0947482 & 0.1600795 & 0.5918823 & 0.5539294 &
-0.8350835 \\
-AT1G01030 & 126.3681 & 0.1307144 & 0.2205640 & 0.5926370 & 0.5534241 &
-0.8350835 \\
-\end{longtable}
-
 \begin{itemize}
 \tightlist
 \item
@@ -504,14 +301,6 @@ AT1G01030 & 126.3681 & 0.1307144 & 0.2205640 & 0.5926370 & 0.5534241 &
 \end{itemize}
 
 \subsection{Log Fold Change Shrinkage}\label{log-fold-change-shrinkage}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Apply log fold change shrinkage to the results using the \textquotesingle{}apeglm\textquotesingle{} method, which helps stabilize estimates for low{-}count genes.}
-\NormalTok{resLFC }\OtherTok{\textless{}{-}} \FunctionTok{lfcShrink}\NormalTok{(dds, }\AttributeTok{coef =}\StringTok{"genotype\_mmf1\_vs\_WT"}\NormalTok{ , }\AttributeTok{type=}\StringTok{"apeglm"}\NormalTok{)}
-\FunctionTok{kable}\NormalTok{(resLFC[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{, ], }\AttributeTok{caption =} \StringTok{"Shrunken log fold changes."}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{longtable}[]{@{}lrrrrr@{}}
 \caption{Shrunken log fold changes.}\tabularnewline
@@ -541,36 +330,6 @@ AT1G01030 & 126.3681 & -0.0264731 & 0.0696804 & 0.3468553 & 0.6820738 \\
 \subsection{Variance Stabilizing Transformation (VST) and Heatmap
 Preparation}\label{variance-stabilizing-transformation-vst-and-heatmap-preparation}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Apply variance stabilizing transformation (VST) to the count data. This transformation makes the variance independent of the mean.}
-\NormalTok{vsd }\OtherTok{\textless{}{-}} \FunctionTok{vst}\NormalTok{(dds, }\AttributeTok{blind=}\ConstantTok{FALSE}\NormalTok{)}
-\NormalTok{rld }\OtherTok{\textless{}{-}} \FunctionTok{rlog}\NormalTok{(dds, }\AttributeTok{blind=}\ConstantTok{FALSE}\NormalTok{)}
-
-\CommentTok{\# Select the top 20 most highly expressed genes based on the mean of normalized counts.}
-\NormalTok{select }\OtherTok{\textless{}{-}} \FunctionTok{order}\NormalTok{(}\FunctionTok{rowMeans}\NormalTok{(}\FunctionTok{counts}\NormalTok{(dds, }\AttributeTok{normalized=}\ConstantTok{TRUE}\NormalTok{)), }\AttributeTok{decreasing=}\ConstantTok{TRUE}\NormalTok{)[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{20}\NormalTok{]}
-\NormalTok{df }\OtherTok{\textless{}{-}} \FunctionTok{as.data.frame}\NormalTok{(}\FunctionTok{colData}\NormalTok{(dds)[,}\FunctionTok{c}\NormalTok{(}\StringTok{"conditioning"}\NormalTok{, }\StringTok{"genotype"}\NormalTok{)])}
-\FunctionTok{kable}\NormalTok{(df[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{, ], }\AttributeTok{caption =} \StringTok{"Sample metadata."}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{longtable}[]{@{}lll@{}}
-\caption{Sample metadata.}\tabularnewline
-\toprule\noalign{}
-& conditioning & genotype \\
-\midrule\noalign{}
-\endfirsthead
-\toprule\noalign{}
-& conditioning & genotype \\
-\midrule\noalign{}
-\endhead
-\bottomrule\noalign{}
-\endlastfoot
-mmf1m1 & minus & mmf1 \\
-mmf1m2 & minus & mmf1 \\
-mmf1m3 & minus & mmf1 \\
-\end{longtable}
-
 \begin{itemize}
 \tightlist
 \item
@@ -580,8 +339,6 @@ mmf1m3 & minus & mmf1 \\
 \end{itemize}
 
 \subsection{Sample Clustering Heatmap}\label{sample-clustering-heatmap}
-
-\pandocbounded{\includegraphics[keepaspectratio]{06_Transcriptome_files/figure-pdf/unnamed-chunk-8-1.pdf}}
 
 \begin{itemize}
 \tightlist
@@ -594,24 +351,6 @@ mmf1m3 & minus & mmf1 \\
 
 \subsection{Principal Component Analysis
 (PCA)**}\label{principal-component-analysis-pca}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Perform variance stabilizing transformation (VST) on the DESeq2 object to prepare data for PCA.}
-\NormalTok{vsdata }\OtherTok{\textless{}{-}} \FunctionTok{vst}\NormalTok{(dds, }\AttributeTok{blind=}\ConstantTok{FALSE}\NormalTok{)}
-
-\CommentTok{\# Generate PCA plot data with variance explained by PC1 and PC2.}
-\NormalTok{vsPCA }\OtherTok{\textless{}{-}} \FunctionTok{plotPCA}\NormalTok{(vsdata, }\AttributeTok{returnData=}\NormalTok{T)}
-\NormalTok{variance\_x }\OtherTok{\textless{}{-}}\NormalTok{ vsPCA}\SpecialCharTok{$}\NormalTok{labels}\SpecialCharTok{$}\NormalTok{x}
-\NormalTok{variance\_y }\OtherTok{\textless{}{-}}\NormalTok{ vsPCA}\SpecialCharTok{$}\NormalTok{labels}\SpecialCharTok{$}\NormalTok{y}
-
-\CommentTok{\# Rename columns for better readability and create a new column to differentiate conditions based on sample names.}
-\NormalTok{vsPCA }\OtherTok{\textless{}{-}}\NormalTok{ vsPCA }\SpecialCharTok{\%\textgreater{}\%} 
-  \FunctionTok{rename}\NormalTok{(}\AttributeTok{genotype =}\NormalTok{ condition) }\SpecialCharTok{\%\textgreater{}\%} 
-  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{conditioning =} \FunctionTok{ifelse}\NormalTok{(}\FunctionTok{grepl}\NormalTok{(}\StringTok{"m[0{-}9]"}\NormalTok{, name), }\StringTok{"minus"}\NormalTok{, }\StringTok{"plus"}\NormalTok{))}
-\FunctionTok{kable}\NormalTok{(vsPCA[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{, ], }\AttributeTok{caption =} \StringTok{"PCA data."}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{longtable}[]{@{}lrrllll@{}}
 \caption{PCA data.}\tabularnewline
@@ -630,77 +369,10 @@ mmf1m2 & -9.221483 & 4.011595 & mmf1 & mmf1 & mmf1m2 & minus \\
 mmf1m3 & 0.184031 & 4.420461 & mmf1 & mmf1 & mmf1m3 & minus \\
 \end{longtable}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Create a PCA plot with ellipses representing the 95\% confidence region for each conditioning level.}
-
-\NormalTok{PCA\_plot }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{(vsPCA, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ PC1, }\AttributeTok{y =}\NormalTok{ PC2)) }\SpecialCharTok{+}
-  \CommentTok{\# Add ellipses with consistent styles}
-  \FunctionTok{stat\_ellipse}\NormalTok{(}
-    \AttributeTok{geom =} \StringTok{"polygon"}\NormalTok{, }\AttributeTok{type =} \StringTok{"t"}\NormalTok{, }\AttributeTok{level =} \FloatTok{0.95}\NormalTok{, }\AttributeTok{size =} \FloatTok{0.4}\NormalTok{, }
-    \FunctionTok{aes}\NormalTok{(}\AttributeTok{group =}\NormalTok{ conditioning, }\AttributeTok{color =}\NormalTok{ conditioning, }\AttributeTok{fill =}\NormalTok{ conditioning), }
-    \AttributeTok{alpha =} \FloatTok{0.01}  \CommentTok{\# Low transparency for fill}
-\NormalTok{  ) }\SpecialCharTok{+}
-  \CommentTok{\# Set custom colors for fill and border of ellipses}
-  \FunctionTok{scale\_color\_manual}\NormalTok{(}\AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"seagreen"}\NormalTok{, }\StringTok{"gold2"}\NormalTok{)) }\SpecialCharTok{+} 
-  \FunctionTok{scale\_fill\_manual}\NormalTok{(}\AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"seagreen"}\NormalTok{, }\StringTok{"gold2"}\NormalTok{)) }\SpecialCharTok{+}
-  \FunctionTok{new\_scale\_color}\NormalTok{() }\SpecialCharTok{+}
-  
-  \CommentTok{\# Add points with shape and color distinction}
-  \FunctionTok{geom\_point}\NormalTok{(}
-    \AttributeTok{size =} \FloatTok{1.5}\NormalTok{, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{shape =} \FunctionTok{factor}\NormalTok{(genotype), }\AttributeTok{color =} \FunctionTok{factor}\NormalTok{(conditioning))}
-\NormalTok{  ) }\SpecialCharTok{+}
-  \FunctionTok{scale\_shape\_manual}\NormalTok{(}\AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\DecValTok{16}\NormalTok{, }\DecValTok{2}\NormalTok{)) }\SpecialCharTok{+}  \CommentTok{\# Define shapes (e.g., closed circle, open triangle)}
-  \FunctionTok{scale\_color\_manual}\NormalTok{(}\AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"seagreen"}\NormalTok{, }\StringTok{"gold2"}\NormalTok{)) }\SpecialCharTok{+} 
-  
-  \CommentTok{\# Add labels and subtitles}
-  \FunctionTok{labs}\NormalTok{(}
-    \AttributeTok{x =} \FunctionTok{paste0}\NormalTok{(}\StringTok{"PC1 ("}\NormalTok{, variance\_x, }\StringTok{"\%)"}\NormalTok{), }
-    \AttributeTok{y =} \FunctionTok{paste0}\NormalTok{(}\StringTok{"PC2 ("}\NormalTok{, variance\_y, }\StringTok{"\%)"}\NormalTok{), }
-    \AttributeTok{subtitle =} \StringTok{"PCA of transcriptome"}\NormalTok{, }
-    \AttributeTok{color =} \StringTok{"Microbiome"}\NormalTok{, }\AttributeTok{fill =} \StringTok{"Microbiome"}\NormalTok{, }\AttributeTok{shape =} \StringTok{"Line"}
-\NormalTok{  ) }\SpecialCharTok{+}
-  
-  \CommentTok{\# Apply a clean theme with consistent font size}
-  \FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+}
-  \FunctionTok{theme}\NormalTok{(}
-    \AttributeTok{text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),                }\CommentTok{\# Uniform text size}
-    \AttributeTok{axis.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),          }\CommentTok{\# Axis titles}
-    \AttributeTok{axis.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),           }\CommentTok{\# Axis text}
-    \AttributeTok{legend.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),        }\CommentTok{\# Legend titles}
-    \AttributeTok{legend.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),         }\CommentTok{\# Legend text}
-    \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),          }\CommentTok{\# Plot title}
-    \AttributeTok{plot.subtitle =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{)        }\CommentTok{\# Subtitle}
-\NormalTok{  ) }\SpecialCharTok{+}
-  
-  \CommentTok{\# Adjust legend for better visibility}
-  \FunctionTok{guides}\NormalTok{(}
-    \AttributeTok{fill =} \FunctionTok{guide\_legend}\NormalTok{(}\AttributeTok{override.aes =} \FunctionTok{list}\NormalTok{(}\AttributeTok{shape =} \DecValTok{21}\NormalTok{))  }\CommentTok{\# Use shape override for clarity}
-\NormalTok{  )}
-
-\CommentTok{\# Save the updated plot object}
-\NormalTok{PCA\_plot}
-\end{Highlighting}
-\end{Shaded}
-
-\pandocbounded{\includegraphics[keepaspectratio]{06_Transcriptome_files/figure-pdf/unnamed-chunk-9-1.pdf}}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\FunctionTok{ggsave}\NormalTok{(}\StringTok{"PCA\_plot\_transcriptome.pdf"}\NormalTok{, }\AttributeTok{plot =}\NormalTok{ PCA\_plot, }\AttributeTok{width =} \FloatTok{10.5}\NormalTok{, }\AttributeTok{height =} \DecValTok{8}\NormalTok{, }\AttributeTok{units =} \StringTok{"cm"}\NormalTok{, }\AttributeTok{dpi =} \DecValTok{600}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
+\pandocbounded{\includegraphics[keepaspectratio]{06_Transcriptome_files/figure-pdf/PCA transcriptome-1.pdf}}
 
 \subsection{PERMANOVA Analysis of Lines within Conditioning
 Levels}\label{permanova-analysis-of-lines-within-conditioning-levels}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Ensure factors are correctly set for analysis}
-\NormalTok{vsPCA}\SpecialCharTok{$}\NormalTok{genotype }\OtherTok{\textless{}{-}} \FunctionTok{factor}\NormalTok{(vsPCA}\SpecialCharTok{$}\NormalTok{genotype)}
-\NormalTok{vsPCA}\SpecialCharTok{$}\NormalTok{conditioning }\OtherTok{\textless{}{-}} \FunctionTok{factor}\NormalTok{(vsPCA}\SpecialCharTok{$}\NormalTok{conditioning)}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{itemize}
 \tightlist
@@ -711,14 +383,6 @@ Levels}\label{permanova-analysis-of-lines-within-conditioning-levels}
   variables as categorical.
 \end{itemize}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Split data by conditioning levels}
-\NormalTok{conditioning\_levels }\OtherTok{\textless{}{-}} \FunctionTok{levels}\NormalTok{(vsPCA}\SpecialCharTok{$}\NormalTok{conditioning)}
-\NormalTok{results }\OtherTok{\textless{}{-}} \FunctionTok{list}\NormalTok{()}
-\end{Highlighting}
-\end{Shaded}
-
 \begin{itemize}
 \tightlist
 \item
@@ -726,26 +390,6 @@ Levels}\label{permanova-analysis-of-lines-within-conditioning-levels}
   \texttt{conditioning} and initialize an empty list \texttt{results} to
   store the PERMANOVA results for each conditioning level.
 \end{itemize}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\FunctionTok{library}\NormalTok{(vegan)}
-\ControlFlowTok{for}\NormalTok{ (cond }\ControlFlowTok{in}\NormalTok{ conditioning\_levels) \{}
-  \CommentTok{\# Subset data for the current conditioning level}
-\NormalTok{  subset\_data }\OtherTok{\textless{}{-}} \FunctionTok{subset}\NormalTok{(vsPCA, conditioning }\SpecialCharTok{==}\NormalTok{ cond)}
-  
-  \CommentTok{\# Prepare distance matrix using PCA scores for the subset}
-\NormalTok{  pca\_scores }\OtherTok{\textless{}{-}}\NormalTok{ subset\_data[, }\FunctionTok{c}\NormalTok{(}\StringTok{"PC1"}\NormalTok{, }\StringTok{"PC2"}\NormalTok{)]}
-\NormalTok{  dist\_matrix }\OtherTok{\textless{}{-}} \FunctionTok{dist}\NormalTok{(pca\_scores)}
-  
-  \CommentTok{\# Perform PERMANOVA for genotype within the current conditioning level}
-\NormalTok{  result }\OtherTok{\textless{}{-}} \FunctionTok{adonis}\NormalTok{(dist\_matrix }\SpecialCharTok{\textasciitilde{}}\NormalTok{ genotype, }\AttributeTok{data =}\NormalTok{ subset\_data)}
-  
-  \CommentTok{\# Store results in a list}
-\NormalTok{  results[[cond]] }\OtherTok{\textless{}{-}}\NormalTok{ result}\SpecialCharTok{$}\NormalTok{aov.tab}
-\NormalTok{\}}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{itemize}
 \tightlist
@@ -773,17 +417,6 @@ Levels}\label{permanova-analysis-of-lines-within-conditioning-levels}
     \end{itemize}
   \end{itemize}
 \end{itemize}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Print results for each conditioning level}
-\ControlFlowTok{for}\NormalTok{ (cond }\ControlFlowTok{in} \FunctionTok{names}\NormalTok{(results)) \{}
-  \FunctionTok{cat}\NormalTok{(}\StringTok{"Conditioning:"}\NormalTok{, cond, }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
-  \FunctionTok{print}\NormalTok{(results[[cond]])}
-  \FunctionTok{cat}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
-\NormalTok{\}}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{verbatim}
 Conditioning: minus 
@@ -831,14 +464,6 @@ Genotypes}\label{permanova-analysis-of-conditioning-within-genotypes}
   \texttt{conditioning} columns are treated as factors in the analysis.
 \end{itemize}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Split data by genotype levels}
-\NormalTok{genotype\_levels }\OtherTok{\textless{}{-}} \FunctionTok{levels}\NormalTok{(vsPCA}\SpecialCharTok{$}\NormalTok{genotype)}
-\NormalTok{results }\OtherTok{\textless{}{-}} \FunctionTok{list}\NormalTok{()}
-\end{Highlighting}
-\end{Shaded}
-
 \begin{itemize}
 \tightlist
 \item
@@ -846,26 +471,6 @@ Genotypes}\label{permanova-analysis-of-conditioning-within-genotypes}
   and initialize an empty list \texttt{results} to store the PERMANOVA
   results for each genotype.
 \end{itemize}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\FunctionTok{library}\NormalTok{(vegan)}
-\ControlFlowTok{for}\NormalTok{ (geno }\ControlFlowTok{in}\NormalTok{ genotype\_levels) \{}
-  \CommentTok{\# Subset data for the current conditioning level}
-\NormalTok{  subset\_data }\OtherTok{\textless{}{-}} \FunctionTok{subset}\NormalTok{(vsPCA, genotype }\SpecialCharTok{==}\NormalTok{ geno)}
-  
-  \CommentTok{\# Prepare distance matrix using PCA scores for the subset}
-\NormalTok{  pca\_scores }\OtherTok{\textless{}{-}}\NormalTok{ subset\_data[, }\FunctionTok{c}\NormalTok{(}\StringTok{"PC1"}\NormalTok{, }\StringTok{"PC2"}\NormalTok{)]}
-\NormalTok{  dist\_matrix }\OtherTok{\textless{}{-}} \FunctionTok{dist}\NormalTok{(pca\_scores)}
-  
-  \CommentTok{\# Perform PERMANOVA for genotype within the current conditioning level}
-\NormalTok{  result }\OtherTok{\textless{}{-}} \FunctionTok{adonis}\NormalTok{(dist\_matrix }\SpecialCharTok{\textasciitilde{}}\NormalTok{ conditioning, }\AttributeTok{data =}\NormalTok{ subset\_data)}
-  
-  \CommentTok{\# Store results in a list}
-\NormalTok{  results[[geno]] }\OtherTok{\textless{}{-}}\NormalTok{ result}\SpecialCharTok{$}\NormalTok{aov.tab}
-\NormalTok{\}}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{itemize}
 \tightlist
@@ -893,17 +498,6 @@ Genotypes}\label{permanova-analysis-of-conditioning-within-genotypes}
     \end{itemize}
   \end{itemize}
 \end{itemize}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Print results for each conditioning level}
-\ControlFlowTok{for}\NormalTok{ (geno }\ControlFlowTok{in} \FunctionTok{names}\NormalTok{(results)) \{}
-  \FunctionTok{cat}\NormalTok{(}\StringTok{"Genotype:"}\NormalTok{, geno, }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
-  \FunctionTok{print}\NormalTok{(results[[geno]])}
-  \FunctionTok{cat}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
-\NormalTok{\}}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{verbatim}
 Genotype: WT 
@@ -942,48 +536,17 @@ Total         9    466.79                 1.00000
 \subsection{PERMANOVA Analysis of Lines
 vs.~Conditioning}\label{permanova-analysis-of-lines-vs.-conditioning}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Prepare for PERMANOVA }
-\NormalTok{pca\_scores }\OtherTok{\textless{}{-}}\NormalTok{ vsPCA[, }\FunctionTok{c}\NormalTok{(}\StringTok{"PC1"}\NormalTok{, }\StringTok{"PC2"}\NormalTok{)]}
-\NormalTok{dist\_matrix }\OtherTok{\textless{}{-}} \FunctionTok{dist}\NormalTok{(pca\_scores)}
-\end{Highlighting}
-\end{Shaded}
-
 \begin{itemize}
-\tightlist
 \item
   \textbf{Purpose}: Extract the first two principal components
   (\texttt{PC1} and \texttt{PC2}) from \texttt{vsPCA} and compute a
   distance matrix from these scores. This matrix represents the pairwise
   dissimilarities between samples.
-\end{itemize}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Ensure factors are correctly set for analysis}
-\NormalTok{vsPCA}\SpecialCharTok{$}\NormalTok{genotype }\OtherTok{\textless{}{-}} \FunctionTok{factor}\NormalTok{(vsPCA}\SpecialCharTok{$}\NormalTok{genotype)}
-\NormalTok{vsPCA}\SpecialCharTok{$}\NormalTok{conditioning }\OtherTok{\textless{}{-}} \FunctionTok{factor}\NormalTok{(vsPCA}\SpecialCharTok{$}\NormalTok{conditioning)}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{itemize}
-\tightlist
 \item
   \textbf{Purpose}: Ensure that both \texttt{genotype} and
   \texttt{conditioning} are treated as categorical factors in the
   PERMANOVA analysis.
 \end{itemize}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Perform PERMANOVA for the interaction of genotype and conditioning}
-\FunctionTok{library}\NormalTok{(vegan)}
-\NormalTok{result }\OtherTok{\textless{}{-}} \FunctionTok{adonis}\NormalTok{(dist\_matrix }\SpecialCharTok{\textasciitilde{}}\NormalTok{ genotype }\SpecialCharTok{*}\NormalTok{ conditioning, }\AttributeTok{data =}\NormalTok{ vsPCA)}
-\CommentTok{\#print(result$aov.tab)}
-\FunctionTok{kable}\NormalTok{(result}\SpecialCharTok{$}\NormalTok{aov.tab, }\AttributeTok{caption =} \StringTok{"PERMANOVA results."}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{longtable}[]{@{}
   >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.3099}}
@@ -1064,96 +627,6 @@ Total & 19 & 2849.3735 & NA & NA & 1.0000000 & NA \\
 
 \subsection{Setup and Library Loading}\label{setup-and-library-loading}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\DocumentationTok{\#\# Clear the workspace to avoid conflicts with existing objects.}
-\FunctionTok{rm}\NormalTok{(}\AttributeTok{list=}\FunctionTok{ls}\NormalTok{())}
-\CommentTok{\# Purpose: Remove all objects from the R environment to ensure a clean workspace.}
-
-\CommentTok{\# Set global chunk options: hide code in the output and suppress messages and warnings.}
-\NormalTok{knitr}\SpecialCharTok{::}\NormalTok{opts\_chunk}\SpecialCharTok{$}\FunctionTok{set}\NormalTok{(}\AttributeTok{echo =} \ConstantTok{FALSE}\NormalTok{)}
-\CommentTok{\# Purpose: Ensure that the R code isn\textquotesingle{}t displayed in the final document, and suppress any messages or warnings.}
-
-\CommentTok{\# Load BiocManager, installing it if not already available.}
-\CommentTok{\#if (!require("BiocManager", quietly = TRUE))}
-    \CommentTok{\#install.packages("BiocManager")}
-\CommentTok{\# Purpose: Check if BiocManager is installed, and install it if necessary for managing Bioconductor packages.}
-
-\CommentTok{\# Install and load the DESeq2 package for differential expression analysis.}
-\CommentTok{\#BiocManager::install("DESeq2")}
-\FunctionTok{library}\NormalTok{(DESeq2)}
-\CommentTok{\# Purpose: Install DESeq2 if needed and load it for performing RNA{-}seq differential expression analysis.}
-
-\CommentTok{\# Load ggplot2 for data visualization.}
-\FunctionTok{library}\NormalTok{(ggplot2)}
-\CommentTok{\# Purpose: Load the ggplot2 package for creating plots.}
-
-\CommentTok{\# Ensure BiocManager is available for further package installations.}
-\CommentTok{\#if (!require("BiocManager", quietly = TRUE))}
-    \CommentTok{\#install.packages("BiocManager")}
-\CommentTok{\# Purpose: Re{-}check and install BiocManager if necessary to avoid any issues during package installations.}
-
-\CommentTok{\# Install and load apeglm for shrinkage estimation in differential expression.}
-\CommentTok{\#BiocManager::install("apeglm")}
-\FunctionTok{library}\NormalTok{(apeglm)}
-\CommentTok{\# Purpose: Install and load apeglm to perform log fold change shrinkage in DESeq2 analysis.}
-
-\CommentTok{\# Load additional libraries for data visualization and transformation.}
-\FunctionTok{library}\NormalTok{(scales)}
-\FunctionTok{library}\NormalTok{(viridis)}
-\CommentTok{\# Purpose: Load scales for scaling functions and viridis for color palettes.}
-
-\CommentTok{\# Ensure BiocManager is ready for installing vsn.}
-\CommentTok{\#if (!require("BiocManager", quietly = TRUE))}
-    \CommentTok{\#install.packages("BiocManager")}
-\CommentTok{\# Purpose: Reconfirm that BiocManager is installed to manage further package installations.}
-
-\CommentTok{\# Install and load vsn for variance stabilization.}
-\CommentTok{\#BiocManager::install("vsn")}
-\CommentTok{\#library(vsn)}
-\CommentTok{\# Purpose: Install and load vsn to apply variance{-}stabilizing transformations to count data.}
-
-\CommentTok{\# Load color palettes, hexagonal binning, and data manipulation libraries.}
-\FunctionTok{library}\NormalTok{(RColorBrewer)}
-\FunctionTok{library}\NormalTok{(hexbin)}
-\FunctionTok{library}\NormalTok{(dplyr)}
-\FunctionTok{library}\NormalTok{(ggrepel)}
-\CommentTok{\# Purpose: Load additional libraries for color palettes, hexagonal binning plots, data manipulation, and improved text label placement in plots.}
-
-\CommentTok{\# Install and load ComplexHeatmap for advanced heatmap visualizations.}
-\CommentTok{\#BiocManager::install("ComplexHeatmap")}
-\CommentTok{\#library(ComplexHeatmap)}
-\CommentTok{\# Purpose: Install and load ComplexHeatmap to create sophisticated heatmaps.}
-
-\CommentTok{\# Load additional packages for PCA, tibbles, Poisson clustering, grid arrangements, and Venn diagrams.}
-\FunctionTok{library}\NormalTok{(glmpca)}
-\FunctionTok{library}\NormalTok{(tibble)}
-\FunctionTok{library}\NormalTok{(PoiClaClu)}
-\FunctionTok{library}\NormalTok{(gridExtra)}
-\FunctionTok{library}\NormalTok{(ggVennDiagram)}
-\CommentTok{\# Purpose: Load necessary libraries for generalized PCA, handling modern data frames, Poisson clustering, arranging multiple plots, and creating Venn diagrams.}
-
-\CommentTok{\# Load the tidyverse for data manipulation and magrittr for pipe operators.}
-\FunctionTok{library}\NormalTok{(tidyverse)}
-\FunctionTok{library}\NormalTok{(magrittr)}
-\CommentTok{\# Purpose: Load the tidyverse suite for comprehensive data manipulation and magrittr for enhanced piping.}
-
-\CommentTok{\# Load cowplot for combining plots and Cairo for enhanced graphic rendering.}
-\FunctionTok{library}\NormalTok{(cowplot)}
-\FunctionTok{library}\NormalTok{(Cairo)}
-\CommentTok{\# Purpose: Load cowplot to combine multiple plots and Cairo for high{-}quality vector graphics.}
-
-\CommentTok{\# Set the working directory to the location of the current R script or R Markdown file.}
-\FunctionTok{library}\NormalTok{(rstudioapi)}
-\CommentTok{\#setwd(dirname(getActiveDocumentContext()$path))}
-\CommentTok{\# Purpose: Automatically set the working directory to the script\textquotesingle{}s location, ensuring relative paths work correctly.}
-
-\CommentTok{\# Set a random seed for reproducibility.}
-\FunctionTok{set.seed}\NormalTok{(}\DecValTok{100}\NormalTok{)}
-\CommentTok{\# Purpose: Ensure reproducibility of random processes by setting a fixed seed.}
-\end{Highlighting}
-\end{Shaded}
-
 \subsection{Data Import and
 Preprocessing}\label{data-import-and-preprocessing}
 
@@ -1169,17 +642,6 @@ Preprocessing}\label{data-import-and-preprocessing}
 
 \subsection{Import data}\label{import-data}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Read the count data from the "Counts\_Table" sheet}
-\NormalTok{df\_WT }\OtherTok{\textless{}{-}} \FunctionTok{read.xlsx}\NormalTok{(}\StringTok{"Input/Dataset6.xlsx"}\NormalTok{, }\AttributeTok{sheet =} \StringTok{"Deseq\_Col0"}\NormalTok{, }\AttributeTok{rowNames =} \ConstantTok{TRUE}\NormalTok{)}
-\NormalTok{df\_WT\_sig }\OtherTok{\textless{}{-}}\NormalTok{ df\_WT[df\_WT}\SpecialCharTok{$}\NormalTok{signif}\SpecialCharTok{==}\StringTok{"significant"} \SpecialCharTok{\&} \SpecialCharTok{!}\NormalTok{(}\FunctionTok{is.na}\NormalTok{(df\_WT}\SpecialCharTok{$}\NormalTok{signif)),]}
-\CommentTok{\# Read the metadata from the "Meta\_Data" sheet}
-\NormalTok{df\_mmf1 }\OtherTok{\textless{}{-}} \FunctionTok{read.xlsx}\NormalTok{(}\StringTok{"Input/Dataset6.xlsx"}\NormalTok{, }\AttributeTok{sheet =} \StringTok{"Deseq\_mmf1"}\NormalTok{, }\AttributeTok{rowNames =} \ConstantTok{TRUE}\NormalTok{)}
-\NormalTok{df\_mmf1\_sig }\OtherTok{\textless{}{-}}\NormalTok{ df\_mmf1[df\_mmf1}\SpecialCharTok{$}\NormalTok{signif}\SpecialCharTok{==}\StringTok{"significant"} \SpecialCharTok{\&} \SpecialCharTok{!}\NormalTok{(}\FunctionTok{is.na}\NormalTok{(df\_mmf1}\SpecialCharTok{$}\NormalTok{signif)),]}
-\end{Highlighting}
-\end{Shaded}
-
 \begin{itemize}
 \tightlist
 \item
@@ -1189,68 +651,6 @@ Preprocessing}\label{data-import-and-preprocessing}
 \end{itemize}
 
 \subsection{Plot Creation Function}\label{plot-creation-function}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Define a function to create a combined volcano and MA plot for differential expression analysis results.}
-\NormalTok{create\_plot }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(df, }\AttributeTok{title=}\StringTok{""}\NormalTok{)\{}
-
-  \CommentTok{\# Reorder data to plot unchanged genes first.}
-\NormalTok{  df }\OtherTok{\textless{}{-}}\NormalTok{ df[}\FunctionTok{order}\NormalTok{(df}\SpecialCharTok{$}\NormalTok{signif),]}
-  
-  \CommentTok{\# Prepare labels for the legend by counting the number of genes in each direction.}
-\NormalTok{  labs }\OtherTok{\textless{}{-}} \FunctionTok{table}\NormalTok{(df}\SpecialCharTok{$}\NormalTok{direction) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{paste0}\NormalTok{(}\FunctionTok{names}\NormalTok{(.), }\StringTok{" ("}\NormalTok{, ., }\StringTok{")"}\NormalTok{)}
-  
-  \CommentTok{\# Define colors for each direction.}
-\NormalTok{  cols }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{"seagreen"}\NormalTok{,}\StringTok{"grey80"}\NormalTok{, }\StringTok{"gold2"}\NormalTok{)}
-  \FunctionTok{names}\NormalTok{(cols) }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{"BXplus downregulated"}\NormalTok{,}\StringTok{"unchanged"}\NormalTok{, }\StringTok{"BXplus upregulated"}\NormalTok{)}
-  
-  \CommentTok{\# Create a volcano plot to visualize log2 fold change against the negative log10 adjusted p{-}value.}
-\NormalTok{vulcano }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{(}\FunctionTok{na.omit}\NormalTok{(df), }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x=}\NormalTok{log2FoldChange, }\AttributeTok{y=}\SpecialCharTok{{-}}\FunctionTok{log10}\NormalTok{(padj), }\AttributeTok{fill=}\NormalTok{direction)) }\SpecialCharTok{+}
-\FunctionTok{geom\_point}\NormalTok{(}\AttributeTok{pch=}\DecValTok{21}\NormalTok{, }\AttributeTok{col=}\StringTok{"black"}\NormalTok{, }\AttributeTok{size=}\DecValTok{2}\NormalTok{, }\AttributeTok{stroke=}\FloatTok{0.1}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.7}\NormalTok{) }\SpecialCharTok{+}
-\FunctionTok{scale\_fill\_manual}\NormalTok{(}\StringTok{"BXm \textasciitilde{} BXp"}\NormalTok{, }\AttributeTok{labels =}\NormalTok{ labs, }\AttributeTok{values =}\NormalTok{ cols) }\SpecialCharTok{+}
-\FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+}
-\FunctionTok{xlim}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{5}\NormalTok{, }\DecValTok{10}\NormalTok{)}\SpecialCharTok{+}
-\FunctionTok{ylim}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{0}\NormalTok{, }\DecValTok{28}\NormalTok{)}\SpecialCharTok{+}
-\FunctionTok{geom\_hline}\NormalTok{(}\AttributeTok{yintercept =} \SpecialCharTok{{-}}\FunctionTok{log10}\NormalTok{(}\FloatTok{0.05}\NormalTok{), }\AttributeTok{lty=}\DecValTok{2}\NormalTok{, }\AttributeTok{lwd=}\FloatTok{0.3}\NormalTok{, }\AttributeTok{color=}\StringTok{"black"}\NormalTok{) }\SpecialCharTok{+}
-\FunctionTok{geom\_vline}\NormalTok{(}\AttributeTok{xintercept =} \SpecialCharTok{{-}}\DecValTok{1}\NormalTok{, }\AttributeTok{lty=}\DecValTok{2}\NormalTok{, }\AttributeTok{lwd=}\FloatTok{0.3}\NormalTok{, }\AttributeTok{color=}\StringTok{"black"}\NormalTok{) }\SpecialCharTok{+}
-\FunctionTok{geom\_vline}\NormalTok{(}\AttributeTok{xintercept =} \DecValTok{1}\NormalTok{, }\AttributeTok{lty=}\DecValTok{2}\NormalTok{, }\AttributeTok{lwd=}\FloatTok{0.3}\NormalTok{, }\AttributeTok{color=}\StringTok{"black"}\NormalTok{) }\SpecialCharTok{+}
-\FunctionTok{ggtitle}\NormalTok{(}\FunctionTok{paste0}\NormalTok{(title, }\StringTok{": Differentially expressed genes"}\NormalTok{))}
-
-\CommentTok{\# Purpose: Create a volcano plot to visualize differentially expressed genes based on log2 fold change and adjusted p{-}values.}
-
-\CommentTok{\# Create an MA plot to visualize log2 fold change against the log10 mean of normalized counts.}
-
-\NormalTok{MA }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{(}\FunctionTok{na.omit}\NormalTok{(df), }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x=}\FunctionTok{log10}\NormalTok{(baseMean), }\AttributeTok{y=}\NormalTok{log2FoldChange, }\AttributeTok{fill=}\NormalTok{direction)) }\SpecialCharTok{+}
-\FunctionTok{geom\_point}\NormalTok{(}\AttributeTok{pch=}\DecValTok{21}\NormalTok{, }\AttributeTok{col=}\StringTok{"black"}\NormalTok{, }\AttributeTok{size=}\DecValTok{2}\NormalTok{, }\AttributeTok{stroke=}\FloatTok{0.1}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.7}\NormalTok{) }\SpecialCharTok{+}
-\FunctionTok{scale\_fill\_manual}\NormalTok{(}\StringTok{"BXm \textasciitilde{} BXp"}\NormalTok{, }\AttributeTok{labels =}\NormalTok{ labs, }\AttributeTok{values =}\NormalTok{ cols) }\SpecialCharTok{+}
-\FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+}
-\FunctionTok{xlim}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{0}\NormalTok{, }\DecValTok{6}\NormalTok{)}\SpecialCharTok{+}
-\FunctionTok{ylim}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{5}\NormalTok{, }\DecValTok{10}\NormalTok{)}\SpecialCharTok{+}
-\FunctionTok{geom\_hline}\NormalTok{(}\AttributeTok{yintercept =} \DecValTok{0}\NormalTok{, }\AttributeTok{lty=}\DecValTok{2}\NormalTok{, }\AttributeTok{lwd=}\FloatTok{0.3}\NormalTok{, }\AttributeTok{color=}\StringTok{"black"}\NormalTok{)}
-
-\CommentTok{\# Purpose: Create an MA plot to visualize the relationship between the average expression and log2 fold change.}
-
-\CommentTok{\# Combine the volcano and MA plots into one plot.}
-\NormalTok{dds\_plot }\OtherTok{\textless{}{-}} \FunctionTok{plot\_grid}\NormalTok{(vulcano }\SpecialCharTok{+} \FunctionTok{theme}\NormalTok{(}\AttributeTok{legend.position=}\StringTok{"none"}\NormalTok{),}
-\NormalTok{MA }\SpecialCharTok{+} \FunctionTok{theme}\NormalTok{(}\AttributeTok{legend.position=}\StringTok{"none"}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{labs}\NormalTok{(}\AttributeTok{colour=}\StringTok{""}\NormalTok{),}
-\AttributeTok{nrow=}\DecValTok{1}\NormalTok{, }\AttributeTok{align=}\StringTok{"hv"}\NormalTok{)}
-
-\CommentTok{\# Purpose: Combine the volcano and MA plots into a single figure.}
-
-\CommentTok{\# Add the legend to the combined plot.}
-\NormalTok{legend }\OtherTok{\textless{}{-}} \FunctionTok{get\_legend}\NormalTok{(vulcano }\SpecialCharTok{+} \FunctionTok{theme}\NormalTok{(}\AttributeTok{legend.position =} \StringTok{"right"}\NormalTok{))}
-\NormalTok{dds\_plot }\OtherTok{\textless{}{-}} \FunctionTok{plot\_grid}\NormalTok{(dds\_plot, legend, }\AttributeTok{ncol=}\DecValTok{1}\NormalTok{, }\AttributeTok{rel\_heights=}\FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{, }\FloatTok{0.1}\NormalTok{))}
-
-\CommentTok{\# Purpose: Add the legend to the bottom of the combined plot and return the final plot.}
-
-\FunctionTok{return}\NormalTok{(dds\_plot)}
-
-\CommentTok{\# Purpose: Return the combined plot as the output of the function.}
-
-\NormalTok{\}}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{itemize}
 \tightlist
@@ -1272,7 +672,7 @@ Results}\label{plotting-differential-expression-results}
   displaying differentially expressed genes.
 \end{itemize}
 
-\pandocbounded{\includegraphics[keepaspectratio]{06_Transcriptome_files/figure-pdf/unnamed-chunk-28-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{06_Transcriptome_files/figure-pdf/Volcano plots-1.pdf}}
 
 \begin{itemize}
 \tightlist
@@ -1280,6 +680,10 @@ Results}\label{plotting-differential-expression-results}
   \textbf{Purpose}: Combine the volcano plots for WT and mmf1 into one
   figure and save it as a PDF.
 \end{itemize}
+
+\pandocbounded{\includegraphics[keepaspectratio]{06_Transcriptome_files/figure-pdf/VENN diagram upregulated-1.pdf}}
+
+\pandocbounded{\includegraphics[keepaspectratio]{06_Transcriptome_files/figure-pdf/VENN diagram downregulated-1.pdf}}
 
 \subsection{Prepare data to compare WT to
 mmf1}\label{prepare-data-to-compare-wt-to-mmf1}
@@ -1290,22 +694,6 @@ mmf1}\label{prepare-data-to-compare-wt-to-mmf1}
   \textbf{Purpose}: Prepare the data by filtering the metadata and count
   data to compare WT to mmf1 samples conditioned with BXplus.
 \end{itemize}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\#For BX minus}
-\NormalTok{meta\_minus }\OtherTok{\textless{}{-}}\NormalTok{ meta }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(conditioning }\SpecialCharTok{\%in\%} \StringTok{"minus"}\NormalTok{)}
-\CommentTok{\# Purpose: Filter the metadata to include only samples conditioned with "minus".}
-
-\CommentTok{\# Step 1: Get row names from meta\_minus}
-\NormalTok{rows\_to\_select }\OtherTok{\textless{}{-}} \FunctionTok{rownames}\NormalTok{(meta\_minus)}
-\CommentTok{\# Purpose: Extract the row names (sample names) from the filtered metadata.}
-
-\CommentTok{\# Step 2: Subset cts using these names}
-\NormalTok{cts\_minus }\OtherTok{\textless{}{-}}\NormalTok{ cts[, rows\_to\_select, drop }\OtherTok{=} \ConstantTok{FALSE}\NormalTok{]}
-\CommentTok{\# Purpose: Subset the counts data to include only the columns corresponding to the samples in "minus" conditioning.}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{itemize}
 \tightlist
@@ -1319,25 +707,6 @@ mmf1}\label{prepare-data-to-compare-wt-to-mmf1}
 conditioning
 levels}\label{differential-expression-analysis-between-lines-within-conditioning-levels}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Read the count data from the "Counts\_Table" sheet}
-\NormalTok{df\_plus }\OtherTok{\textless{}{-}} \FunctionTok{read.xlsx}\NormalTok{(}\StringTok{"Input/Dataset6.xlsx"}\NormalTok{, }\AttributeTok{sheet =} \StringTok{"Deseq\_BXplus"}\NormalTok{, }\AttributeTok{rowNames =} \ConstantTok{TRUE}\NormalTok{)}
-
-\CommentTok{\# Read the metadata from the "Meta\_Data" sheet}
-\NormalTok{df\_minus }\OtherTok{\textless{}{-}} \FunctionTok{read.xlsx}\NormalTok{(}\StringTok{"Input/Dataset6.xlsx"}\NormalTok{, }\AttributeTok{sheet =} \StringTok{"Deseq\_BXminus"}\NormalTok{, }\AttributeTok{rowNames =} \ConstantTok{TRUE}\NormalTok{)}
-
-
-
-\CommentTok{\# Filter for significant genes only.}
-\NormalTok{df\_plus\_sig }\OtherTok{\textless{}{-}}\NormalTok{ df\_plus[df\_plus}\SpecialCharTok{$}\NormalTok{signif }\SpecialCharTok{==} \StringTok{"significant"} \SpecialCharTok{\&} \SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(df\_plus}\SpecialCharTok{$}\NormalTok{signif),]}
-\CommentTok{\# Purpose: Create a subset of the results containing only significant genes.}
-\CommentTok{\# Filter for significant genes only.}
-\NormalTok{df\_minus\_sig }\OtherTok{\textless{}{-}}\NormalTok{ df\_minus[df\_minus}\SpecialCharTok{$}\NormalTok{signif }\SpecialCharTok{==} \StringTok{"significant"} \SpecialCharTok{\&} \SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(df\_minus}\SpecialCharTok{$}\NormalTok{signif),]}
-\CommentTok{\# Purpose: Create a subset of the results containing only significant genes.}
-\end{Highlighting}
-\end{Shaded}
-
 \begin{itemize}
 \tightlist
 \item
@@ -1347,20 +716,6 @@ levels}\label{differential-expression-analysis-between-lines-within-conditioning
 
 \subsection{Split significant genes by direction
 (upregulated/downregulated)}\label{split-significant-genes-by-direction-upregulateddownregulated}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# For BXplus samples}
-\NormalTok{df\_plus\_sig\_up }\OtherTok{\textless{}{-}}\NormalTok{ df\_plus\_sig }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(direction }\SpecialCharTok{==} \StringTok{"Col{-}0 downregulated"}\NormalTok{)}
-\NormalTok{df\_plus\_sig\_down }\OtherTok{\textless{}{-}}\NormalTok{ df\_plus\_sig }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(direction }\SpecialCharTok{==} \StringTok{"Col{-}0 upregulated"}\NormalTok{)}
-\CommentTok{\# Purpose: Separate the significant genes from BXplus samples into upregulated and downregulated categories.}
-
-\CommentTok{\# For BXminus samples}
-\NormalTok{df\_minus\_sig\_up }\OtherTok{\textless{}{-}}\NormalTok{ df\_minus\_sig }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(direction }\SpecialCharTok{==} \StringTok{"Col{-}0 downregulated"}\NormalTok{)}
-\NormalTok{df\_minus\_sig\_down }\OtherTok{\textless{}{-}}\NormalTok{ df\_minus\_sig }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(direction }\SpecialCharTok{==} \StringTok{"Col{-}0 upregulated"}\NormalTok{)}
-\CommentTok{\# Purpose: Separate the significant genes from BXminus samples into upregulated and downregulated categories.}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{itemize}
 \tightlist
@@ -1372,68 +727,6 @@ levels}\label{differential-expression-analysis-between-lines-within-conditioning
 \subsection{Create and Plot Volcano and MA plots for BXplus and
 BXminus}\label{create-and-plot-volcano-and-ma-plots-for-bxplus-and-bxminus}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Function to create volcano and MA plots for the soil analysis}
-\NormalTok{create\_plot\_soil }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(df, }\AttributeTok{title =} \StringTok{""}\NormalTok{) \{}
-  
-  \CommentTok{\# Reorder data to plot "unchanged" first}
-\NormalTok{  df }\OtherTok{\textless{}{-}}\NormalTok{ df[}\FunctionTok{order}\NormalTok{(df}\SpecialCharTok{$}\NormalTok{signif), ]}
-  
-  \CommentTok{\# Add gene numbers to legend}
-\NormalTok{  labs }\OtherTok{\textless{}{-}} \FunctionTok{table}\NormalTok{(df}\SpecialCharTok{$}\NormalTok{direction) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{paste0}\NormalTok{(}\FunctionTok{names}\NormalTok{(.), }\StringTok{" ("}\NormalTok{, ., }\StringTok{")"}\NormalTok{)}
-  
-  \CommentTok{\# Colors for the plot}
-\NormalTok{  cols }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{"steelblue4"}\NormalTok{, }\StringTok{"grey80"}\NormalTok{, }\StringTok{"red4"}\NormalTok{)}
-  \FunctionTok{names}\NormalTok{(cols) }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{"Col{-}0 upregulated"}\NormalTok{, }\StringTok{"unchanged"}\NormalTok{, }\StringTok{"Col{-}0 downregulated"}\NormalTok{)}
-  
-  \CommentTok{\# Volcano plot}
-\NormalTok{  vulcano }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{(}\FunctionTok{na.omit}\NormalTok{(df), }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ log2FoldChange, }\AttributeTok{y =} \SpecialCharTok{{-}}\FunctionTok{log10}\NormalTok{(padj), }\AttributeTok{fill =}\NormalTok{ direction)) }\SpecialCharTok{+}
-    \FunctionTok{geom\_point}\NormalTok{(}\AttributeTok{pch =} \DecValTok{21}\NormalTok{, }\AttributeTok{col =} \StringTok{"black"}\NormalTok{, }\AttributeTok{size =} \DecValTok{2}\NormalTok{, }\AttributeTok{stroke =} \FloatTok{0.1}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.7}\NormalTok{) }\SpecialCharTok{+}
-    \FunctionTok{scale\_fill\_manual}\NormalTok{(}\StringTok{"BXm \textasciitilde{} BXp"}\NormalTok{, }\AttributeTok{labels =}\NormalTok{ labs, }\AttributeTok{values =}\NormalTok{ cols) }\SpecialCharTok{+}
-    \FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+}
-    \FunctionTok{geom\_hline}\NormalTok{(}\AttributeTok{yintercept =} \SpecialCharTok{{-}}\FunctionTok{log10}\NormalTok{(}\FloatTok{0.05}\NormalTok{), }\AttributeTok{lty =} \DecValTok{2}\NormalTok{, }\AttributeTok{lwd =} \FloatTok{0.3}\NormalTok{, }\AttributeTok{color =} \StringTok{"black"}\NormalTok{) }\SpecialCharTok{+}
-    \FunctionTok{geom\_vline}\NormalTok{(}\AttributeTok{xintercept =} \SpecialCharTok{{-}}\DecValTok{1}\NormalTok{, }\AttributeTok{lty =} \DecValTok{2}\NormalTok{, }\AttributeTok{lwd =} \FloatTok{0.3}\NormalTok{, }\AttributeTok{color =} \StringTok{"black"}\NormalTok{) }\SpecialCharTok{+}
-    \FunctionTok{geom\_vline}\NormalTok{(}\AttributeTok{xintercept =} \DecValTok{1}\NormalTok{, }\AttributeTok{lty =} \DecValTok{2}\NormalTok{, }\AttributeTok{lwd =} \FloatTok{0.3}\NormalTok{, }\AttributeTok{color =} \StringTok{"black"}\NormalTok{) }\SpecialCharTok{+}
-    \FunctionTok{ggtitle}\NormalTok{(}\FunctionTok{paste0}\NormalTok{(title, }\StringTok{": Differentially expressed genes"}\NormalTok{)) }\SpecialCharTok{+}
-    \FunctionTok{theme}\NormalTok{(}
-      \AttributeTok{text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),        }\CommentTok{\# Set all text to 7pt}
-      \AttributeTok{axis.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
-      \AttributeTok{axis.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
-      \AttributeTok{legend.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
-      \AttributeTok{legend.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
-      \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{)}
-\NormalTok{    )}
-  
-  \CommentTok{\# MA plot}
-\NormalTok{  MA }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{(}\FunctionTok{na.omit}\NormalTok{(df), }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =} \FunctionTok{log10}\NormalTok{(baseMean), }\AttributeTok{y =}\NormalTok{ log2FoldChange, }\AttributeTok{fill =}\NormalTok{ direction)) }\SpecialCharTok{+}
-    \FunctionTok{geom\_point}\NormalTok{(}\AttributeTok{pch =} \DecValTok{21}\NormalTok{, }\AttributeTok{col =} \StringTok{"black"}\NormalTok{, }\AttributeTok{size =} \DecValTok{2}\NormalTok{, }\AttributeTok{stroke =} \FloatTok{0.1}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.7}\NormalTok{) }\SpecialCharTok{+}
-    \FunctionTok{scale\_fill\_manual}\NormalTok{(}\StringTok{"BXm \textasciitilde{} BXp"}\NormalTok{, }\AttributeTok{labels =}\NormalTok{ labs, }\AttributeTok{values =}\NormalTok{ cols) }\SpecialCharTok{+}
-    \FunctionTok{geom\_hline}\NormalTok{(}\AttributeTok{yintercept =} \DecValTok{0}\NormalTok{, }\AttributeTok{lty =} \DecValTok{2}\NormalTok{, }\AttributeTok{lwd =} \FloatTok{0.3}\NormalTok{, }\AttributeTok{color =} \StringTok{"black"}\NormalTok{) }\SpecialCharTok{+}
-    \FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+}
-    \FunctionTok{theme}\NormalTok{(}
-      \AttributeTok{text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),        }\CommentTok{\# Set all text to 7pt}
-      \AttributeTok{axis.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
-      \AttributeTok{axis.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
-      \AttributeTok{legend.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
-      \AttributeTok{legend.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
-      \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{)}
-\NormalTok{    )}
-  
-  \CommentTok{\# Combine plots}
-\NormalTok{  dds\_plot }\OtherTok{\textless{}{-}} \FunctionTok{plot\_grid}\NormalTok{(vulcano }\SpecialCharTok{+} \FunctionTok{theme}\NormalTok{(}\AttributeTok{legend.position =} \StringTok{"none"}\NormalTok{),}
-\NormalTok{                        MA }\SpecialCharTok{+} \FunctionTok{theme}\NormalTok{(}\AttributeTok{legend.position =} \StringTok{"none"}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{labs}\NormalTok{(}\AttributeTok{colour =} \StringTok{""}\NormalTok{),}
-                        \AttributeTok{nrow =} \DecValTok{1}\NormalTok{, }\AttributeTok{align =} \StringTok{"hv"}\NormalTok{)}
-  
-  \CommentTok{\# Add legend}
-\NormalTok{  legend }\OtherTok{\textless{}{-}} \FunctionTok{get\_legend}\NormalTok{(vulcano }\SpecialCharTok{+} \FunctionTok{theme}\NormalTok{(}\AttributeTok{legend.position =} \StringTok{"right"}\NormalTok{))}
-\NormalTok{  dds\_plot }\OtherTok{\textless{}{-}} \FunctionTok{plot\_grid}\NormalTok{(dds\_plot, legend, }\AttributeTok{ncol =} \DecValTok{1}\NormalTok{, }\AttributeTok{rel\_heights =} \FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{, }\FloatTok{0.1}\NormalTok{))}
-  
-  \FunctionTok{return}\NormalTok{(dds\_plot)}
-\NormalTok{\}}
-\end{Highlighting}
-\end{Shaded}
-
 \begin{itemize}
 \tightlist
 \item
@@ -1443,6 +736,13 @@ BXminus}\label{create-and-plot-volcano-and-ma-plots-for-bxplus-and-bxminus}
 
 \subsection{Plot Volcano and MA Plots for BXplus
 Soil}\label{plot-volcano-and-ma-plots-for-bxplus-soil}
+
+\pandocbounded{\includegraphics[keepaspectratio]{06_Transcriptome_files/figure-pdf/Volcano plus-1.pdf}}
+
+\begin{verbatim}
+pdf 
+  2 
+\end{verbatim}
 
 \begin{itemize}
 \tightlist
@@ -1456,6 +756,13 @@ Soil}\label{plot-volcano-and-ma-plots-for-bxplus-soil}
 BXminus
 Soil}}{Plot Volcano and MA Plots for BXminus Soil}}\label{plot-volcano-and-ma-plots-for-bxminus-soil}
 
+\pandocbounded{\includegraphics[keepaspectratio]{06_Transcriptome_files/figure-pdf/Volcanon minus-1.pdf}}
+
+\begin{verbatim}
+pdf 
+  2 
+\end{verbatim}
+
 \begin{itemize}
 \tightlist
 \item
@@ -1467,8 +774,6 @@ Soil}}{Plot Volcano and MA Plots for BXminus Soil}}\label{plot-volcano-and-ma-pl
 \subsection{Combine Volcano Plots for BXplus and BXminus
 Soils}\label{combine-volcano-plots-for-bxplus-and-bxminus-soils}
 
-\pandocbounded{\includegraphics[keepaspectratio]{06_Transcriptome_files/figure-pdf/unnamed-chunk-36-1.pdf}}
-
 \begin{itemize}
 \tightlist
 \item
@@ -1478,20 +783,6 @@ Soils}\label{combine-volcano-plots-for-bxplus-and-bxminus-soils}
 
 \subsection{Extract Gene Lists for Further
 Analysis}\label{extract-gene-lists-for-further-analysis}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Extract significant upregulated and downregulated genes from the BXplus results.}
-\NormalTok{genes\_df\_plus\_sig\_up }\OtherTok{\textless{}{-}} \FunctionTok{rownames}\NormalTok{(df\_plus\_sig\_up)}
-\NormalTok{genes\_df\_plus\_sig\_down }\OtherTok{\textless{}{-}} \FunctionTok{rownames}\NormalTok{(df\_plus\_sig\_down)}
-\CommentTok{\# Purpose: Create lists of gene IDs for genes that are significantly upregulated and downregulated in BXplus soil.}
-
-\CommentTok{\# Extract significant upregulated and downregulated genes from the BXminus results.}
-\NormalTok{genes\_df\_minus\_sig\_up }\OtherTok{\textless{}{-}} \FunctionTok{rownames}\NormalTok{(df\_minus\_sig\_up)}
-\NormalTok{genes\_df\_minus\_sig\_down }\OtherTok{\textless{}{-}} \FunctionTok{rownames}\NormalTok{(df\_minus\_sig\_down)}
-\CommentTok{\# Purpose: Create lists of gene IDs for genes that are significantly upregulated and downregulated in BXminus soil.}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{itemize}
 \tightlist
@@ -1504,18 +795,6 @@ Analysis}\label{extract-gene-lists-for-further-analysis}
 \subsection{Identify Overlapping Genes between BXplus and BXminus
 Soils}\label{identify-overlapping-genes-between-bxplus-and-bxminus-soils}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Identify genes that are upregulated in both BXplus and BXminus soils.}
-\NormalTok{overlap\_genes\_up }\OtherTok{\textless{}{-}} \FunctionTok{intersect}\NormalTok{(genes\_df\_minus\_sig\_up, genes\_df\_plus\_sig\_up)}
-\CommentTok{\# Purpose: Find the intersection of upregulated genes in BXplus and BXminus soils, identifying genes upregulated in both conditions.}
-
-\CommentTok{\# Identify genes that are downregulated in both BXplus and BXminus soils.}
-\NormalTok{overlap\_genes\_down }\OtherTok{\textless{}{-}} \FunctionTok{intersect}\NormalTok{(genes\_df\_minus\_sig\_down, genes\_df\_plus\_sig\_down)}
-\CommentTok{\# Purpose: Find the intersection of downregulated genes in BXplus and BXminus soils, identifying genes downregulated in both conditions.}
-\end{Highlighting}
-\end{Shaded}
-
 \begin{itemize}
 \tightlist
 \item
@@ -1525,18 +804,6 @@ Soils}\label{identify-overlapping-genes-between-bxplus-and-bxminus-soils}
 
 \subsection{Create Lists of Overlapping Genes for
 Visualization}\label{create-lists-of-overlapping-genes-for-visualization}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Create a list of upregulated genes in both BXminus and BXplus soils.}
-\NormalTok{gene\_lists\_up }\OtherTok{\textless{}{-}} \FunctionTok{list}\NormalTok{(}\AttributeTok{BXminus =}\NormalTok{ genes\_df\_minus\_sig\_up, }\AttributeTok{BXplus =}\NormalTok{ genes\_df\_plus\_sig\_up)}
-\CommentTok{\# Purpose: Prepare a list of upregulated genes for creating Venn diagrams or other visualizations.}
-
-\CommentTok{\# Create a list of downregulated genes in both BXminus and BXplus soils.}
-\NormalTok{gene\_lists\_down }\OtherTok{\textless{}{-}} \FunctionTok{list}\NormalTok{(}\AttributeTok{BXminus =}\NormalTok{ genes\_df\_minus\_sig\_down, }\AttributeTok{BXplus =}\NormalTok{ genes\_df\_plus\_sig\_down)}
-\CommentTok{\# Purpose: Prepare a list of downregulated genes for creating Venn diagrams or other visualizations.}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{itemize}
 \tightlist
@@ -1548,51 +815,9 @@ Visualization}\label{create-lists-of-overlapping-genes-for-visualization}
 \subsection{Visualize Overlapping Genes Using Venn
 Diagrams}\label{visualize-overlapping-genes-using-venn-diagrams}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Load the ggvenn library for Venn diagram visualization.}
-\FunctionTok{library}\NormalTok{(ggvenn)}
-\CommentTok{\# Purpose: Load the \textasciigrave{}ggvenn\textasciigrave{} library to create Venn diagrams.}
+\pandocbounded{\includegraphics[keepaspectratio]{06_Transcriptome_files/figure-pdf/VENN overlap condition-1.pdf}}
 
-\CommentTok{\# Create and save Venn diagrams for upregulated genes between Col{-}0 and mmf1 in BXplus soil.}
-\FunctionTok{ggvenn}\NormalTok{(gene\_lists\_up, }\FunctionTok{c}\NormalTok{(}\StringTok{"BXminus"}\NormalTok{, }\StringTok{"BXplus"}\NormalTok{),}
-       \AttributeTok{fill\_color =} \FunctionTok{c}\NormalTok{(}\StringTok{"seagreen"}\NormalTok{,}\StringTok{"gold2"}\NormalTok{),}
-       \AttributeTok{stroke\_size =} \FloatTok{0.5}\NormalTok{, }
-       \AttributeTok{show\_percentage =} \ConstantTok{FALSE}\NormalTok{,}
-       \AttributeTok{text\_size =} \DecValTok{3}\NormalTok{,}
-       \AttributeTok{set\_name\_size =} \DecValTok{2}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
-\pandocbounded{\includegraphics[keepaspectratio]{06_Transcriptome_files/figure-pdf/unnamed-chunk-40-1.pdf}}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Purpose: Generate a Venn diagram to visualize the overlap of upregulated genes between Col{-}0 and mmf1 genotypes in BXplus soil.}
-
-\FunctionTok{ggsave}\NormalTok{(}\StringTok{"VENN\_Colmmf1\_soil\_up.png"}\NormalTok{, }\AttributeTok{width =} \DecValTok{5}\NormalTok{, }\AttributeTok{height =} \DecValTok{5}\NormalTok{, }\AttributeTok{units =} \StringTok{"cm"}\NormalTok{)}
-\CommentTok{\# Purpose: Save the upregulated gene Venn diagram as a PNG file.}
-
-\CommentTok{\# Create and save Venn diagrams for downregulated genes between Col{-}0 and mmf1 in BXplus soil.}
-\FunctionTok{ggvenn}\NormalTok{(gene\_lists\_down, }\FunctionTok{c}\NormalTok{(}\StringTok{"BXminus"}\NormalTok{, }\StringTok{"BXplus"}\NormalTok{),}
-       \AttributeTok{fill\_color =} \FunctionTok{c}\NormalTok{(}\StringTok{"seagreen"}\NormalTok{,}\StringTok{"gold2"}\NormalTok{),}
-       \AttributeTok{stroke\_size =} \FloatTok{0.5}\NormalTok{, }
-       \AttributeTok{show\_percentage =} \ConstantTok{FALSE}\NormalTok{,}
-       \AttributeTok{text\_size =} \DecValTok{3}\NormalTok{,}
-       \AttributeTok{set\_name\_size =} \DecValTok{2}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
-\pandocbounded{\includegraphics[keepaspectratio]{06_Transcriptome_files/figure-pdf/unnamed-chunk-40-2.pdf}}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Purpose: Generate a Venn diagram to visualize the overlap of downregulated genes between Col{-}0 and mmf1 genotypes in BXplus soil.}
-
-\FunctionTok{ggsave}\NormalTok{(}\StringTok{"VENN\_Colmmf1\_soil\_down.png"}\NormalTok{, }\AttributeTok{width =} \DecValTok{5}\NormalTok{, }\AttributeTok{height =} \DecValTok{5}\NormalTok{, }\AttributeTok{units =} \StringTok{"cm"}\NormalTok{)}
-\CommentTok{\# Purpose: Save the downregulated gene Venn diagram as a PNG file.}
-\end{Highlighting}
-\end{Shaded}
+\pandocbounded{\includegraphics[keepaspectratio]{06_Transcriptome_files/figure-pdf/VENN overlap condition-2.pdf}}
 
 \begin{itemize}
 \tightlist
@@ -1607,111 +832,10 @@ Diagrams}\label{visualize-overlapping-genes-using-venn-diagrams}
 \subsection{Setup and Load Required
 Libraries}\label{setup-and-load-required-libraries}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Clear the environment}
-\FunctionTok{rm}\NormalTok{(}\AttributeTok{list =} \FunctionTok{ls}\NormalTok{())}
-\CommentTok{\# Purpose: Removes all objects from the R environment to start with a clean workspace.}
-
-\CommentTok{\# Purpose: Configures the knitr options to suppress the printing of R code in the output.}
-
-\CommentTok{\# Load necessary libraries}
-\FunctionTok{library}\NormalTok{(dplyr)           }\CommentTok{\# Data manipulation}
-\FunctionTok{library}\NormalTok{(DESeq2)          }\CommentTok{\# Differential expression analysis}
-\FunctionTok{library}\NormalTok{(BiocParallel)    }\CommentTok{\# Parallel computation for Bioconductor packages}
-
-\CommentTok{\# Check if "BiocManager" is installed, if not, install it}
-\ControlFlowTok{if}\NormalTok{ (}\SpecialCharTok{!}\FunctionTok{require}\NormalTok{(}\StringTok{"BiocManager"}\NormalTok{, }\AttributeTok{quietly =} \ConstantTok{TRUE}\NormalTok{))}
-    \FunctionTok{install.packages}\NormalTok{(}\StringTok{"BiocManager"}\NormalTok{)}
-\CommentTok{\# Purpose: Ensure BiocManager is installed for managing Bioconductor packages.}
-
-\CommentTok{\# Install and load the coseq package for co{-}expression analysis}
-\NormalTok{BiocManager}\SpecialCharTok{::}\FunctionTok{install}\NormalTok{(}\StringTok{"coseq"}\NormalTok{)}
-\FunctionTok{library}\NormalTok{(coseq)}
-
-\CommentTok{\# Load additional libraries for parallel processing, plotting, and data manipulation}
-\FunctionTok{library}\NormalTok{(foreach)         }\CommentTok{\# For parallel processing}
-\FunctionTok{library}\NormalTok{(doParallel)      }\CommentTok{\# Parallel backend for foreach}
-\FunctionTok{library}\NormalTok{(ggplot2)         }\CommentTok{\# Data visualization}
-\FunctionTok{library}\NormalTok{(tidyr)           }\CommentTok{\# Data tidying}
-\FunctionTok{library}\NormalTok{(viridis)         }\CommentTok{\# Color palettes}
-\FunctionTok{library}\NormalTok{(ComplexHeatmap)  }\CommentTok{\# Advanced heatmap plotting}
-
-\CommentTok{\# Check if "BiocManager" is installed again (redundant but safe)}
-\ControlFlowTok{if}\NormalTok{ (}\SpecialCharTok{!}\FunctionTok{require}\NormalTok{(}\StringTok{"BiocManager"}\NormalTok{, }\AttributeTok{quietly =} \ConstantTok{TRUE}\NormalTok{))}
-    \FunctionTok{install.packages}\NormalTok{(}\StringTok{"BiocManager"}\NormalTok{)}
-
-\CommentTok{\# Install and load the "org.At.tair.db" package for Arabidopsis thaliana annotations}
-\NormalTok{BiocManager}\SpecialCharTok{::}\FunctionTok{install}\NormalTok{(}\StringTok{"org.At.tair.db"}\NormalTok{)}
-\FunctionTok{library}\NormalTok{(org.At.tair.db)}
-
-\CommentTok{\# Load additional libraries for plotting, GO enrichment analysis, and data manipulation}
-\FunctionTok{library}\NormalTok{(gridExtra)        }\CommentTok{\# Arranging multiple plots}
-\FunctionTok{library}\NormalTok{(clusterProfiler)  }\CommentTok{\# GO term enrichment analysis}
-\FunctionTok{library}\NormalTok{(ggsci)            }\CommentTok{\# Scientific journal color palettes}
-\FunctionTok{library}\NormalTok{(DOSE)             }\CommentTok{\# Disease Ontology Semantic and Enrichment analysis}
-\FunctionTok{library}\NormalTok{(splitstackshape)  }\CommentTok{\# Split and reshape data}
-\FunctionTok{library}\NormalTok{(reshape2)         }\CommentTok{\# Data reshaping}
-
-\CommentTok{\# Check again if "BiocManager" is installed}
-\ControlFlowTok{if}\NormalTok{ (}\SpecialCharTok{!}\FunctionTok{require}\NormalTok{(}\StringTok{"BiocManager"}\NormalTok{, }\AttributeTok{quietly =} \ConstantTok{TRUE}\NormalTok{))}
-    \FunctionTok{install.packages}\NormalTok{(}\StringTok{"BiocManager"}\NormalTok{)}
-
-\CommentTok{\# Install and load the "simplifyEnrichment" package for GO term analysis}
-\NormalTok{BiocManager}\SpecialCharTok{::}\FunctionTok{install}\NormalTok{(}\StringTok{"simplifyEnrichment"}\NormalTok{)}
-\FunctionTok{library}\NormalTok{(simplifyEnrichment)}
-
-\CommentTok{\# Load additional libraries for data manipulation and Venn diagram plotting}
-\FunctionTok{library}\NormalTok{(data.table)       }\CommentTok{\# Fast data manipulation}
-\FunctionTok{library}\NormalTok{(doBy)             }\CommentTok{\# Group by and summary statistics}
-\FunctionTok{library}\NormalTok{(tibble)           }\CommentTok{\# Tidyverse core data structure}
-\FunctionTok{library}\NormalTok{(varhandle)        }\CommentTok{\# Handling variable types}
-\FunctionTok{library}\NormalTok{(ggvenn)           }\CommentTok{\# Venn diagram plotting}
-\FunctionTok{library}\NormalTok{(knitr)}
-\CommentTok{\# Source custom co{-}expression functions from an external file}
-\FunctionTok{source}\NormalTok{(}\StringTok{"Input/co{-}expression\_functions.R"}\NormalTok{)}
-\CommentTok{\# Purpose: Load custom functions for co{-}expression analysis from an external file.}
-
-\CommentTok{\# Set working directory to the source file location}
-\FunctionTok{library}\NormalTok{(rstudioapi)}
-\CommentTok{\#setwd(dirname(getActiveDocumentContext()$path))}
-\CommentTok{\# Purpose: Automatically set the working directory to the location of the current R script.}
-
-\CommentTok{\# Set a random seed for reproducibility}
-\FunctionTok{set.seed}\NormalTok{(}\DecValTok{100}\NormalTok{)}
-\CommentTok{\# Purpose: Ensure that random operations produce the same results each time the script is run.}
-
-\CommentTok{\# Use multiple cores for parallel processing to speed up computations}
-\FunctionTok{register}\NormalTok{(}\FunctionTok{MulticoreParam}\NormalTok{(}\DecValTok{8}\NormalTok{))}
-\CommentTok{\# Purpose: Register a parallel backend using 8 cores to improve performance for heavy computations.}
-\end{Highlighting}
-\end{Shaded}
-
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
 \subsection{Co-Expression Analysis
 Setup}\label{co-expression-analysis-setup}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Read the count data from the "Counts\_Table" sheet}
-\NormalTok{cts }\OtherTok{\textless{}{-}} \FunctionTok{read.xlsx}\NormalTok{(}\StringTok{"Input/Dataset6.xlsx"}\NormalTok{, }\AttributeTok{sheet =} \StringTok{"Counts\_Table"}\NormalTok{, }\AttributeTok{rowNames =} \ConstantTok{TRUE}\NormalTok{)}
-
-\CommentTok{\# Read the metadata from the "Meta\_Data" sheet}
-\NormalTok{meta }\OtherTok{\textless{}{-}} \FunctionTok{read.xlsx}\NormalTok{(}\StringTok{"Input/Dataset6.xlsx"}\NormalTok{, }\AttributeTok{sheet =} \StringTok{"Meta\_Data"}\NormalTok{, }\AttributeTok{rowNames =} \ConstantTok{TRUE}\NormalTok{)}
-\CommentTok{\# Purpose: Load the RNA{-}seq count data and corresponding metadata into R.}
-
-\CommentTok{\# Set genotype and conditioning variables as factors and define their levels}
-\NormalTok{meta}\SpecialCharTok{$}\NormalTok{genotype }\OtherTok{\textless{}{-}} \FunctionTok{factor}\NormalTok{(meta}\SpecialCharTok{$}\NormalTok{genotype, }\AttributeTok{levels =} \FunctionTok{c}\NormalTok{(}\StringTok{"WT"}\NormalTok{, }\StringTok{"mmf1"}\NormalTok{))}
-\NormalTok{meta}\SpecialCharTok{$}\NormalTok{conditioning }\OtherTok{\textless{}{-}} \FunctionTok{factor}\NormalTok{(meta}\SpecialCharTok{$}\NormalTok{conditioning, }\AttributeTok{levels =} \FunctionTok{c}\NormalTok{(}\StringTok{"minus"}\NormalTok{, }\StringTok{"plus"}\NormalTok{))}
-\CommentTok{\# Purpose: Convert the genotype and conditioning columns in the metadata to factors, specifying the order of levels.}
-
-\CommentTok{\# Define colors for plotting different conditions}
-\NormalTok{cols\_condition }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{"gold2"}\NormalTok{, }\StringTok{"palegreen3"}\NormalTok{)}
-\FunctionTok{names}\NormalTok{(cols\_condition) }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{"plus"}\NormalTok{, }\StringTok{"minus"}\NormalTok{)}
-\CommentTok{\# Purpose: Assign colors to the different levels of conditioning (plus, minus) for use in plots.}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{itemize}
 \tightlist
@@ -1726,35 +850,6 @@ Setup}\label{co-expression-analysis-setup}
 
 \subsection{Differential Gene Expression
 Analysis}\label{differential-gene-expression-analysis}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Get WT and mmf1 data separately}
-\NormalTok{WT\_meta }\OtherTok{\textless{}{-}}\NormalTok{ meta }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(genotype }\SpecialCharTok{==} \StringTok{"WT"}\NormalTok{)}
-\NormalTok{cts\_WT }\OtherTok{\textless{}{-}}\NormalTok{ cts }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{subset.matrix}\NormalTok{(}\ConstantTok{TRUE}\NormalTok{, }\FunctionTok{as.vector}\NormalTok{(}\FunctionTok{row.names}\NormalTok{(WT\_meta))) }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{.[, }\FunctionTok{row.names}\NormalTok{(WT\_meta)]}
-
-\NormalTok{mmf1meta }\OtherTok{\textless{}{-}}\NormalTok{ meta }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(genotype }\SpecialCharTok{==} \StringTok{"mmf1"}\NormalTok{)}
-\NormalTok{cts\_mmf1 }\OtherTok{\textless{}{-}}\NormalTok{ cts }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{subset.matrix}\NormalTok{(}\ConstantTok{TRUE}\NormalTok{, }\FunctionTok{as.vector}\NormalTok{(}\FunctionTok{row.names}\NormalTok{(mmf1meta))) }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{.[, }\FunctionTok{row.names}\NormalTok{(mmf1meta)]}
-\CommentTok{\# Purpose: Separate the count data and metadata for WT and mmf1 genotypes.}
-
-\CommentTok{\# Perform Differential Gene Expression (DGE) analyses}
-\CommentTok{\#deseq\_WT \textless{}{-} DESeq2\_analysis(cts\_WT, WT\_meta, shrinkage = T, funct = \textasciitilde{} conditioning)}
-\CommentTok{\#deseq\_mmf1 \textless{}{-} DESeq2\_analysis(cts\_mmf1, mmf1meta, shrinkage = T, funct = \textasciitilde{}conditioning)}
-\CommentTok{\# Purpose: Perform differential gene expression analysis using DESeq2 for both WT and mmf1 genotypes.}
-
-\CommentTok{\#Export DESeq results as an RDS file}
-\CommentTok{\#saveRDS(deseq\_WT, file = "Output/Tables/deseq\_WT.rds")}
-\CommentTok{\#saveRDS(deseq\_mmf1, file = "Output/Tables/deseq\_mmf1.rds")}
-
-\CommentTok{\#Load DESeq results from RDS file}
-\CommentTok{\#deseq\_WT \textless{}{-} readRDS("Output/Tables/deseq\_WT.rds")}
-\CommentTok{\#deseq\_mmf1 \textless{}{-} readRDS("Output/Tables/deseq\_mmf1.rds")}
-
-\CommentTok{\# Clean up the environment by removing intermediate data}
-\CommentTok{\#rm(meta, cts, cts\_WT, cts\_mmf1, WT\_meta, mmf1meta)}
-\CommentTok{\# Purpose: Remove intermediate variables from the environment to free up memory.}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{itemize}
 \tightlist
@@ -1793,78 +888,6 @@ Best to not rerun this part, but import previously run file
 \subsection{Figure 5: Annotated
 Heatmap}\label{figure-5-annotated-heatmap}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\FunctionTok{library}\NormalTok{(openxlsx)}
-\DocumentationTok{\#\#\# make matrix of the co{-}seq data}
-\NormalTok{WTCL }\OtherTok{\textless{}{-}} \FunctionTok{read.xlsx}\NormalTok{(}\StringTok{"Input/Dataset6.xlsx"}\NormalTok{, }\AttributeTok{sheet =} \StringTok{"WT\_coseq\_clusters"}\NormalTok{)}
-\CommentTok{\#WTCL \textless{}{-} read.table("Input/WT\_coseq.clusters\_new.txt", header = T, sep = "\textbackslash{}t")}
-\CommentTok{\# Purpose: Load the co{-}seq cluster data (\textasciigrave{}WTCL\textasciigrave{}) from a text file that was generated in the previous step. This file contains the gene expression profiles and their associated clusters.}
-
-\CommentTok{\#WTCL \textless{}{-} exprofiles}
-\CommentTok{\# Note: An alternative way to load the co{-}seq data is commented out, which would load directly from \textasciigrave{}exprofiles\textasciigrave{} instead of a file.}
-
-\DocumentationTok{\#\# sort clusters by expression (up{-}\textgreater{}down)}
-\CommentTok{\#WTCL \textless{}{-} clustersort(WTCL, deseq\_WT)}
-\CommentTok{\# Purpose: Sort the clusters in \textasciigrave{}WTCL\textasciigrave{} by their expression profiles, from highest to lowest, using a custom \textasciigrave{}clustersort\textasciigrave{} function. This ordering helps in visualizing the data in a more interpretable manner.}
-\CommentTok{\#write.csv(WTCL, "Output/Tables/GeneClusters\_Col0.csv", row.names = TRUE)}
-
-\CommentTok{\#WTGO \textless{}{-} GOanalysis(WTCL, deseq\_WT, dotplot = F)}
-\CommentTok{\# Export the GO enrichment results for each cluster to a RDS file}
-\CommentTok{\#saveRDS(WTGO, file = "Output/Tables/WTGO.rds")}
-\CommentTok{\#Import WTGO from RDS file}
-\CommentTok{\#WTGO \textless{}{-} readRDS("Input/WTGO.rds")}
-\NormalTok{WTGO }\OtherTok{\textless{}{-}} \FunctionTok{read.xlsx}\NormalTok{(}\StringTok{"Input/Dataset6.xlsx"}\NormalTok{, }\AttributeTok{sheet =} \StringTok{"GO\_Col0"}\NormalTok{, }\AttributeTok{rowNames =} \ConstantTok{TRUE}\NormalTok{)}
-\CommentTok{\# Purpose: Perform Gene Ontology (GO) analysis on the sorted clusters using a custom \textasciigrave{}GOanalysis\textasciigrave{} function. The analysis identifies enriched GO terms for each cluster without generating dot plots (\textasciigrave{}dotplot = F\textasciigrave{}).}
-\CommentTok{\#write.csv(WTGO[1], "Output/Tables/GO\_Col0.csv", row.names = TRUE)}
-\CommentTok{\#WTGO\_clusters \textless{}{-} WTGO[[1]]}
-\NormalTok{WTGO\_clusters }\OtherTok{\textless{}{-}} \FunctionTok{read.xlsx}\NormalTok{(}\StringTok{"Input/Dataset6.xlsx"}\NormalTok{, }\AttributeTok{sheet =} \StringTok{"GO\_Col0"}\NormalTok{, }\AttributeTok{rowNames =} \ConstantTok{TRUE}\NormalTok{)}
-\CommentTok{\# Install the biomaRt package if it\textquotesingle{}s not already installed}
-\CommentTok{\#install.packages("biomaRt")}
-
-\CommentTok{\# Load the biomaRt library}
-\FunctionTok{library}\NormalTok{(biomaRt)}
-
-\CommentTok{\# Connect to the Ensembl Plants BioMart database for Arabidopsis thaliana}
-\NormalTok{mart }\OtherTok{\textless{}{-}} \FunctionTok{useMart}\NormalTok{(}\AttributeTok{biomart =} \StringTok{"plants\_mart"}\NormalTok{, }\AttributeTok{dataset =} \StringTok{"athaliana\_eg\_gene"}\NormalTok{, }\AttributeTok{host =} \StringTok{"https://plants.ensembl.org"}\NormalTok{)}
-
-\CommentTok{\# Specify the attributes you want to retrieve: GeneID, Gene Name, and Description}
-\NormalTok{attributes }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{"ensembl\_gene\_id"}\NormalTok{, }\StringTok{"external\_gene\_name"}\NormalTok{, }\StringTok{"description"}\NormalTok{)}
-
-\CommentTok{\# Extract the unique GeneIDs from your WTGO\_clusters dataframe}
-\NormalTok{gene\_ids }\OtherTok{\textless{}{-}} \FunctionTok{unique}\NormalTok{(WTGO\_clusters}\SpecialCharTok{$}\NormalTok{geneID)}
-
-\CommentTok{\# Query the Ensembl Plants database to get the gene name and description for the gene IDs}
-\NormalTok{gene\_annotations }\OtherTok{\textless{}{-}}\NormalTok{ biomaRt}\SpecialCharTok{::}\FunctionTok{getBM}\NormalTok{(}\AttributeTok{attributes =}\NormalTok{ attributes,}
-                          \AttributeTok{filters =} \StringTok{"ensembl\_gene\_id"}\NormalTok{, }
-                          \AttributeTok{values =}\NormalTok{ gene\_ids, }
-                          \AttributeTok{mart =}\NormalTok{ mart)}
-
-\CommentTok{\# Merge WTGO\_clusters with the gene\_annotations data frame}
-\NormalTok{WTGO\_clusters\_annotated }\OtherTok{\textless{}{-}} \FunctionTok{merge}\NormalTok{(WTGO\_clusters, gene\_annotations, }
-                                 \AttributeTok{by.x =} \StringTok{"geneID"}\NormalTok{, }\AttributeTok{by.y =} \StringTok{"ensembl\_gene\_id"}\NormalTok{, }
-                                 \AttributeTok{all.x =} \ConstantTok{TRUE}\NormalTok{)}
-
-\CommentTok{\# Convert rownames of filtered\_deseq to a column for merging}
-\NormalTok{df\_WT\_sig}\SpecialCharTok{$}\NormalTok{geneID }\OtherTok{\textless{}{-}} \FunctionTok{rownames}\NormalTok{(df\_WT\_sig)}
-
-\CommentTok{\# Select only the columns we want to merge (log2FoldChange and padj, along with geneID)}
-\NormalTok{filtered\_deseq\_subset }\OtherTok{\textless{}{-}}\NormalTok{ df\_WT\_sig[, }\FunctionTok{c}\NormalTok{(}\StringTok{"geneID"}\NormalTok{, }\StringTok{"log2FoldChange"}\NormalTok{, }\StringTok{"padj"}\NormalTok{)]}
-
-\CommentTok{\# Merge filtered\_deseq with WTGO\_clusters\_annotated by the geneID column}
-\NormalTok{WTGO\_clusters\_annotated }\OtherTok{\textless{}{-}} \FunctionTok{merge}\NormalTok{(WTGO\_clusters\_annotated, filtered\_deseq\_subset, }
-                                 \AttributeTok{by =} \StringTok{"geneID"}\NormalTok{, }\AttributeTok{all.x =} \ConstantTok{TRUE}\NormalTok{)}
-
-\CommentTok{\# Add a new column "significant" based on the specified conditions}
-\NormalTok{WTGO\_clusters\_annotated}\SpecialCharTok{$}\NormalTok{significant }\OtherTok{\textless{}{-}} \FunctionTok{with}\NormalTok{(WTGO\_clusters\_annotated, }
-\NormalTok{                                            log2FoldChange }\SpecialCharTok{\textgreater{}} \DecValTok{1} \SpecialCharTok{|}\NormalTok{ log2FoldChange }\SpecialCharTok{\textless{}} \SpecialCharTok{{-}}\DecValTok{1} \SpecialCharTok{\&}\NormalTok{ padj }\SpecialCharTok{\textless{}} \FloatTok{0.05}\NormalTok{)}
-
-\CommentTok{\# View the resulting data frame with the added columns}
-\CommentTok{\#head(WTGO\_clusters\_annotated)}
-\FunctionTok{kable}\NormalTok{(WTGO\_clusters\_annotated[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{, }\DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{],}\AttributeTok{caption =} \StringTok{"Annotated GO clusters in WT"}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
 \begin{longtable}[]{@{}
   >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.1429}}
   >{\raggedleft\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.1143}}
@@ -1896,39 +919,6 @@ AT1G01090 & 6 & purine nucleoside bisphosphate biosynthetic process \\
 AT1G01090 & 6 & acyl-CoA metabolic process \\
 AT1G01090 & 6 & acyl-CoA biosynthetic process \\
 \end{longtable}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\#write.csv(WTGO\_clusters\_annotated, "Output/Tables/GO\_Col0\_annotated.csv", row.names = TRUE)}
-
-\CommentTok{\#write.table(data.frame(WTGO[[2]]@compareClusterResult), "output/WT\_GOenrichment\_new.txt",row.names = F, col.names = T, quote = F, sep = "\textbackslash{}t")}
-\CommentTok{\# Purpose: (Commented out) Save the GO enrichment results for each cluster to a text file for further analysis or review.}
-
-\CommentTok{\#write.table(data.frame(WTGO[[1]]), "/WT\_GOenrichment\_clusters.txt",row.names = F, col.names = T, quote = F, sep = "\textbackslash{}t")}
-\CommentTok{\# Purpose: Save the summarized GO enrichment results for each cluster to a text file. These results can later be used to annotate the heatmap or for other downstream analyses.}
-
-\CommentTok{\# Open PDF device}
-\CommentTok{\#pdf("WT\_coseq.annotated.heatmap\_new.pdf", width = 15, height = 8)}
-\CommentTok{\# Purpose: Open a PDF device for plotting, specifying the file path and dimensions (width and height). This allows the annotated heatmap to be saved as a PDF.}
-
-\DocumentationTok{\#\# make annotated heatmap}
-\CommentTok{\#heatmap \textless{}{-} clusterheatmap(WTCL, deseq\_WT, WTGO, GOnumber = 5, cluster\_order = T)}
-\CommentTok{\# Purpose: Generate an annotated heatmap using a custom \textasciigrave{}clusterheatmap\textasciigrave{} function. The heatmap displays the expression profiles of the clusters along with GO annotations. The top 5 GO terms for each cluster are included, and clusters are ordered (\textasciigrave{}cluster\_order = T\textasciigrave{}).}
-
-\CommentTok{\#Close PDF device}
-\CommentTok{\#dev.off()}
-\CommentTok{\# Purpose: Close the PDF device, finalizing the PDF file that contains the annotated heatmap.}
-\CommentTok{\#print(heatmap)}
-\CommentTok{\#png("heat\_maps.png", height = 1000, width= 1500)}
-\CommentTok{\# Purpose: (Commented out) Option to save the heatmap as a PNG image instead of a PDF, with specified dimensions.}
-
-\CommentTok{\# \#save as pdf}
-\CommentTok{\#pdf("/Users/Henry/Desktop/Desktop {-} pseudomonas/Data/2022\_09\_23\_GWAS\_mutant\_screening\_E2/RNA\_seq/RNASeq/02\_Stats/Figs/WT\_coseq.annotated.heatmap\_new.pdf", onefile = T, useDingbats = F, height=10, width=8)}
-\CommentTok{\# clusterheatmap(WTCL, deseq\_WT, WTGO, GOnumber=5, cluster\_order = F)}
-\CommentTok{\# dev.off()}
-\CommentTok{\# Purpose: (Commented out) Another approach to save the heatmap as a PDF, with slightly different settings such as \textasciigrave{}onefile = T\textasciigrave{} and \textasciigrave{}useDingbats = F\textasciigrave{}. This section seems redundant with the previous PDF saving step, hence it’s commented out.}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{itemize}
 \tightlist
@@ -1969,7 +959,7 @@ pdf
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{06_Transcriptome_files/figure-pdf/unnamed-chunk-49-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{06_Transcriptome_files/figure-pdf/unnamed-chunk-51-1.pdf}}
 
 \subsection{GO Enrichment Data Preparation and
 Filtering}\label{go-enrichment-data-preparation-and-filtering}
@@ -2000,43 +990,7 @@ Sorting and Ordering Data
 \subsection{Plotting GO Enrichment
 Results}\label{plotting-go-enrichment-results}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Plot GO enrichment results}
-\FunctionTok{ggplot}\NormalTok{(WTGO\_filt\_top5, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Cluster\_number, }\AttributeTok{y =}\NormalTok{ Description, }\AttributeTok{size =}\NormalTok{ GeneRatio),}
-       \AttributeTok{split=}\StringTok{".sign"}\NormalTok{) }\SpecialCharTok{+}
-  \FunctionTok{geom\_rect}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{xmin =} \FloatTok{0.8}\NormalTok{, }\AttributeTok{xmax =} \FloatTok{4.2}\NormalTok{, }\AttributeTok{ymin =} \SpecialCharTok{{-}}\ConstantTok{Inf}\NormalTok{, }\AttributeTok{ymax =} \ConstantTok{Inf}\NormalTok{), }\AttributeTok{fill =} \StringTok{"seagreen"}\NormalTok{,}
-            \AttributeTok{alpha =} \FloatTok{0.01}\NormalTok{) }\SpecialCharTok{+}
-  \FunctionTok{geom\_rect}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{xmin =} \FloatTok{4.7}\NormalTok{, }\AttributeTok{xmax =} \FloatTok{7.2}\NormalTok{, }\AttributeTok{ymin =} \SpecialCharTok{{-}}\ConstantTok{Inf}\NormalTok{, }\AttributeTok{ymax =} \ConstantTok{Inf}\NormalTok{), }\AttributeTok{fill =} \StringTok{"gold2"}\NormalTok{,}
-            \AttributeTok{alpha =} \FloatTok{0.01}\NormalTok{) }\SpecialCharTok{+}
-  \FunctionTok{geom\_point}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{fill =}\NormalTok{ p.adjust, }\AttributeTok{shape =}\NormalTok{ setType), }\AttributeTok{shape =} \DecValTok{21}\NormalTok{, }\AttributeTok{alpha =} \DecValTok{1}\NormalTok{) }\SpecialCharTok{+} \CommentTok{\# Adjust alpha for slight transparency}
-  \FunctionTok{theme\_minimal}\NormalTok{(}\AttributeTok{base\_size =} \DecValTok{12}\NormalTok{) }\SpecialCharTok{+}  \CommentTok{\# Cleaner theme, appropriate base text size}
-  \FunctionTok{scale\_fill\_continuous}\NormalTok{(}\AttributeTok{low =} \StringTok{"red3"}\NormalTok{, }\AttributeTok{high =} \StringTok{"blue3"}\NormalTok{) }\SpecialCharTok{+}  \CommentTok{\# Color gradient for fill}
-  \FunctionTok{labs}\NormalTok{(}\AttributeTok{x =} \StringTok{"Cluster"}\NormalTok{,  }\AttributeTok{y =} \ConstantTok{NA}\NormalTok{, }\AttributeTok{fill =} \StringTok{"p. adjust"}\NormalTok{, }\AttributeTok{size =} \StringTok{"Gene ratio"}\NormalTok{) }\SpecialCharTok{+}  \CommentTok{\# Clear labels}
-  \FunctionTok{theme}\NormalTok{(}
-    \AttributeTok{legend.position =} \StringTok{"right"}\NormalTok{,  }\CommentTok{\# Adjust legend position if necessary}
-    \AttributeTok{axis.text.x =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{vjust =} \DecValTok{1}\NormalTok{, }\AttributeTok{size =} \DecValTok{8}\NormalTok{),  }\CommentTok{\# Improve X axis labels readability}
-    \AttributeTok{axis.title.x =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{margin =} \FunctionTok{margin}\NormalTok{(}\AttributeTok{t =} \DecValTok{8}\NormalTok{), }\AttributeTok{size =}\DecValTok{8}\NormalTok{),  }\CommentTok{\# Adjust title spacing}
-    \AttributeTok{axis.title.y =} \FunctionTok{element\_blank}\NormalTok{(),}
-    \AttributeTok{panel.grid.major =} \FunctionTok{element\_line}\NormalTok{(}\AttributeTok{color =} \StringTok{"gray90"}\NormalTok{),  }\CommentTok{\# Lighter grid lines}
-    \AttributeTok{panel.grid.minor =} \FunctionTok{element\_blank}\NormalTok{(),  }\CommentTok{\# Remove minor grid lines}
-    \AttributeTok{strip.background =} \FunctionTok{element\_blank}\NormalTok{(),  }\CommentTok{\# Clean up facet strip background if necessary}
-    \AttributeTok{strip.text.x =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{8}\NormalTok{),}
-    \AttributeTok{axis.text.y =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{10}\NormalTok{),}
-    \AttributeTok{legend.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{6}\NormalTok{),}
-    \AttributeTok{legend.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{)}
-\NormalTok{  )}
-\end{Highlighting}
-\end{Shaded}
-
-\pandocbounded{\includegraphics[keepaspectratio]{06_Transcriptome_files/figure-pdf/unnamed-chunk-53-1.pdf}}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\FunctionTok{ggsave}\NormalTok{(}\StringTok{"GO\_enrich\_WT\_Facet\_ggplot.pdf"}\NormalTok{, }\AttributeTok{width =} \DecValTok{18}\NormalTok{, }\AttributeTok{height =} \DecValTok{15}\NormalTok{, }\AttributeTok{units =} \StringTok{"cm"}\NormalTok{)}
-\CommentTok{\# Purpose: Generate a plot of the GO enrichment results using \textasciigrave{}ggplot2\textasciigrave{}, displaying clusters along the x{-}axis and GO terms along the y{-}axis. The size of points represents \textasciigrave{}GeneRatio\textasciigrave{}, and color represents \textasciigrave{}p.adjust\textasciigrave{}. The plot is saved as a PDF.}
-\end{Highlighting}
-\end{Shaded}
+\pandocbounded{\includegraphics[keepaspectratio]{06_Transcriptome_files/figure-pdf/Enrichment dotplot-1.pdf}}
 
 \begin{itemize}
 \tightlist
@@ -2051,9 +1005,9 @@ Results}\label{plotting-go-enrichment-results}
 \subsection{Session Information}\label{session-information}
 
 \begin{verbatim}
-R version 4.4.2 (2024-10-31)
+R version 4.4.1 (2024-06-14)
 Platform: aarch64-apple-darwin20
-Running under: macOS Sequoia 15.2
+Running under: macOS 15.5
 
 Matrix products: default
 BLAS:   /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/lib/libRblas.0.dylib 
@@ -2062,7 +1016,7 @@ LAPACK: /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/lib/libRlap
 locale:
 [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
 
-time zone: Europe/Zurich
+time zone: Europe/Copenhagen
 tzcode source: internal
 
 attached base packages:
@@ -2070,88 +1024,89 @@ attached base packages:
  [8] datasets  methods   base     
 
 other attached packages:
- [1] biomaRt_2.58.2              varhandle_2.0.6            
- [3] doBy_4.6.24                 data.table_1.16.4          
- [5] simplifyEnrichment_2.0.0    reshape2_1.4.4             
- [7] splitstackshape_1.4.8       DOSE_4.0.0                 
- [9] ggsci_3.2.0                 clusterProfiler_4.14.4     
-[11] org.At.tair.db_3.20.0       AnnotationDbi_1.68.0       
-[13] doParallel_1.0.17           iterators_1.0.14           
-[15] foreach_1.5.2               coseq_1.30.0               
-[17] BiocManager_1.30.25         BiocParallel_1.40.0        
-[19] ggvenn_0.1.10               cowplot_1.1.3              
-[21] vegan_2.6-8                 lattice_0.22-6             
-[23] permute_0.9-7               openxlsx_4.2.7.1           
-[25] rstudioapi_0.17.1           knitr_1.49                 
-[27] ggnewscale_0.5.0            Cairo_1.6-2                
-[29] magrittr_2.0.3              lubridate_1.9.4            
-[31] forcats_1.0.0               stringr_1.5.1              
-[33] purrr_1.0.2                 readr_2.1.5                
-[35] tidyr_1.3.1                 tidyverse_2.0.0            
-[37] ggVennDiagram_1.5.2         gridExtra_2.3              
-[39] PoiClaClu_1.0.2.1           tibble_3.2.1               
-[41] glmpca_0.2.0                ComplexHeatmap_2.22.0      
-[43] ggrepel_0.9.6               dplyr_1.1.4                
-[45] hexbin_1.28.5               RColorBrewer_1.1-3         
-[47] vsn_3.74.0                  viridis_0.6.5              
-[49] viridisLite_0.4.2           scales_1.3.0               
-[51] apeglm_1.28.0               ggplot2_3.5.1              
-[53] DESeq2_1.46.0               SummarizedExperiment_1.36.0
-[55] Biobase_2.66.0              MatrixGenerics_1.18.0      
-[57] matrixStats_1.5.0           GenomicRanges_1.58.0       
-[59] GenomeInfoDb_1.42.1         IRanges_2.40.1             
-[61] S4Vectors_0.44.0            BiocGenerics_0.52.0        
+ [1] enrichplot_1.26.6           biomaRt_2.58.2             
+ [3] varhandle_2.0.6             doBy_4.6.24                
+ [5] data.table_1.17.6           simplifyEnrichment_2.0.0   
+ [7] reshape2_1.4.4              splitstackshape_1.4.8      
+ [9] DOSE_4.0.0                  ggsci_3.2.0                
+[11] clusterProfiler_4.14.6      org.At.tair.db_3.20.0      
+[13] AnnotationDbi_1.68.0        doParallel_1.0.17          
+[15] iterators_1.0.14            foreach_1.5.2              
+[17] coseq_1.30.0                BiocManager_1.30.25        
+[19] BiocParallel_1.40.0         ggvenn_0.1.10              
+[21] cowplot_1.1.3               vegan_2.6-8                
+[23] lattice_0.22-6              permute_0.9-7              
+[25] openxlsx_4.2.8              rstudioapi_0.17.1          
+[27] knitr_1.49                  ggnewscale_0.5.1           
+[29] Cairo_1.6-2                 magrittr_2.0.3             
+[31] lubridate_1.9.4             forcats_1.0.0              
+[33] stringr_1.5.1               purrr_1.0.2                
+[35] readr_2.1.5                 tidyr_1.3.1                
+[37] tidyverse_2.0.0             ggVennDiagram_1.5.2        
+[39] gridExtra_2.3               PoiClaClu_1.0.2.1          
+[41] tibble_3.2.1                glmpca_0.2.0               
+[43] ComplexHeatmap_2.22.0       ggrepel_0.9.6              
+[45] dplyr_1.1.4                 hexbin_1.28.5              
+[47] RColorBrewer_1.1-3          vsn_3.74.0                 
+[49] viridis_0.6.5               viridisLite_0.4.2          
+[51] scales_1.3.0                apeglm_1.28.0              
+[53] ggplot2_3.5.1               DESeq2_1.46.0              
+[55] SummarizedExperiment_1.36.0 Biobase_2.66.0             
+[57] MatrixGenerics_1.18.0       matrixStats_1.5.0          
+[59] GenomicRanges_1.58.0        GenomeInfoDb_1.42.1        
+[61] IRanges_2.40.1              S4Vectors_0.44.0           
+[63] BiocGenerics_0.52.0        
 
 loaded via a namespace (and not attached):
-  [1] fs_1.6.5                enrichplot_1.26.6       httr_1.4.7             
-  [4] numDeriv_2016.8-1.1     backports_1.5.0         tools_4.4.2            
-  [7] R6_2.5.1                lazyeval_0.2.2          mgcv_1.9-1             
- [10] GetoptLong_1.0.5        withr_3.0.2             prettyunits_1.2.0      
- [13] bayesm_3.1-6            preprocessCore_1.68.0   cli_3.6.3              
- [16] textshaping_0.4.1       microbenchmark_1.5.0    labeling_0.4.3         
- [19] slam_0.1-55             mvtnorm_1.3-2           robustbase_0.99-4-1    
- [22] tm_0.7-15               proxy_0.4-27            systemfonts_1.1.0      
- [25] yulab.utils_0.1.9       gson_0.1.0              R.utils_2.12.3         
- [28] plotrix_3.8-4           bbmle_1.0.25.1          limma_3.62.1           
- [31] RSQLite_2.3.9           generics_0.1.3          gridGraphics_0.5-1     
- [34] shape_1.4.6.1           HTSCluster_2.0.11       zip_2.3.1              
- [37] GO.db_3.20.0            Matrix_1.7-1            abind_1.4-8            
- [40] R.methodsS3_1.8.2       lifecycle_1.0.4         scatterplot3d_0.3-44   
- [43] yaml_2.3.10             edgeR_4.4.1             BiocFileCache_2.10.2   
- [46] qvalue_2.34.0           SparseArray_1.6.0       blob_1.2.4             
- [49] promises_1.3.2          crayon_1.5.3            bdsmatrix_1.3-7        
- [52] ggtangle_0.0.6          KEGGREST_1.42.0         HTSFilter_1.46.0       
- [55] capushe_1.1.2           pillar_1.10.1           fgsea_1.32.0           
- [58] rjson_0.2.23            boot_1.3-31             codetools_0.2-20       
- [61] fastmatch_1.1-6         glue_1.8.0              ggfun_0.1.8            
- [64] vctrs_0.6.5             png_0.1-8               treeio_1.30.0          
- [67] gtable_0.3.6            emdbook_1.3.13          cachem_1.1.0           
- [70] xfun_0.50               S4Arrays_1.6.0          mime_0.12              
- [73] coda_0.19-4.1           simona_1.4.0            statmod_1.5.0          
- [76] nlme_3.1-166            ggtree_3.14.0           bit64_4.5.2            
- [79] filelock_1.0.3          progress_1.2.3          tensorA_0.36.2.1       
- [82] Deriv_4.1.6             affyio_1.76.0           colorspace_2.1-1       
- [85] DBI_1.2.3               tidyselect_1.2.1        curl_6.1.0             
- [88] bit_4.5.0.1             compiler_4.4.2          Rmixmod_2.1.10         
- [91] compositions_2.0-8      xml2_1.3.6              NLP_0.3-2              
- [94] DelayedArray_0.32.0     DEoptimR_1.1-3-1        affy_1.84.0            
- [97] rappdirs_0.3.3          digest_0.6.37           rmarkdown_2.29         
-[100] XVector_0.46.0          htmltools_0.5.8.1       pkgconfig_2.0.3        
-[103] dbplyr_2.5.0            fastmap_1.2.0           rlang_1.1.4            
-[106] GlobalOptions_0.1.2     UCSC.utils_1.2.0        shiny_1.10.0           
-[109] farver_2.1.2            jsonlite_1.8.9          GOSemSim_2.32.0        
-[112] R.oo_1.27.0             GenomeInfoDbData_1.2.13 ggplotify_0.1.2        
-[115] patchwork_1.3.0         munsell_0.5.1           Rcpp_1.0.13-1          
-[118] ape_5.8-1               stringi_1.8.4           zlibbioc_1.52.0        
-[121] MASS_7.3-64             plyr_1.8.9              Biostrings_2.74.1      
-[124] splines_4.4.2           hms_1.1.3               circlize_0.4.16        
-[127] locfit_1.5-9.10         igraph_2.1.2            XML_3.99-0.18          
-[130] evaluate_1.0.1          modelr_0.1.11           tzdb_0.4.0             
-[133] httpuv_1.6.15           clue_0.3-66             broom_1.0.7            
-[136] xtable_1.8-4            e1071_1.7-16            tidytree_0.4.6         
-[139] later_1.4.1             class_7.3-23            ragg_1.3.3             
-[142] Polychrome_1.5.1        aplot_0.2.4             memoise_2.0.1          
-[145] cluster_2.1.8           corrplot_0.95           timechange_0.3.0       
+  [1] fs_1.6.5                httr_1.4.7              numDeriv_2016.8-1.1    
+  [4] backports_1.5.0         tools_4.4.1             R6_2.5.1               
+  [7] lazyeval_0.2.2          mgcv_1.9-1              GetoptLong_1.0.5       
+ [10] withr_3.0.2             prettyunits_1.2.0       bayesm_3.1-6           
+ [13] preprocessCore_1.68.0   cli_3.6.3               textshaping_0.4.1      
+ [16] microbenchmark_1.5.0    labeling_0.4.3          slam_0.1-55            
+ [19] mvtnorm_1.3-2           robustbase_0.99-4-1     tm_0.7-15              
+ [22] proxy_0.4-27            systemfonts_1.1.0       yulab.utils_0.1.9      
+ [25] gson_0.1.0              R.utils_2.12.3          plotrix_3.8-4          
+ [28] bbmle_1.0.25.1          limma_3.62.1            RSQLite_2.3.9          
+ [31] generics_0.1.3          gridGraphics_0.5-1      shape_1.4.6.1          
+ [34] HTSCluster_2.0.11       zip_2.3.1               GO.db_3.20.0           
+ [37] Matrix_1.7-0            abind_1.4-8             R.methodsS3_1.8.2      
+ [40] lifecycle_1.0.4         scatterplot3d_0.3-44    yaml_2.3.10            
+ [43] edgeR_4.4.1             BiocFileCache_2.10.2    qvalue_2.34.0          
+ [46] SparseArray_1.6.0       blob_1.2.4              promises_1.3.2         
+ [49] crayon_1.5.3            bdsmatrix_1.3-7         ggtangle_0.0.6         
+ [52] KEGGREST_1.42.0         HTSFilter_1.46.0        capushe_1.1.2          
+ [55] pillar_1.10.1           fgsea_1.32.0            rjson_0.2.23           
+ [58] boot_1.3-30             codetools_0.2-20        fastmatch_1.1-6        
+ [61] glue_1.8.0              ggfun_0.1.8             vctrs_0.6.5            
+ [64] png_0.1-8               treeio_1.30.0           gtable_0.3.6           
+ [67] emdbook_1.3.13          cachem_1.1.0            xfun_0.50              
+ [70] S4Arrays_1.6.0          mime_0.12               coda_0.19-4.1          
+ [73] simona_1.4.0            statmod_1.5.0           nlme_3.1-164           
+ [76] ggtree_3.14.0           bit64_4.5.2             filelock_1.0.3         
+ [79] progress_1.2.3          tensorA_0.36.2.1        Deriv_4.1.6            
+ [82] affyio_1.76.0           colorspace_2.1-1        DBI_1.2.3              
+ [85] tidyselect_1.2.1        curl_6.1.0              bit_4.5.0.1            
+ [88] compiler_4.4.1          Rmixmod_2.1.10          compositions_2.0-8     
+ [91] xml2_1.3.6              NLP_0.3-2               DelayedArray_0.32.0    
+ [94] DEoptimR_1.1-3-1        affy_1.84.0             rappdirs_0.3.3         
+ [97] digest_0.6.37           rmarkdown_2.29          XVector_0.46.0         
+[100] htmltools_0.5.8.1       pkgconfig_2.0.3         dbplyr_2.5.0           
+[103] fastmap_1.2.0           rlang_1.1.4             GlobalOptions_0.1.2    
+[106] UCSC.utils_1.2.0        shiny_1.10.0            farver_2.1.2           
+[109] jsonlite_1.8.9          GOSemSim_2.32.0         R.oo_1.27.0            
+[112] GenomeInfoDbData_1.2.13 ggplotify_0.1.2         patchwork_1.3.0        
+[115] munsell_0.5.1           Rcpp_1.0.13-1           ape_5.8-1              
+[118] stringi_1.8.4           zlibbioc_1.52.0         MASS_7.3-60.2          
+[121] plyr_1.8.9              Biostrings_2.74.1       splines_4.4.1          
+[124] hms_1.1.3               circlize_0.4.16         locfit_1.5-9.10        
+[127] igraph_2.1.2            XML_3.99-0.18           evaluate_1.0.1         
+[130] modelr_0.1.11           tzdb_0.4.0              httpuv_1.6.15          
+[133] clue_0.3-66             broom_1.0.7             xtable_1.8-4           
+[136] e1071_1.7-16            tidytree_0.4.6          later_1.4.1            
+[139] class_7.3-22            ragg_1.3.3              Polychrome_1.5.1       
+[142] aplot_0.2.4             memoise_2.0.1           cluster_2.1.6          
+[145] corrplot_0.95           timechange_0.3.0       
 \end{verbatim}
 
 \begin{itemize}

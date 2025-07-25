@@ -47,7 +47,12 @@ We see a clear seperation between conditions and genotypes in the PCA plot. The 
 
 # Setup
 
-```{r, message=FALSE}
+```{r}
+#| label: Setup
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
 
 ##clear the object from memory
 rm(list=ls())
@@ -96,7 +101,11 @@ set.seed(100)
 
 ## Reading Data
 
-```{r, message=FALSE}
+```{r}
+#| label: Import data
+#| warning: false
+#| include: false
+#| paged-print: false
 # Load required package
 library(openxlsx)
 
@@ -115,7 +124,12 @@ kable(meta[1:3, ], caption = "Meta Data Table")
 
 ## Preparing Metadata
 
-```{r, message=FALSE}
+```{r}
+#| label: Factoring
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
 # Convert the 'genotype' column in the metadata to a factor, specifying the order of levels.
 meta$genotype <- factor(meta$genotype, levels=c("WT","mmf1"))
 
@@ -131,7 +145,12 @@ names(cols_condition) <- c("plus", "minus")
 
 ## Sequencing Depth Visualization
 
-```{r, message=FALSE, fig.height=5}
+```{r}
+#| label: Read count
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Calculate the total number of reads (sequencing depth) for each sample by summing the counts across all genes.
 meta$n_reads <- colSums(cts)
 
@@ -149,7 +168,12 @@ meta |>
 
 ## Creating DESeq2 Object and Running Differential Expression Analysis
 
-```{r, message=FALSE}
+```{r}
+#| label: Run DESEq
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
 # Create a DESeq2 object using the count data and metadata, specifying a design formula that includes genotype and conditioning.
 dds <- DESeqDataSetFromMatrix(countData = cts,
                               colData = meta,
@@ -173,7 +197,11 @@ kable(res[1:3, ], caption = "Differential expression.")
 
 ## Log Fold Change Shrinkage
 
-```{r, message=FALSE}
+```{r message=FALSE}
+#| label: LF Shrinkage
+#| echo: false
+#| warning: false
+#| paged-print: false
 # Apply log fold change shrinkage to the results using the 'apeglm' method, which helps stabilize estimates for low-count genes.
 resLFC <- lfcShrink(dds, coef ="genotype_mmf1_vs_WT" , type="apeglm")
 kable(resLFC[1:3, ], caption = "Shrunken log fold changes.")
@@ -183,7 +211,12 @@ kable(resLFC[1:3, ], caption = "Shrunken log fold changes.")
 
 ## Variance Stabilizing Transformation (VST) and Heatmap Preparation
 
-```{r, message=FALSE}
+```{r}
+#| label: VST
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
 # Apply variance stabilizing transformation (VST) to the count data. This transformation makes the variance independent of the mean.
 vsd <- vst(dds, blind=FALSE)
 rld <- rlog(dds, blind=FALSE)
@@ -198,7 +231,12 @@ kable(df[1:3, ], caption = "Sample metadata.")
 
 ## Sample Clustering Heatmap
 
-```{r, echo=FALSE, message=FALSE, fig.height=5}
+```{r}
+#| label: Sample Clustering
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
 # Calculate the Euclidean distances between samples based on the VST-transformed data.
 sampleDists <- dist(t(assay(vsd)))
 
@@ -220,7 +258,12 @@ Heatmap(sampleDistMatrix,
 
 ## Principal Component Analysis (PCA)\*\*
 
-```{r, message=FALSE, fig.height=5}
+```{r}
+#| label: PCA transcriptome
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Perform variance stabilizing transformation (VST) on the DESeq2 object to prepare data for PCA.
 vsdata <- vst(dds, blind=FALSE)
 
@@ -288,7 +331,12 @@ ggsave("PCA_plot_transcriptome.pdf", plot = PCA_plot, width = 10.5, height = 8, 
 
 ## PERMANOVA Analysis of Lines within Conditioning Levels
 
-```{r, message=FALSE}
+```{r}
+#| label: PCA factoring
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Ensure factors are correctly set for analysis
 vsPCA$genotype <- factor(vsPCA$genotype)
 vsPCA$conditioning <- factor(vsPCA$conditioning)
@@ -296,7 +344,11 @@ vsPCA$conditioning <- factor(vsPCA$conditioning)
 
 -   **Purpose**: Convert the `genotype` and `conditioning` columns in `vsPCA` to factors to ensure that the subsequent PERMANOVA analysis correctly interprets these variables as categorical.
 
-```{r, message=FALSE}
+```{r message=FALSE}
+#| label: Split condition
+#| echo: false
+#| warning: false
+#| paged-print: false
 # Split data by conditioning levels
 conditioning_levels <- levels(vsPCA$conditioning)
 results <- list()
@@ -304,7 +356,12 @@ results <- list()
 
 -   **Purpose**: Extract the different levels of `conditioning` and initialize an empty list `results` to store the PERMANOVA results for each conditioning level.
 
-```{r, message=FALSE}
+```{r}
+#| label: Run PERMANOVA
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 library(vegan)
 for (cond in conditioning_levels) {
   # Subset data for the current conditioning level
@@ -329,7 +386,12 @@ for (cond in conditioning_levels) {
         -   Performs PERMANOVA (`adonis`) to test if `genotype` significantly explains differences in the distance matrix.
         -   Stores the ANOVA table from the PERMANOVA result in the `results` list.
 
-```{r, message=FALSE}
+```{r}
+#| label: PERMANOVA
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Print results for each conditioning level
 for (cond in names(results)) {
   cat("Conditioning:", cond, "\n")
@@ -342,7 +404,12 @@ for (cond in names(results)) {
 
 ## PERMANOVA Analysis of Conditioning within Genotypes
 
-```{r, echo=FALSE, message=FALSE}
+```{r}
+#| label: Factoring B
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
 # Ensure factors are correctly set for analysis
 vsPCA$genotype <- factor(vsPCA$genotype)
 vsPCA$conditioning <- factor(vsPCA$conditioning)
@@ -350,7 +417,12 @@ vsPCA$conditioning <- factor(vsPCA$conditioning)
 
 -   **Purpose**: Reaffirm that the `genotype` and `conditioning` columns are treated as factors in the analysis.
 
-```{r, message=FALSE}
+```{r}
+#| label: Split genotype condition
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Split data by genotype levels
 genotype_levels <- levels(vsPCA$genotype)
 results <- list()
@@ -359,7 +431,12 @@ results <- list()
 
 -   **Purpose**: Extract the different levels of `genotype` and initialize an empty list `results` to store the PERMANOVA results for each genotype.
 
-```{r, message=FALSE}
+```{r}
+#| label: Pairwise PERMAOVA
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 library(vegan)
 for (geno in genotype_levels) {
   # Subset data for the current conditioning level
@@ -384,7 +461,12 @@ for (geno in genotype_levels) {
         -   Performs PERMANOVA to test if `conditioning` significantly explains differences in the distance matrix within each genotype.
         -   Stores the ANOVA table from the PERMANOVA result in the `results` list.
 
-```{r, message=FALSE}
+```{r}
+#| label: Pairwise PERMANOVA - condition
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Print results for each conditioning level
 for (geno in names(results)) {
   cat("Genotype:", geno, "\n")
@@ -397,7 +479,12 @@ for (geno in names(results)) {
 
 ## PERMANOVA Analysis of Lines vs. Conditioning
 
-```{r, message=FALSE}
+```{r}
+#| label: Prep full
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Prepare for PERMANOVA 
 pca_scores <- vsPCA[, c("PC1", "PC2")]
 dist_matrix <- dist(pca_scores)
@@ -405,7 +492,12 @@ dist_matrix <- dist(pca_scores)
 
 -   **Purpose**: Extract the first two principal components (`PC1` and `PC2`) from `vsPCA` and compute a distance matrix from these scores. This matrix represents the pairwise dissimilarities between samples.
 
-```{r, message=FALSE}
+```{r}
+#| label: Factoring full
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
 # Ensure factors are correctly set for analysis
 vsPCA$genotype <- factor(vsPCA$genotype)
 vsPCA$conditioning <- factor(vsPCA$conditioning)
@@ -413,7 +505,12 @@ vsPCA$conditioning <- factor(vsPCA$conditioning)
 
 -   **Purpose**: Ensure that both `genotype` and `conditioning` are treated as categorical factors in the PERMANOVA analysis.
 
-```{r, message=FALSE}
+```{r}
+#| label: PERMANOVA full
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Perform PERMANOVA for the interaction of genotype and conditioning
 library(vegan)
 result <- adonis(dist_matrix ~ genotype * conditioning, data = vsPCA)
@@ -430,7 +527,12 @@ kable(result$aov.tab, caption = "PERMANOVA results.")
 
 ## Setup and Library Loading
 
-```{r, message=FALSE, warning=FALSE}
+```{r}
+#| label: Setup DESEq
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
 ## Clear the workspace to avoid conflicts with existing objects.
 rm(list=ls())
 # Purpose: Remove all objects from the R environment to ensure a clean workspace.
@@ -520,7 +622,12 @@ set.seed(100)
 
 ## Data Import and Preprocessing
 
-```{r, message=FALSE, warning=FALSE}
+```{r}
+#| label: Factoring DESEq
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Load required package
 library(openxlsx)
 
@@ -544,9 +651,12 @@ names(cols_condition) <- c("plus", "minus")
 
 -   **Purpose**: Load the RNA-seq count data and associated metadata for downstream analysis.Ensure that `genotype` and `conditioning` are treated as categorical variables with predefined levels.Assign specific colors to the conditioning levels for consistent plotting.
 
-```{r message=FALSE, warning=FALSE}
-#| eval: false
-#| include: false
+```{r}
+#| label: DESEq Run
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 dds_analysis <- function(treatment, subset=T){
   if(subset){
     #subset
@@ -582,18 +692,23 @@ dds_analysis <- function(treatment, subset=T){
 df_WT <- dds_analysis("WT")
 df_WT_sig <- df_WT[df_WT$signif=="significant" & !(is.na(df_WT$signif)),]
 df_WT$GeneId <- rownames(df_WT)
-write.csv(df_WT, "Output/Tables/DESeq_Col0.csv", row.names = TRUE)
+#write.csv(df_WT, "Output/Tables/DESeq_Col0.csv", row.names = TRUE)
 
 #mmf1
 df_mmf1 <- dds_analysis("mmf1")
 df_mmf1_sig <- df_mmf1[df_mmf1$signif=="significant" & !(is.na(df_mmf1$signif)),]
 df_mmf1$GeneId <- rownames(df_mmf1)
-write.csv(df_mmf1, "Output/Tables/DESeq_mmf1.csv", row.names = TRUE)
+#write.csv(df_mmf1, "Output/Tables/DESeq_mmf1.csv", row.names = TRUE)
 ```
 
 ## Import data
 
-```{r, echo=TRUE, message=FALSE, warning=FALSE}
+```{r}
+#| label: Import DESEQ res
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
 
 
 # Read the count data from the "Counts_Table" sheet
@@ -608,7 +723,12 @@ df_mmf1_sig <- df_mmf1[df_mmf1$signif=="significant" & !(is.na(df_mmf1$signif)),
 
 ## Plot Creation Function
 
-```{r, echo=TRUE, message=FALSE, warning=FALSE}
+```{r}
+#| label: DESEq plots
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
 # Define a function to create a combined volcano and MA plot for differential expression analysis results.
 create_plot <- function(df, title=""){
 
@@ -672,8 +792,13 @@ return(dds_plot)
 
 ## Plotting Differential Expression Results
 
-```{r fig.height=5, message=FALSE, warning=FALSE}
+```{r}
+#| label: volcano WT
+#| message: false
+#| warning: false
+#| fig-height: 5
 #| include: false
+#| paged-print: false
 # Generate a volcano plot for wildtype (WT) plants and save it as a PDF.
 volcano_WT <-  plot(create_plot(df_WT,"WT"))
 
@@ -685,8 +810,13 @@ dev.off()
 
 -   **Purpose**: Create and save a volcano plot for WT plants, displaying differentially expressed genes.
 
-```{r fig.height=5, message=FALSE, warning=FALSE}
+```{r}
+#| label: Volcano mmf1
+#| message: false
+#| warning: false
+#| fig-height: 5
 #| include: false
+#| paged-print: false
 # Generate a volcano plot for mmf1 mutants and save it as a PDF.
 volcano_mmf1 <- plot(create_plot(df_mmf1,"mmf1"))
 
@@ -698,8 +828,13 @@ dev.off()
 
 -   **Purpose**: Create and save a volcano plot for mmf1 mutants, displaying differentially expressed genes.
 
-```{r fig.height=10, message=FALSE, warning=FALSE}
+```{r}
+#| label: Volcano plots
 #| echo: false
+#| message: false
+#| warning: false
+#| fig-height: 10
+#| paged-print: false
 # Combine the volcano plots for WT and mmf1 into a single figure.
 volcano_plots <- plot_grid(volcano_WT, volcano_mmf1, nrow=2, rel_widths = c(1, 1))
 volcano_plots
@@ -709,9 +844,91 @@ ggsave("volcano_plots.pdf", plot= volcano_plots, width = 18, height = 20, units 
 
 -   **Purpose**: Combine the volcano plots for WT and mmf1 into one figure and save it as a PDF.
 
+```{r}
+#| label: VENN diagram upregulated
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+# Required libraries
+library(dplyr)
+library(ggvenn)  # or alternatively use VennDiagram
+
+# Step 1: Select top 100 genes by absolute log2FoldChange from each dataframe
+top100_WT <- df_WT |>
+  arrange(desc(abs(log2FoldChange))) |>
+  slice_head(n = 100) |>
+  pull(GeneId)
+
+top100_mmf1 <- df_mmf1 |>
+  arrange(desc(abs(log2FoldChange))) |>
+  slice_head(n = 100) |>
+  pull(GeneId)
+
+# Step 2: Prepare list for Venn diagram
+venn_data <- list(
+  WT = top100_WT,
+  mmf1 = top100_mmf1
+)
+
+# Step 3: Plot Venn diagram
+ggvenn(
+  venn_data,
+  fill_color = c("#E69F00", "#56B4E9"),
+  stroke_size = 0.5,
+  set_name_size = 4
+)
+
+ggsave("VENN_diagram.png", width = 10, height = 8, units = "cm")
+```
+
+```{r}
+#| label: VENN diagram downregulated
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+library(dplyr)
+library(ggvenn)
+library(ggplot2)
+
+# Step 1: Select top 100 most downregulated genes from each dataframe
+top100_neg_WT <- df_WT |>
+  filter(log2FoldChange < 0) |>
+  arrange(log2FoldChange) |>
+  slice_head(n = 100) |>
+  pull(GeneId)
+
+top100_neg_mmf1 <- df_mmf1 |>
+  filter(log2FoldChange < 0) |>
+  arrange(log2FoldChange) |>
+  slice_head(n = 100) |>
+  pull(GeneId)
+
+# Step 2: Prepare list for Venn diagram
+venn_data_neg <- list(
+  WT = top100_neg_WT,
+  mmf1 = top100_neg_mmf1
+)
+
+# Step 3: Plot Venn diagram
+ggvenn(
+  venn_data_neg,
+  fill_color = c("#E69F00", "#56B4E9"),
+  stroke_size = 0.5,
+  set_name_size = 4
+)
+
+# Save the plot
+ggsave("VENN_diagram_downregulated.png", width = 10, height = 8, units = "cm")
+```
+
 ## Prepare data to compare WT to mmf1
 
-```{r, warning=FALSE, message=FALSE}
+```{r message=FALSE, warning=FALSE}
+#| label: cts plus
+#| echo: false
+#| paged-print: false
 #For BX plus
 meta_plus <- meta %>% filter(conditioning %in% "plus")
 # Purpose: Filter the metadata to include only samples conditioned with "plus".
@@ -727,7 +944,9 @@ cts_plus <- cts[, rows_to_select, drop = FALSE]
 
 -   **Purpose**: Prepare the data by filtering the metadata and count data to compare WT to mmf1 samples conditioned with BXplus.
 
-```{r, echo=TRUE, warning=FALSE, message=FALSE}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#| label: cts minus
+#| paged-print: false
 #For BX minus
 meta_minus <- meta %>% filter(conditioning %in% "minus")
 # Purpose: Filter the metadata to include only samples conditioned with "minus".
@@ -745,7 +964,12 @@ cts_minus <- cts[, rows_to_select, drop = FALSE]
 
 # Differential Expression Analysis between lines within conditioning levels
 
-```{r, echo=TRUE, warning=FALSE, message=FALSE}
+```{r}
+#| label: Modify DESEq tables 
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Read the count data from the "Counts_Table" sheet
 df_plus <- read.xlsx("Input/Dataset6.xlsx", sheet = "Deseq_BXplus", rowNames = TRUE)
 
@@ -767,7 +991,12 @@ df_minus_sig <- df_minus[df_minus$signif == "significant" & !is.na(df_minus$sign
 
 ## Split significant genes by direction (upregulated/downregulated)
 
-```{r, echo=TRUE, warning=FALSE, message=FALSE}
+```{r}
+#| label: Split genes by direction
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # For BXplus samples
 df_plus_sig_up <- df_plus_sig %>% filter(direction == "Col-0 downregulated")
 df_plus_sig_down <- df_plus_sig %>% filter(direction == "Col-0 upregulated")
@@ -783,7 +1012,12 @@ df_minus_sig_down <- df_minus_sig %>% filter(direction == "Col-0 upregulated")
 
 ## Create and Plot Volcano and MA plots for BXplus and BXminus
 
-```{r, echo=TRUE, warning=FALSE, message=FALSE}
+```{r}
+#| label: Volcano condition function
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
 # Function to create volcano and MA plots for the soil analysis
 create_plot_soil <- function(df, title = "") {
   
@@ -847,8 +1081,12 @@ create_plot_soil <- function(df, title = "") {
 
 ## Plot Volcano and MA Plots for BXplus Soil
 
-```{r message=FALSE, warning=FALSE}
-#| include: false
+```{r}
+#| label: Volcano plus
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 volcano_plus <- plot(create_plot_soil(df_plus,"BXplus"))
 # Purpose: Generate the volcano and MA plots for BXplus soil using the `create_plot_soil` function and save it to `volcano_plus`.
 
@@ -866,8 +1104,12 @@ dev.off()
 
 ### **Plot Volcano and MA Plots for BXminus Soil**
 
-```{r message=FALSE, warning=FALSE}
-#| include: false
+```{r}
+#| label: Volcanon minus
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 volcano_minus <- plot(create_plot_soil(df_minus,"BXminus"))
 # Purpose: Generate the volcano and MA plots for BXminus soil using the `create_plot_soil` function and save it to `volcano_minus`.
 
@@ -885,7 +1127,12 @@ dev.off()
 
 ## Combine Volcano Plots for BXplus and BXminus Soils
 
-```{r echo=FALSE, fig.height=10, message=FALSE, warning=FALSE}
+```{r}
+#| label: Combined volcano
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
 volcano_plots_soil <- plot_grid(volcano_minus, volcano_plus, nrow = 2, rel_widths = c(1, 1))
 # Purpose: Combine the volcano plots for BXminus and BXplus soils into a single plot, stacking them vertically.
 print(volcano_plots_soil)
@@ -897,7 +1144,12 @@ ggsave("volcano_plots_soil.pdf", width = 16.2, height = 18, units = "cm")
 
 ## Extract Gene Lists for Further Analysis
 
-```{r, echo=TRUE, warning=FALSE, message=FALSE}
+```{r}
+#| label: Extract gene list
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Extract significant upregulated and downregulated genes from the BXplus results.
 genes_df_plus_sig_up <- rownames(df_plus_sig_up)
 genes_df_plus_sig_down <- rownames(df_plus_sig_down)
@@ -913,7 +1165,12 @@ genes_df_minus_sig_down <- rownames(df_minus_sig_down)
 
 ## Identify Overlapping Genes between BXplus and BXminus Soils
 
-```{r, echo=TRUE, warning=FALSE, message=FALSE}
+```{r}
+#| label: Identify overlapping gened
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Identify genes that are upregulated in both BXplus and BXminus soils.
 overlap_genes_up <- intersect(genes_df_minus_sig_up, genes_df_plus_sig_up)
 # Purpose: Find the intersection of upregulated genes in BXplus and BXminus soils, identifying genes upregulated in both conditions.
@@ -927,7 +1184,12 @@ overlap_genes_down <- intersect(genes_df_minus_sig_down, genes_df_plus_sig_down)
 
 ## Create Lists of Overlapping Genes for Visualization
 
-```{r, echo=TRUE, warning=FALSE, message=FALSE}
+```{r}
+#| label: Generate gene list
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
 # Create a list of upregulated genes in both BXminus and BXplus soils.
 gene_lists_up <- list(BXminus = genes_df_minus_sig_up, BXplus = genes_df_plus_sig_up)
 # Purpose: Prepare a list of upregulated genes for creating Venn diagrams or other visualizations.
@@ -943,7 +1205,12 @@ gene_lists_down <- list(BXminus = genes_df_minus_sig_down, BXplus = genes_df_plu
 
 ## Visualize Overlapping Genes Using Venn Diagrams
 
-```{r, echo=TRUE, warning=FALSE, message=FALSE}
+```{r}
+#| label: VENN overlap condition
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Load the ggvenn library for Venn diagram visualization.
 library(ggvenn)
 # Purpose: Load the `ggvenn` library to create Venn diagrams.
@@ -980,7 +1247,12 @@ ggsave("VENN_Colmmf1_soil_down.png", width = 5, height = 5, units = "cm")
 
 ## Setup and Load Required Libraries
 
-```{r, echo =TRUE, include=TRUE, message=FALSE, warning=FALSE}
+```{r}
+#| label: Setup GO
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
 # Clear the environment
 rm(list = ls())
 # Purpose: Removes all objects from the R environment to start with a clean workspace.
@@ -1062,7 +1334,12 @@ register(MulticoreParam(8))
 
 ## Co-Expression Analysis Setup
 
-```{r, echo=TRUE, message=FALSE, warning=FALSE}
+```{r}
+#| label: Co expression setup
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
 # Read the count data from the "Counts_Table" sheet
 cts <- read.xlsx("Input/Dataset6.xlsx", sheet = "Counts_Table", rowNames = TRUE)
 
@@ -1086,7 +1363,12 @@ names(cols_condition) <- c("plus", "minus")
 
 ## Differential Gene Expression Analysis
 
-```{r, echo=TRUE, message=FALSE, warning=FALSE}
+```{r}
+#| label: Diff expression
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
 # Get WT and mmf1 data separately
 WT_meta <- meta %>% filter(genotype == "WT")
 cts_WT <- cts %>% subset.matrix(TRUE, as.vector(row.names(WT_meta))) %>%.[, row.names(WT_meta)]
@@ -1117,9 +1399,13 @@ cts_mmf1 <- cts %>% subset.matrix(TRUE, as.vector(row.names(mmf1meta))) %>%.[, r
 
 ## Co-Expression Analysis (Coseq) Setup
 
-```{r message=FALSE, warning=FALSE}
+```{r}
+#| label: Coseq_setup
 #| eval: false
+#| message: false
+#| warning: false
 #| include: false
+#| paged-print: false
 # Subset DESeq2 results for adjusted p-value < 0.05
 filtered_deseq <- data.frame(deseq_WT[[2]]) %>% filter(padj < 0.05)
 filtered_genes <- row.names(filtered_deseq)
@@ -1166,9 +1452,13 @@ write.csv(filtered_deseq, "Output/Tables/Diff_genes_Col0.csv", row.names = TRUE)
 
 Best to not rerun this part, but import previously run file
 
-```{r message=FALSE, warning=FALSE}
+```{r}
+#| label: Coseq run
 #| eval: false
+#| message: false
+#| warning: false
 #| include: false
+#| paged-print: false
 #DO NOT RERUN THIS CHUNK OF CODE UNLESS CLUSTERS NEED TO BE REDEFINED
 # Run coseq analysis with the optimal number of clusters (K = 8)
 WT.coseq <- coseq(deseq_WT[[1]], K=8, verbose=FALSE, parallel = T, alpha=0.05, iter.max=9999, model="Normal", transformation="arcsin", seed=12345, subset.index=filtered_genes)
@@ -1211,6 +1501,11 @@ exprofiles <- data.frame(profiles(WT.coseq)) %>%
 -   **Purpose**: Perform the final co-expression analysis for the WT genotype using the previously determined optimal K value of 8 clusters.
 
 ```{r}
+#| label: Import data count tables
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
 # Read the count data from the "Counts_Table" sheet
 df_WT <- read.xlsx("Input/Dataset6.xlsx", sheet = "Deseq_Col0", rowNames = TRUE, colNames = TRUE)
 df_WT_sig <- df_WT[df_WT$signif=="significant" & !(is.na(df_WT$signif)),]
@@ -1218,7 +1513,14 @@ df_WT_sig <- df_WT[df_WT$signif=="significant" & !(is.na(df_WT$signif)),]
 
 ## Figure 5: Annotated Heatmap
 
-```{r, echo=TRUE, message=FALSE, warning=FALSE, fig.height=8, width=9}
+```{r}
+#| label: Heatmap print
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-height: 8
+#| fig-width: 9
+#| paged-print: false
 library(openxlsx)
 ### make matrix of the co-seq data
 WTCL <- read.xlsx("Input/Dataset6.xlsx", sheet = "WT_coseq_clusters")
@@ -1322,6 +1624,11 @@ kable(WTGO_clusters_annotated[1:3, 1:3],caption = "Annotated GO clusters in WT")
 ## Function to create the cluster heatmap
 
 ```{r}
+#| label: clusterheatmap function3
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 clusterheatmap3 <- function(CL, deseq, GOdf, GOnumber, cluster_order) {
   # Load required libraries
   require(tidyr)
@@ -1539,9 +1846,13 @@ print(heatmap2)
 
 ## GO Enrichment Data Preparation and Filtering
 
-```{r message=FALSE, warning=FALSE}
+```{r}
+#| label: GO enrich data prep
 #| eval: false
+#| message: false
+#| warning: false
 #| include: false
+#| paged-print: false
 #new_labels <- c("activated" = "Upregulated", "suppressed" = "Downregulated")
 # Purpose: (Commented out) Optionally, define new labels for terms used in the analysis, like "Upregulated" and "Downregulated".
 
@@ -1576,9 +1887,13 @@ WTGO_filt_top5$Cluster_number <- paste("Cluster", WTGO_filt_top5$Cluster)
 
 Sorting and Ordering Data
 
-```{r message=FALSE, warning=FALSE}
+```{r}
+#| label: Ordering GO terms
 #| eval: false
+#| message: false
+#| warning: false
 #| include: false
+#| paged-print: false
 # Ensure Cluster is numeric if it's not
 WTGO_filt_top5$Cluster <- as.numeric(WTGO_filt_top5$Cluster)
 # Purpose: Convert the `Cluster` column to numeric to ensure proper sorting and ordering in plots.
@@ -1599,12 +1914,23 @@ write.csv(WTGO_filt_top5, "Output/Tables/GO_Col0_top5.csv", row.names = TRUE)
 ## Plotting GO Enrichment Results
 
 ```{r}
+#| label: Import GO terms
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Import file with the Top 5 GO terms for each cluster in Col-0
 WTGO_filt_top5 <- read.xlsx("Input/Dataset6.xlsx", sheet = "GO_Col0_top5", rowNames = TRUE)
 WTGO_filt_top5$Description <- factor(WTGO_filt_top5$Description, levels = rev(unique(WTGO_filt_top5$Description[order(WTGO_filt_top5$Cluster)])))
 ```
 
-```{r, echo=TRUE, message=FALSE, warning=FALSE, fig.height=6}
+```{r}
+#| label: Enrichment dotplot
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-height: 6
+#| paged-print: false
 # Plot GO enrichment results
 ggplot(WTGO_filt_top5, aes(x = Cluster_number, y = Description, size = GeneRatio),
        split=".sign") +
@@ -1635,9 +1961,233 @@ ggsave("GO_enrich_WT_Facet_ggplot.pdf", width = 18, height = 15, units = "cm")
 
 -   **Purpose**: Plot the GO enrichment results for the WT genotype, displaying clusters along the x-axis and GO terms along the y-axis. The size of points represents `GeneRatio`, and color represents `p.adjust`. The plot is saved as a PDF for further analysis or visualization.
 
+```{r}
+#| label: Cluster profiler setup
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# Install if needed
+if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
+BiocManager::install(c("clusterProfiler", "org.At.tair.db", "enrichplot"))
+
+# Load required packages
+library(clusterProfiler)
+library(org.At.tair.db)
+library(enrichplot)
+library(ggplot2)
+```
+
+```{r}
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# Clean and rank gene list
+gene_list <- df_WT$log2FoldChange
+names(gene_list) <- rownames(df_WT)
+gene_list <- sort(na.omit(gene_list), decreasing = TRUE)
+```
+
+```{r}
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+gsea_go <- gseGO(
+  geneList     = gene_list,
+  OrgDb        = org.At.tair.db,
+  ont          = "BP",         # BP: Biological Process
+  keyType      = "TAIR",       # for Arabidopsis AGI codes
+  nPerm        = 1000,
+  minGSSize    = 5,
+  maxGSSize    = 1000,
+  pvalueCutoff = 0.5,
+  verbose      = TRUE
+)
+```
+
+```{r}
+#| label: GSEA_GO
+#| eval: false
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# Dotplot of top GO terms
+GSEA_GO <- dotplot(gsea_go, showCategory = 10, title = "GSEA - GO Biological Processes")
+GSEA_GO
+ggsave("GSEA_GO_WT.pdf", width = 18, height = 15, units = "cm")
+# Enrichment score curve for one pathway (replace with actual ID)
+gseaplot2(gsea_go, geneSetID = gsea_go$ID[1], title = gsea_go$Description[1])
+```
+
+```{r}
+#| eval: false
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# ---------------------------
+# 1. Load required libraries
+# ---------------------------
+if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
+
+packages <- c("fgsea", "org.At.tair.db", "AnnotationDbi", "dplyr", "ggplot2")
+lapply(packages, function(pkg) {
+  if (!requireNamespace(pkg, quietly = TRUE)) BiocManager::install(pkg)
+  library(pkg, character.only = TRUE)
+})
+
+# ---------------------------
+# 2. Prepare ranked gene list
+# ---------------------------
+
+# Assumes df_WT exists with TAIR IDs as rownames and log2FoldChange column
+gene_list <- df_WT$log2FoldChange
+names(gene_list) <- rownames(df_WT)
+gene_list <- sort(na.omit(gene_list), decreasing = TRUE)
+
+# ---------------------------
+# 3. Build GO Biological Process gene sets
+# ---------------------------
+
+# Extract GO annotations from org.At.tair.db
+go_df <- AnnotationDbi::select(
+  org.At.tair.db,
+  keys = keys(org.At.tair.db, keytype = "TAIR"),
+  columns = c("GO", "ONTOLOGY"),
+  keytype = "TAIR"
+)
+
+# Filter for Biological Process (BP) only
+go_bp <- go_df %>%
+  filter(ONTOLOGY == "BP", !is.na(GO)) %>%
+  distinct(TAIR, GO)
+
+# Create list: GO term -> vector of TAIR IDs
+go_sets <- split(go_bp$TAIR, go_bp$GO)
+
+# Filter gene sets to keep only those with genes in gene_list
+go_sets <- lapply(go_sets, function(genes) intersect(genes, names(gene_list)))
+go_sets <- go_sets[lengths(go_sets) >= 10 & lengths(go_sets) <= 500]
+
+# ---------------------------
+# 4. Run fgsea
+# ---------------------------
+
+fgseaRes <- fgsea(
+  pathways = go_sets,
+  stats = gene_list,
+  nperm = 10000,
+  minSize = 10,
+  maxSize = 500
+)
+
+fgseaRes <- fgseaRes[order(fgseaRes$padj), ]
+
+# ---------------------------
+# 5. Save and inspect results
+# ---------------------------
+
+write.csv(
+  fgseaRes %>% dplyr::select(-leadingEdge),
+  "fgsea_GO_BP_results_WT.csv",
+  row.names = FALSE
+)
+head(fgseaRes[, c("pathway", "NES", "pval", "padj")])
+
+# ---------------------------
+# 6. Plot top enriched pathway
+# ---------------------------
+
+if (nrow(fgseaRes) > 0) {
+  top_pathway <- fgseaRes$pathway[1]
+  plotEnrichment(go_sets[[top_pathway]], gene_list) +
+    ggtitle(paste("Top Enriched GO Term:", top_pathway)) +
+    theme_minimal(base_size = 10)
+  
+  ggsave("fgsea_top_GO_term_WT.pdf", width = 6, height = 4)
+} else {
+  message("No significantly enriched GO terms found.")
+}
+```
+
+```{r}
+#| eval: false
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+library(dplyr)
+
+# Keep only significantly enriched terms (adjusted p-value < 0.05)
+fgsea_sig <- fgseaRes %>% 
+  filter(padj < 0.05) %>%
+  arrange(desc(NES))  # or use abs(NES) for magnitude sort
+
+# Optionally, limit to top N terms
+top_n <- 30
+fgsea_top <- head(fgsea_sig, top_n)
+```
+
+```{r}
+#| eval: false
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+if (!requireNamespace("GO.db", quietly = TRUE)) BiocManager::install("GO.db")
+library(GO.db)
+
+# Map GO IDs to term names (descriptions)
+term_names <- Term(GOTERM[fgseaRes$pathway])
+
+# Add to the results
+fgseaRes$description <- unname(term_names[fgseaRes$pathway])
+
+library(dplyr)
+
+fgsea_sig <- fgseaRes %>%
+  filter(padj < 0.05, !is.na(description)) %>%
+  arrange(desc(NES))
+
+# Optional: Top N terms
+fgsea_top <- head(fgsea_sig, 30)
+
+library(ggplot2)
+
+ggplot(fgsea_top, aes(x = reorder(description, NES), y = NES, fill = NES)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  theme_minimal(base_size = 11) +
+  labs(
+    title = "Top Enriched GO Terms (WT)",
+    x = "GO Term",
+    y = "Normalized Enrichment Score (NES)"
+  ) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
+
+ggplot(fgsea_top, aes(x = NES, y = reorder(description, NES), size = -log10(padj), color = NES)) +
+  geom_point() +
+  theme_minimal(base_size = 11) +
+  labs(
+    title = "Top Enriched GO Terms (WT)",
+    x = "Normalized Enrichment Score (NES)",
+    y = "GO Term",
+    size = "-log10(padj)"
+  ) +
+  scale_color_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
+```
+
 ## Session Information
 
-```{r, echo=FALSE, message=FALSE}
+```{r}
+#| label: Session Info GO
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 sessionInfo()
 ```
 
