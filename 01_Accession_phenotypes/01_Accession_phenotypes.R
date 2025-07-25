@@ -9,7 +9,6 @@ rm(list=ls())
 #ensure a clean workspace.
 
 ## ----r------------------------------------------------------------------------
-
 #| label: Libraries
 #| message: false
 #| warning: false
@@ -37,8 +36,7 @@ library(openxlsx)
 # Purpose: Loads the necessary R packages for data manipulation, visualization, 
 #and GWAS analysis.
 
-## ----r, tidy=TRUE-------------------------------------------------------------
-
+## ----r tidy=TRUE--------------------------------------------------------------
 library("readxl")
 tot_plant_specific_snps <- read_excel("Input/Dataset1.xlsx", sheet = "SNP_table")
 
@@ -52,7 +50,271 @@ plant_region_areas <- read_excel("Input/Dataset1.xlsx", sheet = "plant_region_ar
 # Purpose: Imports phenotype data files into R as data frames.
 
 
-## ----r, tidy=TRUE-------------------------------------------------------------
+## ----r------------------------------------------------------------------------
+# Read phenotypes from excel file
+Col0_plant_region_areas <- read_excel("Input/Dataset1.xlsx", sheet = "Col0_growth")
+
+# --- Plot growth over time (area vs. age) ---
+
+Col0_growth <- ggplot(Col0_plant_region_areas, aes(x = age, y = plant_region_area, colour = BX, fill = BX)) +
+  # Line for group mean
+  stat_summary(fun = mean, geom = "line", size = 1, alpha = 0.8, show.legend = FALSE) +
+  
+  # Error bars for SE
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.5) +
+  
+  # Points for group mean
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 2.5, alpha = 0.4, color = "black") +
+  
+  # Axis labels
+  labs(
+    title = "Daily rosette area: Col-0",
+    x = "Days after germination",
+    y = expression("Rosette area (10"^4*")")
+  ) +
+  
+  # Rescale Y axis to match IP_Hue_3 formatting
+  scale_y_continuous(labels = function(x) x / 10000) +
+  
+  # Optional: Custom breaks if you want consistency
+  # scale_x_continuous(breaks = x_breaks, labels = x_labels) +
+  
+  # Color & fill definitions
+  scale_colour_manual(
+    values = c("seagreen", "gold2"),
+    guide = "none"  # hide color legend
+  ) +
+  scale_fill_manual(
+    values = c("seagreen", "gold2"),
+    name = "Microbiome",
+    labels = c("BX-", "BX+"),
+    guide = guide_legend(
+      override.aes = list(shape = 21, size = 2.5, alpha = 0.4)
+    )
+  ) +
+  
+  # Theme formatting
+  theme_bw() +
+  theme(
+    axis.text = element_text(size = 7),
+    legend.title = element_text(size = 7),
+    legend.text = element_text(size = 7),
+    plot.title = element_text(size = 7),
+    axis.title.y = element_text(size = 7),
+    axis.title.x = element_text(size = 7),
+    legend.position = c(0.2, 0.95),
+    legend.justification = c(1, 1),
+    legend.background = element_rect(fill = "white", color = "black")
+  )
+
+Col0_growth
+
+## ----r------------------------------------------------------------------------
+library(dplyr)
+library(ggplot2)
+library(stringr)
+
+# Ensure age_bx is constructed consistently
+Col0_plant_region_areas <- Col0_plant_region_areas %>%
+  mutate(age_bx = paste0("DAG", age, "_", BX))
+
+# Extract numeric age and make ordering with BX- before BX+
+bx_levels <- Col0_plant_region_areas %>%
+  mutate(
+    age_num = as.numeric(str_extract(age_bx, "\\d+")),
+    bx_order = ifelse(BX == "minus", 0, 1)
+  ) %>%
+  arrange(age_num, bx_order) %>%
+  distinct(age_bx) %>%
+  pull(age_bx)
+
+# Apply the custom order
+Col0_plant_region_areas <- Col0_plant_region_areas %>%
+  mutate(age_bx = factor(age_bx, levels = bx_levels))
+
+# Plot
+Col0_plant_growth <- ggplot(Col0_plant_region_areas, aes(x = factor(age), y = plant_region_area, fill = BX)) +
+  geom_boxplot(
+    position = position_dodge(width = 1),
+    outlier.shape = NA,
+    width = 0.7,
+    alpha = 0.6,
+    color = "black"
+  ) +
+  geom_jitter(
+    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 1),
+    shape = 21,
+    size = 1.0,
+    alpha = 0.8,
+    color = "black"
+  ) +
+  scale_fill_manual(
+    values = c("minus" = "seagreen", "plus" = "gold2"),
+    name = "Microbiome",
+    labels = c("BX-", "BX+"),
+    guide = guide_legend(override.aes = list(shape = 21, size = 1, alpha = 0.4))
+  ) +
+  scale_y_continuous(
+    labels = function(x) x / 10000,
+    limits = c(0, 1500000)
+  ) +
+  labs(
+    title = "Rosette Area of Col-0 Over Time (BX Comparison)",
+    x = "Days After Germination",
+    y = expression("Rosette area (10"^4*")")
+  ) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(size = 7),
+    axis.text.y = element_text(size = 7),
+    axis.title = element_text(size = 7),
+    plot.title = element_text(size = 7),
+    legend.title = element_text(size = 6),
+    legend.text = element_text(size = 6),
+    legend.position = c(0.10, 0.95),
+    legend.justification = c(0, 1),
+    legend.background = element_rect(fill = "white", color = "black")
+  )
+
+Col0_plant_growth
+
+## ----r------------------------------------------------------------------------
+library(dplyr)
+library(broom)
+
+# Run t-tests per age
+t_test_results <- Col0_plant_region_areas %>%
+  group_by(age) %>%
+  filter(BX %in% c("minus", "plus")) %>%
+  summarise(
+    t_test = list(t.test(plant_region_area ~ BX))
+  ) %>%
+  mutate(tidy_result = purrr::map(t_test, broom::tidy)) %>%
+  unnest(tidy_result) %>%
+  select(
+    age,
+    estimate1,  # mean of "minus"
+    estimate2,  # mean of "plus"
+    statistic,
+    p.value,
+    conf.low,
+    conf.high
+  ) %>%
+  mutate(p.value = signif(p.value, 3))
+
+# View results
+print(t_test_results)
+
+# Optional: Save to Excel
+# openxlsx::write.xlsx(t_test_results, "Col0_BX_t_test_results.xlsx", rowNames = FALSE)
+
+## ----r------------------------------------------------------------------------
+library(dplyr)
+library(purrr)
+library(tidyr)
+library(broom)
+
+# Make sure purrr::map is used instead of maps::map
+anova_results <- Col0_plant_region_areas %>%
+  group_by(age) %>%
+  nest() %>%
+  mutate(
+    anova_model = purrr::map(data, ~ aov(plant_region_area ~ BX, data = .x)),
+    anova_tidy  = purrr::map(anova_model, broom::tidy),
+    tukey_hsd   = purrr::map(anova_model, ~ TukeyHSD(.x, "BX") %>% broom::tidy())
+  ) %>%
+  select(age, anova_tidy, tukey_hsd) %>%
+  unnest(cols = c(anova_tidy)) %>%
+  filter(term == "BX")
+
+# Print ANOVA summary results
+print(anova_results)
+
+## ----r------------------------------------------------------------------------
+# Tukey HSD post-hoc summary
+tukey_results <- Col0_plant_region_areas %>%
+  group_by(age) %>%
+  nest() %>%
+  mutate(
+    anova_model = purrr::map(data, ~ aov(plant_region_area ~ BX, data = .x)),
+    tukey = purrr::map(anova_model, ~ TukeyHSD(.x, "BX") %>% broom::tidy())
+  ) %>%
+  unnest(tukey)
+
+# View Tukey results
+print(tukey_results)
+
+## ----r------------------------------------------------------------------------
+library(lme4)
+library(lmerTest)   # for p-values
+library(emmeans)    # for post-hoc
+
+# --- Add unique plant ID ---
+Col0_plant_region_areas <- Col0_plant_region_areas %>%
+  mutate(
+    plant_id = paste(line, BX, number, sep = "_"),
+    BX = factor(BX, levels = c("minus", "plus")),
+    age = as.numeric(age)  # or factor(age)
+  )
+
+## ----r------------------------------------------------------------------------
+# Fit linear mixed-effects model
+model_lmm <- lmer(plant_region_area ~ age * BX + (1 | plant_id), data = Col0_plant_region_areas)
+
+# Summary with p-values
+summary(model_lmm)
+
+
+## ----r------------------------------------------------------------------------
+library(dplyr)
+library(ggplot2)
+library(stringr)
+
+
+# --- Calculate mean per age and BX (match new x-axis structure) ---
+mean_df <- Col0_plant_region_areas %>%
+  group_by(age, BX) %>%
+  summarise(mean_area = mean(plant_region_area), .groups = "drop")
+
+# --- Create connecting lines between BX-minus and BX-plus means for each age ---
+line_df <- mean_df %>%
+  pivot_wider(names_from = BX, values_from = mean_area) %>%
+  filter(!is.na(minus) & !is.na(plus))  # Remove any incomplete rows
+
+# Plot with means and connecting lines
+Col0_plant_growth1 <- Col0_plant_growth +
+  # Add line segments between means
+  geom_segment(
+    data = line_df,
+    aes(
+      x = as.numeric(factor(age)) - 0.25,  # position for BX-minus
+      xend = as.numeric(factor(age)) + 0.25,  # position for BX-plus
+      y = minus,
+      yend = plus
+    ),
+    inherit.aes = FALSE,
+    color = "black",
+    size = 0.5
+  ) +
+  # Add triangle mean points
+  geom_point(
+    data = mean_df,
+    aes(
+      x = as.numeric(factor(age)) + ifelse(BX == "minus", -0.25, 0.25),
+      y = mean_area,
+      fill = BX
+    ),
+    shape = 24,
+    size = 1.3,
+    color = "black",
+    inherit.aes = FALSE
+  )
+
+Col0_plant_growth1
+
+ggsave("Col0_growth_feedback.pdf", plot = Col0_plant_growth1, width = 12, height = 6, units = "cm", path = "Output/Figures/")
+
+## ----r tidy=TRUE--------------------------------------------------------------
 # Extract plant area
 temp1 <- tot_plant_specific_snps %>%
   {gwaR::phenotype_by_snp(plant_region_areas %>% mutate(ACC_ID = genotype_id),
@@ -145,7 +407,7 @@ genotype_order <- genotype_DAG20$genotype
 time_order <- 0:20
 
 
-## ----r include=FALSE----------------------------------------------------------
+## ----r------------------------------------------------------------------------
 # Ensure 'genotype' is a factor with levels in the order specified by 'genotype_order'
 plant_region_areas_DAG20_M <- plant_region_areas_DAG20 %>%
   mutate(genotype = factor(genotype, levels = genotype_order))
@@ -205,7 +467,6 @@ library(dplyr)
 library(tidyr)
 
 ## ----r------------------------------------------------------------------------
-
 # Transform data into wide format
 wide_data <- plant_region_areas_DAG20_extreme20 %>%
   select(dag, group, pseudo_log_area_diff) %>%
@@ -226,7 +487,6 @@ dtw_dist <- proxy::dist(heatmap_matrix, method = function(x, y) dtw(x, y)$distan
 
 
 ## ----r------------------------------------------------------------------------
-
 fit <- hclust(dtw_dist, method = "ward.D2")
 
 # Reverse row order for visualization (optional)
@@ -346,7 +606,7 @@ ACC_ratio <- ggplot(plant_region_areas_DAG15, aes(x = rank, y = area_diff, fill 
 ACC_ratio
 
 # Save the plot
-ggsave("ACC_distr_rel_feedback.pdf", plot = ACC_ratio, width = 16, height = 8, units = "cm", path = "Output/Figures/")
+ggsave("ACC_distr_rel_feedback.pdf", plot = ACC_ratio, width = 16, height = 7, units = "cm", path = "Output/Figures/")
 
 ## ----r------------------------------------------------------------------------
 # Filter data for genotype_id 9851 (IP-Hue-3) and DAG ≤ 20
@@ -662,7 +922,7 @@ ACC_coordinates <- read_excel("Input/Dataset1.xlsx", sheet = "accession_coordina
 kable(ACC_coordinates[1:3, ], caption = "Coordinate table.")
 
 ## ----r------------------------------------------------------------------------
-# Filter for observations on day 10, assign preference, and sort
+# Filter for observations on day 15, assign preference, and sort
 plant_region_areas_DAG10 <- plant_region_areas_DAG20 %>%
   filter(dag == 15) %>%
   mutate(preference = case_when(
@@ -957,7 +1217,7 @@ p <- ggplot() + coord_fixed() +
 base_world_messy <- p + geom_polygon(data = World_map_small, aes(x = long, 
                                                                  y = lat, 
                                                                  group = group), 
-                                     colour = "grey", fill = "grey")
+                                     colour = "grey", fill = "grey", alpha = 0.9)
 # Purpose: Adds the filtered map data to the plot as polygons representing countries.
 
 # Display the messy base world map
@@ -969,7 +1229,7 @@ cleanup <- theme(panel.grid.major = element_blank(),
                  panel.grid.minor = element_blank(), 
                  panel.background = element_rect(fill = 'white', 
                                                  colour = 'white'), 
-                 axis.line = element_line(colour = "grey50"))
+                 axis.line = element_line(colour = "grey"))
 # Purpose: Cleans up the map by removing unnecessary elements and setting a minimalist theme.
 
 base_world <- base_world_messy + cleanup
@@ -986,38 +1246,40 @@ df_layer_2 <- coordinates_merged_data[coordinates_merged_data$preference == "min
 
 ## ----r------------------------------------------------------------------------
 # Add simple data points to the map
+# Add a new column 'growth_type' to both data frames if it doesn't exist
+# df_layer_1$growth_type <- "plus"
+# df_layer_2$growth_type <- "minus"
+
 ACC_map <- base_world +
+  # All points plotted with color based on growth_type
   geom_point(
     data = df_layer_2,
-    aes(x = Long, y = Lat, fill = "minus"),
-    colour = "black",
-    pch = 21,
-    size = 2,
+    aes(x = Long, y = Lat, color = "minus"),
+    pch = 19,
+    size = 1.4,
     alpha = 0.5
   ) +
   geom_point(
     data = df_layer_1,
-    aes(x = Long, y = Lat, fill = "plus"),
-    colour = "black",
-    pch = 21,
-    size = 2,
+    aes(x = Long, y = Lat, color = "plus"),
+    pch = 19,
+    size = 1.4,
     alpha = 0.5
   ) +
-  scale_fill_manual(
+  scale_color_manual(
     values = c("plus" = "#0072B2", "minus" = "orange2"),
     name = "Growth feedback",
-    labels = c("negative", "positive")
+    labels = c("plus" = "positive", "minus" = "negative")
   ) +
   theme(
-    legend.position = c(0.01, 0.01),  # Bottom-left corner
-    legend.justification = c(0, 0),  # Align legend to bottom-left
-    legend.background = element_rect(fill = "white", color = "black"),  # Optional: Add legend background
-    legend.text = element_text(size = 7),  # Adjust legend text size
-    legend.title = element_text(size = 7, face = "bold")  # Adjust legend title
+    legend.position = c(0.01, 0.01),
+    legend.justification = c(0, 0),
+    legend.background = element_rect(fill = "white", color = NA),
+    legend.text = element_text(size = 7),
+    legend.title = element_text(size = 7, face = "bold")
   )
 
-# Display the map with data points
-print(ACC_map)
+ACC_map
 # Purpose: Displays the world map with the positive and negative accession data points.
 
 # Save the plot as a PDF

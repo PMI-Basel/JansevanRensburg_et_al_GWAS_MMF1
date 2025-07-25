@@ -46,6 +46,11 @@ Materials and methodsWe grew 410 Arabidopsis accessions in triplicate on BXplus 
 # Setup
 
 ```{r}
+#| label: Setup
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 cat("\\small")
 knitr::knit_hooks$set(purl = knitr::hook_purl)
 knitr::opts_chunk$set(echo = TRUE)
@@ -59,6 +64,11 @@ rm(list=ls())
 ## Load libraries
 
 ```{r}
+#| label: Load libraries
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 
 #| label: Libraries
 #| message: false
@@ -92,7 +102,12 @@ library(openxlsx)
 
 **Purpose**: Imports the phenotype data as `plant_region_areas`and the SNPs identifid in the GWAs as `tot_plant_specific_snps`from CSV files into R as data frames.
 
-```{r, tidy=TRUE}
+```{r tidy=TRUE}
+#| label: Import data
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 
 library("readxl")
 tot_plant_specific_snps <- read_excel("Input/Dataset1.xlsx", sheet = "SNP_table")
@@ -110,11 +125,330 @@ plant_region_areas <- read_excel("Input/Dataset1.xlsx", sheet = "plant_region_ar
 
 # Phenotypes
 
+## Col-0 phenotypes
+
+```{r}
+#| label: Col-0 growth over time
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+# Read phenotypes from excel file
+Col0_plant_region_areas <- read_excel("Input/Dataset1.xlsx", sheet = "Col0_growth")
+
+# --- Plot growth over time (area vs. age) ---
+
+Col0_growth <- ggplot(Col0_plant_region_areas, aes(x = age, y = plant_region_area, colour = BX, fill = BX)) +
+  # Line for group mean
+  stat_summary(fun = mean, geom = "line", size = 1, alpha = 0.8, show.legend = FALSE) +
+  
+  # Error bars for SE
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.5) +
+  
+  # Points for group mean
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 2.5, alpha = 0.4, color = "black") +
+  
+  # Axis labels
+  labs(
+    title = "Daily rosette area: Col-0",
+    x = "Days after germination",
+    y = expression("Rosette area (10"^4*")")
+  ) +
+  
+  # Rescale Y axis to match IP_Hue_3 formatting
+  scale_y_continuous(labels = function(x) x / 10000) +
+  
+  # Optional: Custom breaks if you want consistency
+  # scale_x_continuous(breaks = x_breaks, labels = x_labels) +
+  
+  # Color & fill definitions
+  scale_colour_manual(
+    values = c("seagreen", "gold2"),
+    guide = "none"  # hide color legend
+  ) +
+  scale_fill_manual(
+    values = c("seagreen", "gold2"),
+    name = "Microbiome",
+    labels = c("BX-", "BX+"),
+    guide = guide_legend(
+      override.aes = list(shape = 21, size = 2.5, alpha = 0.4)
+    )
+  ) +
+  
+  # Theme formatting
+  theme_bw() +
+  theme(
+    axis.text = element_text(size = 7),
+    legend.title = element_text(size = 7),
+    legend.text = element_text(size = 7),
+    plot.title = element_text(size = 7),
+    axis.title.y = element_text(size = 7),
+    axis.title.x = element_text(size = 7),
+    legend.position = c(0.2, 0.95),
+    legend.justification = c(1, 1),
+    legend.background = element_rect(fill = "white", color = "black")
+  )
+
+Col0_growth
+```
+
+```{r}
+#| label: Col-0 boxplot
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+library(dplyr)
+library(ggplot2)
+library(stringr)
+
+# Ensure age_bx is constructed consistently
+Col0_plant_region_areas <- Col0_plant_region_areas %>%
+  mutate(age_bx = paste0("DAG", age, "_", BX))
+
+# Extract numeric age and make ordering with BX- before BX+
+bx_levels <- Col0_plant_region_areas %>%
+  mutate(
+    age_num = as.numeric(str_extract(age_bx, "\\d+")),
+    bx_order = ifelse(BX == "minus", 0, 1)
+  ) %>%
+  arrange(age_num, bx_order) %>%
+  distinct(age_bx) %>%
+  pull(age_bx)
+
+# Apply the custom order
+Col0_plant_region_areas <- Col0_plant_region_areas %>%
+  mutate(age_bx = factor(age_bx, levels = bx_levels))
+
+# Plot
+Col0_plant_growth <- ggplot(Col0_plant_region_areas, aes(x = factor(age), y = plant_region_area, fill = BX)) +
+  geom_boxplot(
+    position = position_dodge(width = 1),
+    outlier.shape = NA,
+    width = 0.7,
+    alpha = 0.6,
+    color = "black"
+  ) +
+  geom_jitter(
+    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 1),
+    shape = 21,
+    size = 1.0,
+    alpha = 0.8,
+    color = "black"
+  ) +
+  scale_fill_manual(
+    values = c("minus" = "seagreen", "plus" = "gold2"),
+    name = "Microbiome",
+    labels = c("BX-", "BX+"),
+    guide = guide_legend(override.aes = list(shape = 21, size = 1, alpha = 0.4))
+  ) +
+  scale_y_continuous(
+    labels = function(x) x / 10000,
+    limits = c(0, 1500000)
+  ) +
+  labs(
+    title = "Rosette Area of Col-0 Over Time (BX Comparison)",
+    x = "Days After Germination",
+    y = expression("Rosette area (10"^4*")")
+  ) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(size = 7),
+    axis.text.y = element_text(size = 7),
+    axis.title = element_text(size = 7),
+    plot.title = element_text(size = 7),
+    legend.title = element_text(size = 6),
+    legend.text = element_text(size = 6),
+    legend.position = c(0.10, 0.95),
+    legend.justification = c(0, 1),
+    legend.background = element_rect(fill = "white", color = "black")
+  )
+
+Col0_plant_growth
+```
+
+```{r}
+#| label: t-test Col-0
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+library(dplyr)
+library(broom)
+
+# Run t-tests per age
+t_test_results <- Col0_plant_region_areas %>%
+  group_by(age) %>%
+  filter(BX %in% c("minus", "plus")) %>%
+  summarise(
+    t_test = list(t.test(plant_region_area ~ BX))
+  ) %>%
+  mutate(tidy_result = purrr::map(t_test, broom::tidy)) %>%
+  unnest(tidy_result) %>%
+  select(
+    age,
+    estimate1,  # mean of "minus"
+    estimate2,  # mean of "plus"
+    statistic,
+    p.value,
+    conf.low,
+    conf.high
+  ) %>%
+  mutate(p.value = signif(p.value, 3))
+
+# View results
+print(t_test_results)
+
+# Optional: Save to Excel
+# openxlsx::write.xlsx(t_test_results, "Col0_BX_t_test_results.xlsx", rowNames = FALSE)
+```
+
+```{r}
+#| label: ANOVA Col-0
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+library(dplyr)
+library(purrr)
+library(tidyr)
+library(broom)
+
+# Make sure purrr::map is used instead of maps::map
+anova_results <- Col0_plant_region_areas %>%
+  group_by(age) %>%
+  nest() %>%
+  mutate(
+    anova_model = purrr::map(data, ~ aov(plant_region_area ~ BX, data = .x)),
+    anova_tidy  = purrr::map(anova_model, broom::tidy),
+    tukey_hsd   = purrr::map(anova_model, ~ TukeyHSD(.x, "BX") %>% broom::tidy())
+  ) %>%
+  select(age, anova_tidy, tukey_hsd) %>%
+  unnest(cols = c(anova_tidy)) %>%
+  filter(term == "BX")
+
+# Print ANOVA summary results
+print(anova_results)
+```
+
+```{r}
+#| label: Tukey Col-0
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+# Tukey HSD post-hoc summary
+tukey_results <- Col0_plant_region_areas %>%
+  group_by(age) %>%
+  nest() %>%
+  mutate(
+    anova_model = purrr::map(data, ~ aov(plant_region_area ~ BX, data = .x)),
+    tukey = purrr::map(anova_model, ~ TukeyHSD(.x, "BX") %>% broom::tidy())
+  ) %>%
+  unnest(tukey)
+
+# View Tukey results
+print(tukey_results)
+```
+
+```{r}
+#| label: Group Col-0 phenotypes
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+library(lme4)
+library(lmerTest)   # for p-values
+library(emmeans)    # for post-hoc
+
+# --- Add unique plant ID ---
+Col0_plant_region_areas <- Col0_plant_region_areas %>%
+  mutate(
+    plant_id = paste(line, BX, number, sep = "_"),
+    BX = factor(BX, levels = c("minus", "plus")),
+    age = as.numeric(age)  # or factor(age)
+  )
+```
+
+```{r}
+#| label: LMM Col-0
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+# Fit linear mixed-effects model
+model_lmm <- lmer(plant_region_area ~ age * BX + (1 | plant_id), data = Col0_plant_region_areas)
+
+# Summary with p-values
+summary(model_lmm)
+
+```
+
+```{r}
+#| label: Col-0 boxplot time
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+library(dplyr)
+library(ggplot2)
+library(stringr)
+
+
+# --- Calculate mean per age and BX (match new x-axis structure) ---
+mean_df <- Col0_plant_region_areas %>%
+  group_by(age, BX) %>%
+  summarise(mean_area = mean(plant_region_area), .groups = "drop")
+
+# --- Create connecting lines between BX-minus and BX-plus means for each age ---
+line_df <- mean_df %>%
+  pivot_wider(names_from = BX, values_from = mean_area) %>%
+  filter(!is.na(minus) & !is.na(plus))  # Remove any incomplete rows
+
+# Plot with means and connecting lines
+Col0_plant_growth1 <- Col0_plant_growth +
+  # Add line segments between means
+  geom_segment(
+    data = line_df,
+    aes(
+      x = as.numeric(factor(age)) - 0.25,  # position for BX-minus
+      xend = as.numeric(factor(age)) + 0.25,  # position for BX-plus
+      y = minus,
+      yend = plus
+    ),
+    inherit.aes = FALSE,
+    color = "black",
+    size = 0.5
+  ) +
+  # Add triangle mean points
+  geom_point(
+    data = mean_df,
+    aes(
+      x = as.numeric(factor(age)) + ifelse(BX == "minus", -0.25, 0.25),
+      y = mean_area,
+      fill = BX
+    ),
+    shape = 24,
+    size = 1.3,
+    color = "black",
+    inherit.aes = FALSE
+  )
+
+Col0_plant_growth1
+
+ggsave("Col0_growth_feedback.pdf", plot = Col0_plant_growth1, width = 12, height = 6, units = "cm", path = "Output/Figures/")
+```
+
 ## Extract Phenotypes for SNP Rank 7
 
 **Purpose**: Extracts and combines phenotype data based on SNP rank 7 and prepares it as the `plant_region_areas_SNP` dataframe in for further analysis.
 
-```{r, tidy=TRUE}
+```{r tidy=TRUE}
+#| label: Accession phenotypes top SNP
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Extract plant area
 temp1 <- tot_plant_specific_snps %>%
   {gwaR::phenotype_by_snp(plant_region_areas %>% mutate(ACC_ID = genotype_id),
@@ -158,6 +492,11 @@ kable(plant_region_areas_SNP[1:3, ], caption = "Phenotype table for SNP rank 7."
 **Purpose**: Create a new dataframe, `plant_region_areas_DAG20`, filters the data to include only the first 20 days (DAG ≤ 20) for further analysis, calculates the mean plant region area for each combination of factors, removes duplicates and irrelevant columns, pivots the data to spread 'bx' treatment values into separate columns, calculates the area difference, and ranks the genotypes by the area difference.
 
 ```{r}
+#| label: Accession phenotypes DAG 20
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Filter the plant region areas for DAG ≤ 20
 plant_region_areas_DAG20 <- subset(plant_region_areas, subset = dag <= 21)
 
@@ -191,6 +530,11 @@ kable(plant_region_areas_DAG20[1:3, ], caption = "Phenotype table for DAG 20.")
 **Purpose**: Assigns a preference ("plus" or "minus") to each genotype based on the area difference at day 10 and merges the preference data back into the main dataframe. We chose DAG10, as this is where SNPMMF1 showed up in the GWAS analysis.
 
 ```{r}
+#| label: Assign BX response
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Step 1: Create a dataframe with preferences based on "dag" 15
 preferences <- plant_region_areas_DAG20 %>%
   filter(dag == 10) %>%
@@ -217,6 +561,11 @@ plant_region_areas_DAG20 <- plant_region_areas_DAG20 %>%
 **Purpose**: Prepares the genotype and time order for the heatmap.
 
 ```{r}
+#| label: Data heatmap
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 genotype_DAG20 <- plant_region_areas_DAG20 %>% filter(dag == 20)# dag 20 is the 20th day after germination was picked up
 genotype_order <- genotype_DAG20$genotype
 time_order <- 0:20
@@ -227,9 +576,13 @@ time_order <- 0:20
 
 **Purpose**: Creates a heatmap showing the area differences over time for all accessions, grouped by preference.
 
-```{r include=FALSE}
+```{r}
 #| label: Fig-heatmap-ACCs
-#| fig-cap: "Heatmap showing the evolution of growth feedback over time for all accessions, grouped by preference."
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-cap: Heatmap showing the evolution of growth feedback over time for all accessions, grouped by preference.
+#| paged-print: false
 # Ensure 'genotype' is a factor with levels in the order specified by 'genotype_order'
 plant_region_areas_DAG20_M <- plant_region_areas_DAG20 %>%
   mutate(genotype = factor(genotype, levels = genotype_order))
@@ -257,6 +610,11 @@ ACC_heatmap
 **Purpose**: Filters the data from (@fig-heatmap-ACCs) include only the top 20 positive and negative accessions based on area difference and applies a pseudo-logarithmic transformation to the area difference for better visualization at early timepoints.
 
 ```{r}
+#| label: Top positive and negative acssions
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Filter for specific genotypes with the highest opposing feedbacks
 #and days less than or equal to 20
 
@@ -291,6 +649,11 @@ plant_region_areas_DAG20_extreme20 <- plant_region_areas_DAG20_extreme20 %>%
 ## Hierarchical Clustering: Dynamic Time Warping (DTW)
 
 ```{r}
+#| label: Setup Hierarchical clust
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Load required packages
 if (!requireNamespace("dtw", quietly = TRUE)) install.packages("dtw")
 if (!requireNamespace("ComplexHeatmap", quietly = TRUE)) install.packages("ComplexHeatmap")
@@ -304,6 +667,11 @@ library(tidyr)
 ### Prepare Data
 
 ```{r}
+#| label: Data prep. Heatmap
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 
 # Transform data into wide format
 wide_data <- plant_region_areas_DAG20_extreme20 %>%
@@ -328,6 +696,11 @@ dtw_dist <- proxy::dist(heatmap_matrix, method = function(x, y) dtw(x, y)$distan
 ### Perform Hierarchical Clustering
 
 ```{r}
+#| label: Hierarchical clustering
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 
 fit <- hclust(dtw_dist, method = "ward.D2")
 
@@ -339,9 +712,11 @@ row_order <- rev(1:nrow(heatmap_matrix))
 
 ```{r}
 #| label: FigS1b-heatmap-ACCs20
+#| echo: false
 #| message: false
 #| warning: false
 #| fig-cap: Heatmap showing the evolution of growth feedbacks as Pseudo-log transformed values over time for the top 20 accessions, grouped by preference. Hierarchical clustering was performed using the Dynamic Time Warping method to account for changes over time.
+#| paged-print: false
 
 # **4. Create and Customize the Heatmap**
 ht <- Heatmap(
@@ -389,6 +764,11 @@ We filter the data for DAG 15, where SNPMMF1 was still showing up.
 **Purpose**: Filters the data for day 15, assigns a preference ("plus" or "minus") based on area difference, and ranks the accessions accordingly. We used dag 15 as this was the last day where SNPMMF1 showed up in the GWAS analysis and where all the accessions were still prsent.
 
 ```{r}
+#| label: Prep data feedback distr.
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Filter for observations on day 15, assign preference, and sort
 plant_region_areas_DAG15 <- plant_region_areas_DAG20 %>%
   filter(dag == 15) %>%
@@ -406,9 +786,11 @@ Plot relative growth feedbacks
 
 ```{r}
 #| label: Fig1c-ACC-Distribution
-#| fig-cap: "Distribution of growth feedbackas for all 410 accesions used in the GWAS. The most extreme accessions and Col-0 is indicated on the plot. "
-#| warning: false
+#| echo: false
 #| message: false
+#| warning: false
+#| fig-cap: Distribution of growth feedbackas for all 410 accesions used in the GWAS. The most extreme accessions and Col-0 is indicated on the plot.
+#| paged-print: false
 
 # Prepare data for specific genotypes to label
 labels_data <- plant_region_areas_DAG15 %>%
@@ -475,7 +857,7 @@ ACC_ratio <- ggplot(plant_region_areas_DAG15, aes(x = rank, y = area_diff, fill 
 ACC_ratio
 
 # Save the plot
-ggsave("ACC_distr_rel_feedback.pdf", plot = ACC_ratio, width = 16, height = 8, units = "cm", path = "Output/Figures/")
+ggsave("ACC_distr_rel_feedback.pdf", plot = ACC_ratio, width = 16, height = 7, units = "cm", path = "Output/Figures/")
 ```
 
 ## Growth of extreme accessions
@@ -487,6 +869,11 @@ Filter for IP-Hue-3 and Plot the Growth Over Time
 **Purpose**: Filters the data to include only the genotype with genotype_id 9851 (IP-Hue-3), calculates the mean plant region area for each combination of bx and dag, removes duplicates and irrelevant columns, pivots the data to spread 'bx' treatment values into separate columns, calculates the area difference, and ranks the genotypes by the area difference.
 
 ```{r}
+#| label: Prep data extreme accssions
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Filter data for genotype_id 9851 (IP-Hue-3) and DAG ≤ 20
 plant_region_areas_IPHue3 <- plant_region_areas %>%
   filter(dag <= 20, genotype_id == 9851)
@@ -525,11 +912,12 @@ Plot the growth for IP-Hue-3 over time
 
 ```{r}
 #| label: Fig1b-IP-Hue3-Growth
+#| echo: false
 #| message: false
 #| warning: false
-#| echo: true
-#| fig-show: hide
 #| fig-cap: Plot showing the growth of IP-Hue-3 on the two soil microbiomes over time.
+#| fig-show: hide
+#| paged-print: false
 
 # Create the plot
 IP_Hue_3 <- ggplot() +
@@ -602,11 +990,12 @@ Plot the growth feedback for IP-Hue-3 over time
 
 ```{r}
 #| label: Fig1b-IP-Hue3-Growth-feedback
-#| fig-cap: "Plot showing the growth feedback of IP-Hue-3 on the two soil microbiomes over time. "
-#| warning: false
-#| echo: true
-#| fig-show: hide
+#| echo: false
 #| message: false
+#| warning: false
+#| fig-cap: Plot showing the growth feedback of IP-Hue-3 on the two soil microbiomes over time.
+#| fig-show: hide
+#| paged-print: false
 # Compute the difference between the two groups
 shaded_data_IP_Hue <- shaded_data_IP_Hue %>%
   mutate(difference = mean_group1 - mean_group2)
@@ -642,7 +1031,11 @@ ggsave("IP_Hue_3_response.pdf", plot = IP_Hue_3_response, width = 10, height = 1
 ```
 
 ```{r}
-#| include: false
+#| label: IP-Hue-3
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 
 # Combine plots for IP-Hue-3 using cowplot
 
@@ -669,6 +1062,11 @@ Filter for Hadd-3 and Plot the Growth Over Time
 **Purpose**: Filters the data to include only the genotype with genotype_id 9392 (Hadd-3), calculates the mean plant region area for each combination of bx and dag, removes duplicates and irrelevant columns, pivots the data to spread 'bx' treatment values into separate columns, calculates the area difference, and ranks the genotypes by the area difference.
 
 ```{r}
+#| label: Filter for Hadd-3
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Filter data for genotype_id 9392
 plant_region_areas_Hadd3 <- plant_region_areas %>% 
   filter(dag < 21, genotype_id == 9392)
@@ -706,11 +1104,12 @@ Plot the growth for Hadd-3 over time
 
 ```{r}
 #| label: Fig1b-Hadd3-Growth
-#| fig-cap: Plot showing the growth of Hadd-3 on the two soil microbiomes over time.
-#| echo: true
+#| echo: false
 #| message: false
 #| warning: false
+#| fig-cap: Plot showing the growth of Hadd-3 on the two soil microbiomes over time.
 #| fig-show: hide
+#| paged-print: false
 
 
 
@@ -783,11 +1182,12 @@ Plot the growth feedback for Hadd-3 over time
 
 ```{r}
 #| label: Fig1b-Hadd3-Growth-feedback
-#| fig-cap: "Plot showing the growth feedback of Hadd-3 on the two soil microbiomes over time. "
-#| warning: false
-#| echo: true
-#| fig-show: hide
+#| echo: false
 #| message: false
+#| warning: false
+#| fig-cap: Plot showing the growth feedback of Hadd-3 on the two soil microbiomes over time.
+#| fig-show: hide
+#| paged-print: false
 
 # Compute the difference between the two groups
 shaded_data_Hadd3 <- shaded_data_Hadd3 %>%
@@ -824,7 +1224,11 @@ ggsave("Hadd_3_response.pdf", plot = Hadd3_response, width = 10, height = 10, un
 ```
 
 ```{r}
-#| include: false
+#| label: Hadd-3
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Combine plots for IP-Hue-3 using cowplot
 
 
@@ -842,10 +1246,10 @@ ggsave("Hadd_3_combined.pdf", plot = Hadd_3_combined, width = 18, height = 8, un
 
 ```{r}
 #| label: Fig1b-Growth-feedback-extremeACC
-#| echo: false
 #| message: false
 #| warning: false
 #| fig-cap: Combined plots showing the growth and growth feedbacks of the two most exctreme accessions.
+#| include: false
 # Combine the growth plot and the growth feedback plot
 Extreme_phenotypes <- plot_grid(IP_Hue_3_combined, Hadd_3_combined, nrow = 2, align = "h")
 
@@ -862,6 +1266,11 @@ ggsave("Extreme_ACC_phenotypes.pdf", plot = Extreme_phenotypes, width = 14, heig
 ## Import data
 
 ```{r}
+#| label: Geo data
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 ACC_coordinates <- read_excel("Input/Dataset1.xlsx", sheet = "accession_coordinates")
 kable(ACC_coordinates[1:3, ], caption = "Coordinate table.")
 ```
@@ -873,7 +1282,12 @@ kable(ACC_coordinates[1:3, ], caption = "Coordinate table.")
 **Purpose:** Filters the data to include only observations from day 10, assigns a preference based on the area difference, sorts by area difference, and ranks the accessions.
 
 ```{r}
-# Filter for observations on day 10, assign preference, and sort
+#| label: Filter DAG 15
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+# Filter for observations on day 15, assign preference, and sort
 plant_region_areas_DAG10 <- plant_region_areas_DAG20 %>%
   filter(dag == 15) %>%
   mutate(preference = case_when(
@@ -889,6 +1303,11 @@ Merge the data tables
 **Purpose:** Merges the phenotype data (plant_region_areas_DAG10) with the coordinates data (ACC_coordinates) based on genotype IDs.
 
 ```{r}
+#| label: Merge phenotypes and geo
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Merge the data tables and include only Lat and Long columns from ACC_coordinates
 coordinates_merged_data <- plant_region_areas_DAG10 %>%
   left_join(
@@ -900,6 +1319,11 @@ coordinates_merged_data <- plant_region_areas_DAG10 %>%
 ### **Pearson correlation** and Regression Analysis
 
 ```{r}
+#| label: Pearson corr.
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Perform Pearson correlation test for Latitude
 cor_test_lat <- cor.test(coordinates_merged_data$Lat, coordinates_merged_data$area_diff, 
                          method = "pearson", use = "complete.obs")
@@ -933,6 +1357,11 @@ kable(cor_results, caption = "Correlation Test Results for Latitude and Longitud
 ### **Linear regression model**
 
 ```{r}
+#| label: Linear regression
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Linear regression with Latitude
 model_lat <- lm(area_diff ~ Lat + genotype_id, data = coordinates_merged_data)
 summary_lat <- summary(model_lat)
@@ -970,6 +1399,11 @@ if (p_value_lat < 0.05) {
 ```
 
 ```{r}
+#| label: Linear regression 2
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Linear regression with Latitude
 model_lat <- lm(area_diff ~ Lat, data = coordinates_merged_data)
 summary_lat <- summary(model_lat)
@@ -1011,8 +1445,11 @@ kable(regression_results, caption = "Linear Regression Results for Latitude and 
 
 ```{r}
 #| label: FigS1a-Corr-Latitute
-#| echo: true
+#| echo: false
+#| message: false
+#| warning: false
 #| fig-show: hide
+#| paged-print: false
 
 # Compute linear regression model
 lm_lat <- lm(area_diff ~ Lat, data = coordinates_merged_data, na.action = na.omit)
@@ -1081,8 +1518,11 @@ print(corr_plot_lat)
 
 ```{r}
 #| label: FigS1a-Corr-Longitute
-#| echo: true
+#| echo: false
+#| message: false
+#| warning: false
 #| fig-show: hide
+#| paged-print: false
 # Compute linear regression model
 lm_long <- lm(area_diff ~ Long, data = coordinates_merged_data, 
               na.action = na.omit)
@@ -1150,10 +1590,11 @@ print(corr_plot_long)
 
 ```{r}
 #| label: FigS1a-Corr-Plots
-#| echo: false
 #| message: false
 #| warning: false
 #| fig-cap: Correlation of geographic distribution of accessions used in the GWASand their growth feedbacks.
+#| include: false
+#| paged-print: false
 # Add simple data points to the map
 # Combine the two plots on top of each other
 ACC_corr <- plot_grid(
@@ -1182,6 +1623,11 @@ ggsave("ACC_corr.pdf", plot = ACC_corr, width = 20, height = 10, units = "cm", p
 **Purpos**e: Prepares the world map data and creates a base plot for plotting the locations of positive and negative accessions.
 
 ```{r}
+#| label: Geo blank plot
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Load necessary libraries
 library(maps)
 # Purpose: Loads the `maps` package for map plotting.
@@ -1204,7 +1650,7 @@ p <- ggplot() + coord_fixed() +
 base_world_messy <- p + geom_polygon(data = World_map_small, aes(x = long, 
                                                                  y = lat, 
                                                                  group = group), 
-                                     colour = "grey", fill = "grey")
+                                     colour = "grey", fill = "grey", alpha = 0.9)
 # Purpose: Adds the filtered map data to the plot as polygons representing countries.
 
 # Display the messy base world map
@@ -1216,7 +1662,7 @@ cleanup <- theme(panel.grid.major = element_blank(),
                  panel.grid.minor = element_blank(), 
                  panel.background = element_rect(fill = 'white', 
                                                  colour = 'white'), 
-                 axis.line = element_line(colour = "grey50"))
+                 axis.line = element_line(colour = "grey"))
 # Purpose: Cleans up the map by removing unnecessary elements and setting a minimalist theme.
 
 base_world <- base_world_messy + cleanup
@@ -1236,42 +1682,46 @@ Plot the map and overlay with the accessions used in the GWAS
 
 ```{r}
 #| label: Fig1d-ACC-Geographic
-#| fig-cap: "Geographic distribution of accessions used in the GWAS."
-#| warning: false
+#| echo: false
 #| message: false
+#| warning: false
+#| fig-cap: Geographic distribution of accessions used in the GWAS.
+#| paged-print: false
 # Add simple data points to the map
+# Add a new column 'growth_type' to both data frames if it doesn't exist
+# df_layer_1$growth_type <- "plus"
+# df_layer_2$growth_type <- "minus"
+
 ACC_map <- base_world +
+  # All points plotted with color based on growth_type
   geom_point(
     data = df_layer_2,
-    aes(x = Long, y = Lat, fill = "minus"),
-    colour = "black",
-    pch = 21,
-    size = 2,
+    aes(x = Long, y = Lat, color = "minus"),
+    pch = 19,
+    size = 1.4,
     alpha = 0.5
   ) +
   geom_point(
     data = df_layer_1,
-    aes(x = Long, y = Lat, fill = "plus"),
-    colour = "black",
-    pch = 21,
-    size = 2,
+    aes(x = Long, y = Lat, color = "plus"),
+    pch = 19,
+    size = 1.4,
     alpha = 0.5
   ) +
-  scale_fill_manual(
+  scale_color_manual(
     values = c("plus" = "#0072B2", "minus" = "orange2"),
     name = "Growth feedback",
-    labels = c("negative", "positive")
+    labels = c("plus" = "positive", "minus" = "negative")
   ) +
   theme(
-    legend.position = c(0.01, 0.01),  # Bottom-left corner
-    legend.justification = c(0, 0),  # Align legend to bottom-left
-    legend.background = element_rect(fill = "white", color = "black"),  # Optional: Add legend background
-    legend.text = element_text(size = 7),  # Adjust legend text size
-    legend.title = element_text(size = 7, face = "bold")  # Adjust legend title
+    legend.position = c(0.01, 0.01),
+    legend.justification = c(0, 0),
+    legend.background = element_rect(fill = "white", color = NA),
+    legend.text = element_text(size = 7),
+    legend.title = element_text(size = 7, face = "bold")
   )
 
-# Display the map with data points
-print(ACC_map)
+ACC_map
 # Purpose: Displays the world map with the positive and negative accession data points.
 
 # Save the plot as a PDF
@@ -1284,6 +1734,11 @@ ggsave("ACC_response_map_white.pdf", plot = ACC_map, height = 15, width = 20, un
 **Purpose**: Print the session information, including details about the R version, loaded packages, and the system environment. This is useful for reproducibility, as it documents the computational environment in which the analysis was performed.
 
 ```{r}
+#| label: Session info
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Get session information
 SI <- sessionInfo()
 
