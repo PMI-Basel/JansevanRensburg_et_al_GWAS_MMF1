@@ -67,46 +67,6 @@
 \fi
 \makeatother
 
-\usepackage{color}
-\usepackage{fancyvrb}
-\newcommand{\VerbBar}{|}
-\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
-\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
-% Add ',fontsize=\small' for more characters per line
-\usepackage{framed}
-\definecolor{shadecolor}{RGB}{248,248,248}
-\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
-\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
-\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
-\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
-\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
-\newcommand{\BuiltInTok}[1]{#1}
-\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
-\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
-\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
-\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
-\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
-\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
-\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
-\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
-\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
-\newcommand{\ExtensionTok}[1]{#1}
-\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
-\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
-\newcommand{\ImportTok}[1]{#1}
-\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
-\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
-\newcommand{\NormalTok}[1]{#1}
-\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
-\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
-\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
-\newcommand{\RegionMarkerTok}[1]{#1}
-\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
-\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
-\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
-\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
-\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
-\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
 
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}\usepackage{longtable,booktabs,array}
@@ -194,7 +154,7 @@
 
 \title{02\_GWAS\_Analysis}
 \author{Henry Janse van Rensburg}
-\date{2025-01-30}
+\date{2025-06-27}
 
 \begin{document}
 \maketitle
@@ -239,47 +199,8 @@ analysis.
 \subsubsection{Load Libraries and Install
 packages}\label{load-libraries-and-install-packages}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\NormalTok{knitr}\SpecialCharTok{::}\NormalTok{knit\_hooks}\SpecialCharTok{$}\FunctionTok{set}\NormalTok{(}\AttributeTok{purl =}\NormalTok{ knitr}\SpecialCharTok{::}\NormalTok{hook\_purl)}
-\NormalTok{knitr}\SpecialCharTok{::}\NormalTok{opts\_chunk}\SpecialCharTok{$}\FunctionTok{set}\NormalTok{(}\AttributeTok{echo =} \ConstantTok{TRUE}\NormalTok{)}
-
-\DocumentationTok{\#\# Clear the objects from memory}
-\FunctionTok{rm}\NormalTok{(}\AttributeTok{list=}\FunctionTok{ls}\NormalTok{())}
-\CommentTok{\# Purpose: Removes all objects from the R environment to ensure a clean workspace.}
-
-\NormalTok{devtools}\SpecialCharTok{::}\FunctionTok{install\_github}\NormalTok{(}\StringTok{"Gregor{-}Mendel{-}Institute/gwaR"}\NormalTok{)}
-\CommentTok{\# Purpose: Installs the \textasciigrave{}gwaR\textasciigrave{} package from GitHub, a package for Genome{-}Wide Association Studies (GWAS).}
-
-
-\FunctionTok{library}\NormalTok{(tidyverse)}
-\FunctionTok{library}\NormalTok{(gwaR)  }\CommentTok{\# Loads the \textasciigrave{}gwaR\textasciigrave{} package again after installation.}
-\FunctionTok{library}\NormalTok{(magrittr)}
-\FunctionTok{library}\NormalTok{(dplyr)}
-\FunctionTok{library}\NormalTok{(ggplot2)}
-\FunctionTok{library}\NormalTok{(cowplot)}
-\FunctionTok{library}\NormalTok{(knitr)}
-\CommentTok{\#Library to import xlsx files}
-\FunctionTok{library}\NormalTok{(readxl)}
-\CommentTok{\# Purpose: Loads necessary libraries for data manipulation, visualization, and analysis.}
-\end{Highlighting}
-\end{Shaded}
-
 \subsubsection{Import Phenotype table and SNP
 Table}\label{import-phenotype-table-and-snp-table}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\#Import SNP table}
-\NormalTok{tot\_plant\_specific\_snps }\OtherTok{\textless{}{-}} \FunctionTok{read\_excel}\NormalTok{(}\StringTok{"Input/Dataset3.xlsx"}\NormalTok{, }
-                                      \AttributeTok{sheet =} \StringTok{"SNP\_table\_dag20"}\NormalTok{)}
-
-\CommentTok{\#Import plant phenotypes}
-\NormalTok{plant\_region\_areas }\OtherTok{\textless{}{-}} \FunctionTok{read\_excel}\NormalTok{(}\StringTok{"Input/Dataset3.xlsx"}\NormalTok{, }
-                                 \AttributeTok{sheet =} \StringTok{"plant\_region\_area"}\NormalTok{)}
-\CommentTok{\# Purpose: Imports the files containing phenotype and SNP data into R.}
-\end{Highlighting}
-\end{Shaded}
 
 \section{Data Preparation}\label{data-preparation}
 
@@ -289,23 +210,6 @@ We filter the SNP table and phenotype table to include only the data for
 the first 20 days after germination (DAG 0 to DAG 20). A lot of
 accessions started to flower at this point which affected the
 phenotyping.
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Filter SNPs for phenotypes from DAG 0 to DAG 20}
-\NormalTok{tot\_plant\_specific\_snps\_DAG20 }\OtherTok{\textless{}{-}} \FunctionTok{filter}\NormalTok{(tot\_plant\_specific\_snps, dag }\SpecialCharTok{\textless{}} \DecValTok{21}\NormalTok{)}
-\NormalTok{tot\_plant\_specific\_snps\_DAG20 }\OtherTok{\textless{}{-}} 
-\NormalTok{  tot\_plant\_specific\_snps\_DAG20[}\FunctionTok{order}\NormalTok{(tot\_plant\_specific\_snps\_DAG20}\SpecialCharTok{$}\NormalTok{log10\_p, }
-                                      \AttributeTok{decreasing =} \ConstantTok{TRUE}\NormalTok{),]}
-
-\CommentTok{\# Modify the SNP table to correctly show the days after germination, starting from DAG=0 by adding +1 to each value in the "dag" column}
-
-\NormalTok{tot\_plant\_specific\_snps\_DAG20 }\OtherTok{\textless{}{-}}\NormalTok{ tot\_plant\_specific\_snps\_DAG20 }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{dag =}\NormalTok{ dag }\SpecialCharTok{+} \DecValTok{1}\NormalTok{)}
-
-\FunctionTok{kable}\NormalTok{(tot\_plant\_specific\_snps\_DAG20[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{5}\NormalTok{, ], }\AttributeTok{caption =} \StringTok{"SNP table for DAG\textless{}20."}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{longtable}[]{@{}rrrrlrr@{}}
 \caption{Table containing the SNP output data}\tabularnewline
@@ -319,89 +223,16 @@ chrom & pos & log10\_p & pv & Significant & mac & dag \\
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-3 & 21437549 & 8.990193 & 0 & Bonferroni & 5 & 14 \\
-3 & 21437549 & 8.952353 & 0 & Bonferroni & 5 & 13 \\
-3 & 21437549 & 8.870501 & 0 & Bonferroni & 5 & 15 \\
-3 & 21437549 & 8.628093 & 0 & Bonferroni & 5 & 12 \\
-3 & 21437549 & 8.473713 & 0 & Bonferroni & 5 & 16 \\
+3 & 21437549 & 8.990193 & 0 & Bonferroni & 5 & 12 \\
+3 & 21437549 & 8.952353 & 0 & Bonferroni & 5 & 11 \\
+3 & 21437549 & 8.870501 & 0 & Bonferroni & 5 & 13 \\
+3 & 21437549 & 8.628093 & 0 & Bonferroni & 5 & 10 \\
+3 & 21437549 & 8.473713 & 0 & Bonferroni & 5 & 14 \\
 \end{longtable}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Purpose: Filters the SNP data to include only data from days after germination (DAG) 0 to 20.}
-\end{Highlighting}
-\end{Shaded}
 
 \subsection{Manhattan plot}\label{manhattan-plot}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Create the Manhattan plot}
-\NormalTok{manhattan\_plot }\OtherTok{\textless{}{-}}\NormalTok{ tot\_plant\_specific\_snps\_DAG20 }\SpecialCharTok{\%\textgreater{}\%} 
-  \FunctionTok{ggplot}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ pos, }\AttributeTok{y =}\NormalTok{ log10\_p, }\AttributeTok{label =}\NormalTok{ pos)) }\SpecialCharTok{+}
-  
-  \CommentTok{\# Add alternating shading for every second facet}
-  \FunctionTok{geom\_rect}\NormalTok{(}
-    \AttributeTok{data =}\NormalTok{ tot\_plant\_specific\_snps\_DAG20 }\SpecialCharTok{\%\textgreater{}\%} 
-      \FunctionTok{distinct}\NormalTok{(chrom) }\SpecialCharTok{\%\textgreater{}\%} 
-      \FunctionTok{mutate}\NormalTok{(}\AttributeTok{shade =} \FunctionTok{row\_number}\NormalTok{() }\SpecialCharTok{\%\%} \DecValTok{2} \SpecialCharTok{==} \DecValTok{0}\NormalTok{), }\CommentTok{\# Create a flag for shading}
-    \FunctionTok{aes}\NormalTok{(}
-      \AttributeTok{xmin =} \SpecialCharTok{{-}}\ConstantTok{Inf}\NormalTok{, }\AttributeTok{xmax =} \ConstantTok{Inf}\NormalTok{, }\AttributeTok{ymin =} \SpecialCharTok{{-}}\ConstantTok{Inf}\NormalTok{, }\AttributeTok{ymax =} \ConstantTok{Inf}\NormalTok{, }
-      \AttributeTok{fill =}\NormalTok{ shade}
-\NormalTok{    ), }
-    \AttributeTok{inherit.aes =} \ConstantTok{FALSE}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.1}
-\NormalTok{  ) }\SpecialCharTok{+}
-  
-  \CommentTok{\# Add points}
-  \FunctionTok{geom\_point}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{fill =}\NormalTok{ Significant, }\AttributeTok{color =}\NormalTok{ Significant), }
-             \AttributeTok{size =} \FloatTok{0.8}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.6}\NormalTok{) }\SpecialCharTok{+}
-  
-  \CommentTok{\# Styling and themes}
-  \FunctionTok{theme}\NormalTok{(}
-    \CommentTok{\# Remove panel grid lines and background}
-    \AttributeTok{panel.grid.major =} \FunctionTok{element\_blank}\NormalTok{(),}
-    \AttributeTok{panel.grid.minor =} \FunctionTok{element\_blank}\NormalTok{(),}
-    \AttributeTok{panel.background =} \FunctionTok{element\_blank}\NormalTok{(),}
-    \CommentTok{\# Add axis line}
-    \AttributeTok{axis.line =} \FunctionTok{element\_line}\NormalTok{(}\AttributeTok{colour =} \StringTok{"black"}\NormalTok{),}
-    \CommentTok{\# Adjust legend position}
-    \AttributeTok{legend.position =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.09}\NormalTok{, }\FloatTok{0.80}\NormalTok{),}
-    \CommentTok{\# Remove x{-}axis ticks and labels}
-    \AttributeTok{axis.ticks.x =} \FunctionTok{element\_blank}\NormalTok{(),}
-    \AttributeTok{axis.text.x =} \FunctionTok{element\_blank}\NormalTok{(),}
-    \CommentTok{\# Set all text to size 7pt}
-    \AttributeTok{axis.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
-    \AttributeTok{axis.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
-    \AttributeTok{legend.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
-    \AttributeTok{legend.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
-    \AttributeTok{strip.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
-    \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{)}
-\NormalTok{  ) }\SpecialCharTok{+}
-  
-  \FunctionTok{expand\_limits}\NormalTok{(}\AttributeTok{y =} \FunctionTok{c}\NormalTok{(}\DecValTok{10}\NormalTok{, }\DecValTok{5}\NormalTok{)) }\SpecialCharTok{+}
-  
-  \FunctionTok{facet\_grid}\NormalTok{(}\SpecialCharTok{\textasciitilde{}}\NormalTok{chrom, }\AttributeTok{scales =} \StringTok{"free\_x"}\NormalTok{, }\AttributeTok{switch =} \StringTok{"x"}\NormalTok{) }\SpecialCharTok{+}
-  
-  \FunctionTok{scale\_color\_manual}\NormalTok{(}\AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"red4"}\NormalTok{, }\StringTok{"slategray4"}\NormalTok{, }\StringTok{"slategray4"}\NormalTok{)) }\SpecialCharTok{+}
-  
-  \FunctionTok{scale\_fill\_manual}\NormalTok{(}\AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"grey"}\NormalTok{, }\StringTok{"grey"}\NormalTok{, }\StringTok{"grey"}\NormalTok{,}\StringTok{"grey"}\NormalTok{,}\StringTok{"grey"}\NormalTok{), }
-                    \AttributeTok{guide =} \StringTok{"none"}\NormalTok{) }\SpecialCharTok{+} \CommentTok{\# Alternate shading colors}
-  
-  \FunctionTok{ggtitle}\NormalTok{(}\StringTok{"Manhattan plot"}\NormalTok{)}
-
-\CommentTok{\# Display the plot}
-\FunctionTok{print}\NormalTok{(manhattan\_plot)}
-
-
-\CommentTok{\# Purpose: Displays the Manhattan plot.}
-
-\CommentTok{\# Save the plot}
-\FunctionTok{ggsave}\NormalTok{(}\StringTok{"Manhattan\_plot.pdf"}\NormalTok{, }\AttributeTok{plot =}\NormalTok{ manhattan\_plot, }\AttributeTok{height =} \FloatTok{7.0}\NormalTok{, }\AttributeTok{width =} \FloatTok{16.3}\NormalTok{, }\AttributeTok{units =} \StringTok{"cm"}\NormalTok{, }\AttributeTok{path =} \StringTok{"Output/Figures"}\NormalTok{)}
-\CommentTok{\# Purpose: Saves the Manhattan plot as a PDF file.}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{figure}[H]
+\begin{figure}
 
 \centering{
 
@@ -428,16 +259,6 @@ We bioinformatically isolate the genes located closest to the top 10
 SNPs identified in the GWAs analysis using the
 \texttt{get\_nearest\_genes} function.
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\NormalTok{nearest\_genes }\OtherTok{\textless{}{-}}\NormalTok{ tot\_plant\_specific\_snps\_DAG20 }\SpecialCharTok{\%\textgreater{}\%} 
-  \FunctionTok{get\_nearest\_genes}\NormalTok{(}\AttributeTok{n\_hit =} \DecValTok{100}\NormalTok{)}
-\CommentTok{\# Purpose: Identifies the 20 closest genes to the top SNPs using the \textasciigrave{}get\_nearest\_genes\textasciigrave{} function.}
-
-\FunctionTok{kable}\NormalTok{(nearest\_genes[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{10}\NormalTok{, }\DecValTok{1}\SpecialCharTok{:}\DecValTok{7}\NormalTok{], }\AttributeTok{caption =} \StringTok{"Table with genes located closest to the top SNPs."}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
 \begin{longtable}[]{@{}lrrlrrl@{}}
 \caption{Table containing the SNPs and the genes located closest to each
 of the top SNPs}\tabularnewline
@@ -458,16 +279,33 @@ SNP\_rank & chrom & pos & Significant & log10\_p & mac & GeneId \\
 5 & 3 & 21437549 & Bonferroni & 8.473713 & 5 & AT3G57890 \\
 6 & 3 & 21437549 & Bonferroni & 8.199186 & 5 & AT3G57890 \\
 7 & 3 & 16203882 & Bonferroni & 8.161670 & 12 & AT3G44630 \\
-8 & 3 & 16203882 & Bonferroni & 8.038630 & 11 & AT3G44630 \\
-9 & 3 & 16203882 & Bonferroni & 7.859742 & 11 & AT3G44630 \\
-10 & 3 & 16203882 & Not & 7.752571 & 12 & AT3G44630 \\
+8 & 2 & 2259995 & Bonferroni & 8.125200 & 7 & AT2G05910 \\
+9 & 3 & 16203882 & Bonferroni & 8.038630 & 11 & AT3G44630 \\
+10 & 3 & 16203882 & Bonferroni & 7.859742 & 11 & AT3G44630 \\
 \end{longtable}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Purpose: Displays the nearest genes to the top SNPs.}
-\end{Highlighting}
-\end{Shaded}
+\pandocbounded{\includegraphics[keepaspectratio]{02_GWAS_Analysis_files/figure-pdf/Manhattat plot-1.pdf}}
+
+\section{Overlapping genes - RNAseq}\label{overlapping-genes---rnaseq}
+
+\pandocbounded{\includegraphics[keepaspectratio]{02_GWAS_Analysis_files/figure-pdf/VENN diagram-1.pdf}}
+
+\begin{verbatim}
+Overlap between Roots and GWAS:
+\end{verbatim}
+
+\begin{verbatim}
+[1] "AT3G44630" "AT5G59220"
+\end{verbatim}
+
+\begin{verbatim}
+
+Overlap between Shoots and GWAS:
+\end{verbatim}
+
+\begin{verbatim}
+[1] "AT1G48100" "AT2G36080" "AT5G59220"
+\end{verbatim}
 
 \begin{itemize}
 \tightlist
@@ -482,65 +320,7 @@ SNPMMF1}\label{plot-the-snps-on-chromosome-3-surrounding-snpmmf1}
 We zoom in on the top two genomic locations identified in the GWAS and
 add the genes located closest to the SNPs.
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Subset data for Chromosome 3 and SNPs \textless{} DAG20}
-\NormalTok{tot\_plant\_specific\_snps\_DAG20\_chrm3 }\OtherTok{\textless{}{-}} \FunctionTok{subset}\NormalTok{(tot\_plant\_specific\_snps\_DAG20, }
-\NormalTok{                                              chrom }\SpecialCharTok{==} \StringTok{"3"}\NormalTok{)}
-\CommentTok{\# Purpose: Filters the data to include only SNPs on Chromosome 3.}
-
-\CommentTok{\# Create the Manhattan plot for Chromosome 3}
-\NormalTok{manhattan\_plot\_small }\OtherTok{\textless{}{-}}\NormalTok{ tot\_plant\_specific\_snps\_DAG20\_chrm3 }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{ggplot}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ pos, }\AttributeTok{y =}\NormalTok{ log10\_p, }\AttributeTok{label =}\NormalTok{ pos)) }\SpecialCharTok{+}
-  \FunctionTok{geom\_point}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{fill =}\NormalTok{ Significant, }\AttributeTok{color =}\NormalTok{ Significant), }\AttributeTok{size =} \DecValTok{2}\NormalTok{, }
-             \AttributeTok{alpha =} \FloatTok{0.6}\NormalTok{) }\SpecialCharTok{+}
-  \FunctionTok{facet\_grid}\NormalTok{(}\SpecialCharTok{\textasciitilde{}}\NormalTok{chrom, }\AttributeTok{scales =} \StringTok{"free\_x"}\NormalTok{, }\AttributeTok{switch =} \StringTok{"x"}\NormalTok{) }\SpecialCharTok{+}
-  \FunctionTok{expand\_limits}\NormalTok{(}\AttributeTok{y =} \FunctionTok{c}\NormalTok{(}\DecValTok{5}\NormalTok{, }\DecValTok{10}\NormalTok{)) }\SpecialCharTok{+} \CommentTok{\# Adjust y{-}axis limits as needed}
-  \FunctionTok{theme}\NormalTok{(}
-    \CommentTok{\# Remove panel grid lines}
-    \AttributeTok{panel.grid.major =} \FunctionTok{element\_blank}\NormalTok{(),}
-    \AttributeTok{panel.grid.minor =} \FunctionTok{element\_blank}\NormalTok{(),}
-    \CommentTok{\# Remove panel background}
-    \AttributeTok{panel.background =} \FunctionTok{element\_blank}\NormalTok{(),}
-    \CommentTok{\# Add axis line}
-    \AttributeTok{axis.line =} \FunctionTok{element\_line}\NormalTok{(}\AttributeTok{colour =} \StringTok{"black"}\NormalTok{)}
-\NormalTok{  ) }\SpecialCharTok{+}
-  \FunctionTok{scale\_x\_continuous}\NormalTok{(}\AttributeTok{limits =} \FunctionTok{c}\NormalTok{(}\DecValTok{12500000}\NormalTok{, }\DecValTok{24437549}\NormalTok{)) }\SpecialCharTok{+}
-  \FunctionTok{scale\_color\_manual}\NormalTok{(}\AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"red4"}\NormalTok{, }\StringTok{"slategray4"}\NormalTok{)) }\SpecialCharTok{+}
-  \FunctionTok{theme}\NormalTok{(}\AttributeTok{legend.position =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.2}\NormalTok{, }\FloatTok{0.85}\NormalTok{)) }\SpecialCharTok{+}
-  \FunctionTok{geom\_label}\NormalTok{(}
-    \AttributeTok{label =} \StringTok{"AT3G57890"}\NormalTok{,}
-    \AttributeTok{x =} \DecValTok{21200000}\NormalTok{,}
-    \AttributeTok{y =} \FloatTok{9.4}\NormalTok{,}
-    \AttributeTok{label.padding =} \FunctionTok{unit}\NormalTok{(}\FloatTok{0.2}\NormalTok{, }\StringTok{"lines"}\NormalTok{), }\CommentTok{\# Rectangle size around label}
-    \AttributeTok{label.size =} \FloatTok{0.2}\NormalTok{,}
-    \AttributeTok{color =} \StringTok{"black"}\NormalTok{,}
-    \AttributeTok{fill =} \StringTok{"\#FFFFFF"}
-\NormalTok{  ) }\SpecialCharTok{+}
-  \FunctionTok{geom\_label}\NormalTok{(}
-    \AttributeTok{label =} \StringTok{"AT3G44630"}\NormalTok{,}
-    \AttributeTok{x =} \DecValTok{16200000}\NormalTok{,}
-    \AttributeTok{y =} \FloatTok{8.6}\NormalTok{,}
-    \AttributeTok{label.padding =} \FunctionTok{unit}\NormalTok{(}\FloatTok{0.2}\NormalTok{, }\StringTok{"lines"}\NormalTok{), }\CommentTok{\# Rectangle size around label}
-    \AttributeTok{label.size =} \FloatTok{0.2}\NormalTok{,}
-    \AttributeTok{color =} \StringTok{"black"}\NormalTok{,}
-    \AttributeTok{fill =} \StringTok{"\#FFFFFF"}
-\NormalTok{  ) }\SpecialCharTok{+}
-  \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Manhattan Plot for Chromosome 3"}\NormalTok{, }\AttributeTok{x =} \StringTok{"Position"}\NormalTok{, }
-       \AttributeTok{y =} \StringTok{"{-}log10(p{-}value)"}\NormalTok{)}
-\CommentTok{\# Purpose: Creates a focused Manhattan plot for Chromosome 3, highlighting specific genes.}
-
-\CommentTok{\# Display the plot}
-\FunctionTok{print}\NormalTok{(manhattan\_plot\_small)}
-\CommentTok{\# Purpose: Displays the Manhattan plot for Chromosome 3.}
-
-\CommentTok{\# Save the plot}
-\FunctionTok{ggsave}\NormalTok{(}\StringTok{"Manhattan\_DAG\textless{}20\_topSNP.pdf"}\NormalTok{, }\AttributeTok{plot =}\NormalTok{ manhattan\_plot\_small, }\AttributeTok{width =} \DecValTok{15}\NormalTok{, }\AttributeTok{height =} \DecValTok{10}\NormalTok{, }\AttributeTok{units =} \StringTok{"cm"}\NormalTok{, }\AttributeTok{path =} \StringTok{"Output/Figures"}\NormalTok{)}
-\CommentTok{\# Purpose: Saves the focused Manhattan plot as a PDF file.}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{figure}[H]
+\begin{figure}
 
 \centering{
 
@@ -567,59 +347,6 @@ We first create a world map that will be used to plot the geographic
 distribution of Arabidopsis accessions based on their SNP response to
 BX-feedbacks.
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Load necessary libraries}
-\FunctionTok{library}\NormalTok{(maps)}
-\CommentTok{\# Purpose: Loads the \textasciigrave{}maps\textasciigrave{} package for map plotting.}
-
-\CommentTok{\# Load world map data}
-\NormalTok{world\_map }\OtherTok{\textless{}{-}} \FunctionTok{map\_data}\NormalTok{(}\StringTok{"world"}\NormalTok{)}
-\CommentTok{\# Purpose: Loads data for the world map.}
-
-\CommentTok{\# Load ACC coordinates data}
-\NormalTok{ACC\_coordinates }\OtherTok{\textless{}{-}} \FunctionTok{read\_excel}\NormalTok{(}\StringTok{"Input/Dataset3.xlsx"}\NormalTok{, }
-                              \AttributeTok{sheet =} \StringTok{"Accessions\_coordinates"}\NormalTok{)}
-\CommentTok{\# Purpose: Loads ACC coordinates data from a CSV file.}
-
-\CommentTok{\# Subset the world map data for the region of interest}
-\NormalTok{World\_map\_small }\OtherTok{\textless{}{-}} \FunctionTok{subset}\NormalTok{(world\_map, long }\SpecialCharTok{\textgreater{}} \SpecialCharTok{{-}}\DecValTok{130} \SpecialCharTok{\&}\NormalTok{ long }\SpecialCharTok{\textless{}} \DecValTok{90}\NormalTok{)}
-\NormalTok{World\_map\_small }\OtherTok{\textless{}{-}} \FunctionTok{subset}\NormalTok{(World\_map\_small, lat }\SpecialCharTok{\textgreater{}} \SpecialCharTok{{-}}\DecValTok{0} \SpecialCharTok{\&}\NormalTok{ lat }\SpecialCharTok{\textless{}} \DecValTok{90}\NormalTok{)}
-\CommentTok{\# Purpose: Filters the world map data to focus on a specific region.}
-
-\CommentTok{\# Create a base plot with ggplot2}
-\NormalTok{p }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{() }\SpecialCharTok{+} \FunctionTok{coord\_fixed}\NormalTok{() }\SpecialCharTok{+}
-  \FunctionTok{xlab}\NormalTok{(}\StringTok{"Longitude"}\NormalTok{) }\SpecialCharTok{+} \FunctionTok{ylab}\NormalTok{(}\StringTok{"Latitude"}\NormalTok{)}
-\CommentTok{\# Purpose: Initializes a ggplot2 object for mapping with fixed coordinates.}
-
-\CommentTok{\# Add map to base plot}
-\NormalTok{base\_world\_messy }\OtherTok{\textless{}{-}}\NormalTok{ p }\SpecialCharTok{+} \FunctionTok{geom\_polygon}\NormalTok{(}\AttributeTok{data =}\NormalTok{ World\_map\_small, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ long, }
-                                                                 \AttributeTok{y =}\NormalTok{ lat, }
-                                                                 \AttributeTok{group =}\NormalTok{ group), }
-                                     \AttributeTok{colour =} \StringTok{"grey90"}\NormalTok{, }\AttributeTok{fill =} \StringTok{"grey90"}\NormalTok{)}
-\CommentTok{\# Purpose: Adds the filtered map data to the base plot as polygons.}
-
-\CommentTok{\# Display the messy base world map}
-\CommentTok{\#print(base\_world\_messy)}
-\CommentTok{\# Purpose: Displays the unrefined world map.}
-
-\CommentTok{\# Strip the map down to make it clean and beautiful}
-\NormalTok{cleanup }\OtherTok{\textless{}{-}} \FunctionTok{theme}\NormalTok{(}\AttributeTok{panel.grid.major =} \FunctionTok{element\_blank}\NormalTok{(), }
-                 \AttributeTok{panel.grid.minor =} \FunctionTok{element\_blank}\NormalTok{(), }
-                 \AttributeTok{panel.background =} \FunctionTok{element\_rect}\NormalTok{(}\AttributeTok{fill =} \StringTok{\textquotesingle{}white\textquotesingle{}}\NormalTok{, }
-                                                 \AttributeTok{colour =} \StringTok{\textquotesingle{}white\textquotesingle{}}\NormalTok{), }
-                 \AttributeTok{axis.line =} \FunctionTok{element\_line}\NormalTok{(}\AttributeTok{colour =} \StringTok{"grey50"}\NormalTok{))}
-\CommentTok{\# Purpose: Cleans up the map by removing unnecessary elements and applying a minimalist theme.}
-
-\NormalTok{base\_world }\OtherTok{\textless{}{-}}\NormalTok{ base\_world\_messy }\SpecialCharTok{+}\NormalTok{ cleanup}
-\CommentTok{\# Purpose: Applies the cleaned{-}up theme to the world map.}
-
-\CommentTok{\# Display the clean base world map}
-\CommentTok{\#print(base\_world)}
-\CommentTok{\# Purpose: Displays the refined world map.}
-\end{Highlighting}
-\end{Shaded}
-
 \subsection{Plot the Geographic Distribution of
 Accessions}\label{plot-the-geographic-distribution-of-accessions}
 
@@ -627,28 +354,7 @@ We plot the distribution of accessions on the world map and color each
 accession based on their BX-feedback response (either positive or
 negative).
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Add simple data points to the map}
-\NormalTok{map\_data }\OtherTok{\textless{}{-}}\NormalTok{ base\_world }\SpecialCharTok{+}
-  \FunctionTok{geom\_point}\NormalTok{(}\AttributeTok{data =}\NormalTok{ ACC\_coordinates, }
-             \FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Long, }\AttributeTok{y =}\NormalTok{ Lat, }\AttributeTok{fill =} \FunctionTok{factor}\NormalTok{(SNP)), }\AttributeTok{colour =} \StringTok{"grey30"}\NormalTok{, }
-             \AttributeTok{pch =} \DecValTok{21}\NormalTok{, }\AttributeTok{size =} \DecValTok{3}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.6}\NormalTok{) }\SpecialCharTok{+}
-  \FunctionTok{theme}\NormalTok{(}\AttributeTok{legend.position =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.1}\NormalTok{, }\FloatTok{0.2}\NormalTok{)) }\SpecialCharTok{+}
-  \FunctionTok{scale\_fill\_manual}\NormalTok{(}\AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"orange2"}\NormalTok{, }\StringTok{"deepskyblue4"}\NormalTok{))}
-\CommentTok{\# Purpose: Adds data points representing ACC coordinates to the map, colored by SNP type.}
-
-\CommentTok{\# Display the map with data points}
-\FunctionTok{print}\NormalTok{(map\_data)}
-\CommentTok{\# Purpose: Displays the world map with ACC coordinate data points.}
-
-\CommentTok{\# Save the plot}
-\FunctionTok{ggsave}\NormalTok{(}\StringTok{"ACC\_response\_map\_white.pdf"}\NormalTok{, }\AttributeTok{plot =}\NormalTok{ map\_data, }\AttributeTok{height =} \DecValTok{14}\NormalTok{, }\AttributeTok{width =} \DecValTok{16}\NormalTok{, }\AttributeTok{units =} \StringTok{"cm"}\NormalTok{, }\AttributeTok{dpi =} \DecValTok{600}\NormalTok{, }\AttributeTok{path =} \StringTok{"Output/Figures"}\NormalTok{)}
-\CommentTok{\# Purpose: Saves the map with ACC coordinates as a PDF file.}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{figure}[H]
+\begin{figure}
 
 \centering{
 
@@ -676,46 +382,6 @@ response of Arabidopsis accessions. We use the
 \texttt{phenotype\_by\_snp} function to extract the plant region area
 and days after germination (DAG) data for SNPMMF1.
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Extract plant area}
-\NormalTok{temp1 }\OtherTok{\textless{}{-}}\NormalTok{ tot\_plant\_specific\_snps }\SpecialCharTok{\%\textgreater{}\%}
-\NormalTok{  \{gwaR}\SpecialCharTok{::}\FunctionTok{phenotype\_by\_snp}\NormalTok{(plant\_region\_areas }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{mutate}\NormalTok{(}\AttributeTok{ACC\_ID =}\NormalTok{ genotype\_id),}
-                          \StringTok{"plant\_region\_area"}\NormalTok{,}
-                          \AttributeTok{gwas\_table =}\NormalTok{ .,}
-                          \AttributeTok{specific =} \StringTok{"bx"}\NormalTok{,}
-                          \AttributeTok{SNPrank =} \DecValTok{7}\NormalTok{,}
-                          \AttributeTok{plot =} \ConstantTok{FALSE}\NormalTok{,}
-                          \AttributeTok{SNPmatrix =} \StringTok{"Input/SNPmatrix\_full.fst"}\NormalTok{, }\CommentTok{\# Ensure this path is correct}
-                          \AttributeTok{nobees =} \ConstantTok{TRUE}\NormalTok{)\}}
-
-
-\CommentTok{\# Extract dag (days after germination)}
-
-\NormalTok{temp2 }\OtherTok{\textless{}{-}}\NormalTok{ tot\_plant\_specific\_snps }\SpecialCharTok{\%\textgreater{}\%}
-\NormalTok{  \{gwaR}\SpecialCharTok{::}\FunctionTok{phenotype\_by\_snp}\NormalTok{(plant\_region\_areas }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{mutate}\NormalTok{(}\AttributeTok{ACC\_ID =}\NormalTok{ genotype\_id),}
-                          \StringTok{"dag"}\NormalTok{,}
-                          \AttributeTok{gwas\_table =}\NormalTok{ .,}
-                          \AttributeTok{specific =} \StringTok{"bx"}\NormalTok{,}
-                          \AttributeTok{SNPrank =} \DecValTok{7}\NormalTok{,}
-                          \AttributeTok{plot =} \ConstantTok{FALSE}\NormalTok{,}
-                          \AttributeTok{SNPmatrix =} \StringTok{"Input/SNPmatrix\_full.fst"}\NormalTok{, }\CommentTok{\# Ensure this path is correct}
-                          \AttributeTok{nobees =} \ConstantTok{TRUE}\NormalTok{)\}}
-
-\CommentTok{\# Combine extracted data into one data frame}
-
-\NormalTok{plant\_region\_areas\_SNP }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}\AttributeTok{ACC\_ID =}\NormalTok{ temp1}\SpecialCharTok{$}\NormalTok{ACC\_ID,}
-                          \AttributeTok{bx =}\NormalTok{ temp1}\SpecialCharTok{$}\NormalTok{bx,}
-                          \AttributeTok{plant\_region\_area =}\NormalTok{ temp1}\SpecialCharTok{$}\NormalTok{phenotype\_value,}
-                          \AttributeTok{dag =} \FunctionTok{as.integer}\NormalTok{(temp2}\SpecialCharTok{$}\NormalTok{phenotype\_value),}
-                          \AttributeTok{SNP =}\NormalTok{ temp1}\SpecialCharTok{$}\NormalTok{SNP) }\CommentTok{\# Convert dag to integers}
-
-\FunctionTok{rm}\NormalTok{(temp1, temp2)}
-
-\FunctionTok{kable}\NormalTok{(plant\_region\_areas\_SNP[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{5}\NormalTok{, ], }\AttributeTok{caption =} \StringTok{"Table with plant region area by SNP."}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
 \begin{longtable}[]{@{}rlrrl@{}}
 \caption{Table with plant region area by SNP.}\tabularnewline
 \toprule\noalign{}
@@ -741,67 +407,6 @@ ACC\_ID & bx & plant\_region\_area & dag & SNP \\
 We do this to focus on the phenotypic effects of SNPMM1 on growth. We
 choose DAG15, since this is the latest time when the genetic association
 of SNPMMF1 was still visible.
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Subset to plants with exactly 15 days old}
-\NormalTok{plant\_region\_areas\_DAG15 }\OtherTok{\textless{}{-}} 
-\NormalTok{  plant\_region\_areas\_SNP[plant\_region\_areas\_SNP}\SpecialCharTok{$}\NormalTok{dag }\SpecialCharTok{==} \DecValTok{15}\NormalTok{, }\SpecialCharTok{{-}}\DecValTok{6}\NormalTok{]}
-\CommentTok{\# Purpose: Filters the data to include only plants that are exactly 15 days old.}
-
-\CommentTok{\# Compute mean per ACC}
-\NormalTok{plant\_region\_areas\_DAG15 }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_DAG15 }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{group\_by}\NormalTok{(bx, ACC\_ID) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{mean\_ACC =} \FunctionTok{mean}\NormalTok{(plant\_region\_area, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{ungroup}\NormalTok{()}
-\CommentTok{\# Purpose: Calculates the mean plant region area for each ACC\_ID within each bx group.}
-
-\CommentTok{\# Remove unnecessary columns and keep unique entries}
-\NormalTok{plant\_region\_areas\_DAG15 }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_DAG15 }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{select}\NormalTok{(}\SpecialCharTok{{-}}\NormalTok{plant\_region\_area, }\SpecialCharTok{{-}}\NormalTok{dag) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{distinct}\NormalTok{()}
-\CommentTok{\# Purpose: Removes unnecessary columns and retains only unique rows in the data frame.}
-
-\CommentTok{\# Spread the data by bx treatment}
-\NormalTok{plant\_region\_areas\_DAG15 }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_DAG15 }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{spread}\NormalTok{(}\AttributeTok{key =}\NormalTok{ bx, }\AttributeTok{value =}\NormalTok{ mean\_ACC)}
-\CommentTok{\# Purpose: Reshapes the data so that bx treatments are in separate columns.}
-
-\CommentTok{\# Calculate the difference between treatments (bx+ {-} bx{-})}
-\NormalTok{plant\_region\_areas\_DAG15 }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_DAG15 }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{area\_diff =} \StringTok{\textasciigrave{}}\AttributeTok{+}\StringTok{\textasciigrave{}} \SpecialCharTok{{-}} \StringTok{\textasciigrave{}}\AttributeTok{{-}}\StringTok{\textasciigrave{}}\NormalTok{,}
-         \AttributeTok{fold\_change =} \StringTok{\textasciigrave{}}\AttributeTok{+}\StringTok{\textasciigrave{}} \SpecialCharTok{/} \StringTok{\textasciigrave{}}\AttributeTok{{-}}\StringTok{\textasciigrave{}}\NormalTok{,}
-         \AttributeTok{excessive =} \FunctionTok{case\_when}\NormalTok{(}
-\NormalTok{           fold\_change }\SpecialCharTok{\textgreater{}=} \FloatTok{1.5} \SpecialCharTok{\textasciitilde{}} \StringTok{"plus"}\NormalTok{,}
-\NormalTok{           fold\_change }\SpecialCharTok{\textless{}=} \SpecialCharTok{{-}}\FloatTok{1.5} \SpecialCharTok{\textasciitilde{}} \StringTok{"minus"}\NormalTok{,}
-\NormalTok{           fold\_change }\SpecialCharTok{\textless{}} \FloatTok{1.5} \SpecialCharTok{\textasciitilde{}} \StringTok{"neutral"}
-\NormalTok{         )) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{arrange}\NormalTok{(}\FunctionTok{desc}\NormalTok{(area\_diff))}
-\CommentTok{\# Purpose: Calculates the difference in plant region area between bx+ and bx{-} treatments, and classifies the results.}
-
-\CommentTok{\# Add preference column based on growth feedback}
-\NormalTok{plant\_region\_areas\_DAG15 }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_DAG15 }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{preference =} \FunctionTok{case\_when}\NormalTok{(}
-\NormalTok{    area\_diff }\SpecialCharTok{\textgreater{}=} \DecValTok{0} \SpecialCharTok{\textasciitilde{}} \StringTok{"plus"}\NormalTok{,}
-    \ConstantTok{TRUE} \SpecialCharTok{\textasciitilde{}} \StringTok{"minus"}
-\NormalTok{  )) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{arrange}\NormalTok{(}\FunctionTok{desc}\NormalTok{(area\_diff)) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{rank =} \FunctionTok{row\_number}\NormalTok{())}
-\CommentTok{\# Purpose: Assigns a preference (plus or minus) based on growth feedback and ranks the accessions by area difference.}
-
-\CommentTok{\# Rank by area\_diff}
-\NormalTok{plant\_region\_areas\_DAG15 }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_DAG15 }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{rank =} \FunctionTok{row\_number}\NormalTok{(dplyr}\SpecialCharTok{::}\FunctionTok{desc}\NormalTok{(area\_diff)))}
-\CommentTok{\# Purpose: Ranks the accessions based on the area difference in descending order.}
-
-\CommentTok{\# Save the result to a CSV file}
-\FunctionTok{write.csv}\NormalTok{(plant\_region\_areas\_DAG15, }\AttributeTok{row.names =} \ConstantTok{TRUE}\NormalTok{, }\AttributeTok{file =} \StringTok{"Output/Plant\_region\_areas\_DAG15.csv"}\NormalTok{)}
-\CommentTok{\# Purpose: Saves the final data frame to a CSV file.}
-
-\CommentTok{\# Display the final dataframe}
-\FunctionTok{kable}\NormalTok{(plant\_region\_areas\_DAG15[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{5}\NormalTok{, ], }\AttributeTok{caption =} \StringTok{"Table with accession growth feedback and feedback response"}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{longtable}[]{@{}
   >{\raggedleft\arraybackslash}p{(\linewidth - 16\tabcolsep) * \real{0.0875}}
@@ -873,12 +478,6 @@ rank
 5 \\
 \end{longtable}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Purpose: Displays the first few rows of the final data frame.}
-\end{Highlighting}
-\end{Shaded}
-
 \begin{itemize}
 \tightlist
 \item
@@ -895,119 +494,7 @@ rank
 with
 SNPMMF1}\label{plot-the-relative-growth-feedback-distribution-of-accessions-with-snpmmf1}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Create the plot for the relative growth feedback of all accessions}
-\CommentTok{\# Prepare data for labeling specific genotypes}
-\CommentTok{\# Prepare data for labeling specific genotypes}
-\CommentTok{\# Prepare data for labeling specific genotypes}
-
-\CommentTok{\# Prepare data for labeling specific genotypes}
-\NormalTok{labels\_data }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_DAG15 }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{filter}\NormalTok{(ACC\_ID }\SpecialCharTok{\%in\%} \FunctionTok{c}\NormalTok{(}\StringTok{"9851"}\NormalTok{, }\StringTok{"6909"}\NormalTok{, }\StringTok{"9392"}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{mutate}\NormalTok{(}
-    \AttributeTok{genotype =} \FunctionTok{case\_when}\NormalTok{(}
-\NormalTok{      ACC\_ID }\SpecialCharTok{==} \StringTok{"9851"} \SpecialCharTok{\textasciitilde{}} \StringTok{"IP{-}Hue{-}3"}\NormalTok{,}
-\NormalTok{      ACC\_ID }\SpecialCharTok{==} \StringTok{"6909"} \SpecialCharTok{\textasciitilde{}} \StringTok{"Col{-}0"}\NormalTok{,}
-\NormalTok{      ACC\_ID }\SpecialCharTok{==} \StringTok{"9392"} \SpecialCharTok{\textasciitilde{}} \StringTok{"Hadd{-}3"}
-\NormalTok{    ),}
-    \AttributeTok{circle\_type =} \StringTok{"Labeled Genotypes"}\NormalTok{, }\CommentTok{\# Add a label type for the legend}
-    \AttributeTok{text\_position =} \FunctionTok{ifelse}\NormalTok{(area\_diff }\SpecialCharTok{\textgreater{}} \DecValTok{0}\NormalTok{, area\_diff }\SpecialCharTok{+} \DecValTok{4000}\NormalTok{, area\_diff }\SpecialCharTok{{-}} \DecValTok{5000}\NormalTok{) }\CommentTok{\# Offset for labels}
-\NormalTok{  )}
-
-\CommentTok{\# Add circle\_type for SNPs}
-\NormalTok{snps\_data }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_areas\_DAG15 }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{filter}\NormalTok{(SNP }\SpecialCharTok{==} \ConstantTok{TRUE}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{circle\_type =} \StringTok{"SNPs"}\NormalTok{)}
-
-\CommentTok{\# Combine circle data}
-\NormalTok{circle\_data }\OtherTok{\textless{}{-}} \FunctionTok{bind\_rows}\NormalTok{(labels\_data, snps\_data)}
-
-
-
-
-
-
-\NormalTok{ACC\_ratio }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{(plant\_region\_areas\_DAG15, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ rank, }
-                                                  \AttributeTok{y =}\NormalTok{ area\_diff, }
-                                                  \AttributeTok{fill =}\NormalTok{ preference)) }\SpecialCharTok{+}
-  
-  \CommentTok{\# Add bars with original fill color based on "preference"}
-  \FunctionTok{geom\_bar}\NormalTok{(}\AttributeTok{stat =} \StringTok{"identity"}\NormalTok{, }\AttributeTok{linewidth =} \FloatTok{0.001}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.8}\NormalTok{, }\AttributeTok{width =} \DecValTok{1}\NormalTok{) }\SpecialCharTok{+}
-  
-  \CommentTok{\# Add a second layer to highlight bars for genotypes with SNPs in black}
-  \FunctionTok{geom\_bar}\NormalTok{(}
-    \AttributeTok{data =}\NormalTok{ plant\_region\_areas\_DAG15 }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(SNP }\SpecialCharTok{==} \ConstantTok{TRUE}\NormalTok{),}
-    \FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ rank, }\AttributeTok{y =}\NormalTok{ area\_diff),}
-    \AttributeTok{stat =} \StringTok{"identity"}\NormalTok{, }\AttributeTok{fill =} \StringTok{"black"}\NormalTok{, }\AttributeTok{linewidth =} \FloatTok{0.001}\NormalTok{, }\AttributeTok{width =} \DecValTok{1}
-\NormalTok{  ) }\SpecialCharTok{+}
-  
-  \CommentTok{\# Customize the fill scale for the legend}
-  \FunctionTok{scale\_fill\_manual}\NormalTok{(}
-    \AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"orange2"}\NormalTok{, }\StringTok{"\#0072B2"}\NormalTok{),}
-    \AttributeTok{name =} \StringTok{"BX feedback"}\NormalTok{,  }\CommentTok{\# Update legend title}
-    \AttributeTok{labels =} \FunctionTok{c}\NormalTok{(}\StringTok{"negative"}\NormalTok{, }\StringTok{"positive"}\NormalTok{)  }\CommentTok{\# Update legend labels}
-\NormalTok{  ) }\SpecialCharTok{+}
-  
-  \CommentTok{\# Add circles for labeled genotypes and SNPs}
-  \FunctionTok{geom\_point}\NormalTok{(}
-    \AttributeTok{data =}\NormalTok{ circle\_data,}
-    \FunctionTok{aes}\NormalTok{(}\AttributeTok{y =}\NormalTok{ area\_diff, }\AttributeTok{shape =}\NormalTok{ circle\_type), }\CommentTok{\# Map shape to circle\_type for legend}
-    \AttributeTok{color =} \StringTok{"black"}\NormalTok{, }\AttributeTok{size =} \FloatTok{1.0}
-\NormalTok{  ) }\SpecialCharTok{+}
-  
-  \CommentTok{\# Add text labels dynamically positioned for labeled genotypes}
-  \FunctionTok{geom\_text}\NormalTok{(}
-    \AttributeTok{data =}\NormalTok{ labels\_data,}
-    \FunctionTok{aes}\NormalTok{(}\AttributeTok{y =}\NormalTok{ text\_position, }\AttributeTok{label =}\NormalTok{ genotype), }\CommentTok{\# Use the "genotype" column for labels}
-    \AttributeTok{color =} \StringTok{"black"}\NormalTok{, }\AttributeTok{size =} \DecValTok{2}\NormalTok{, }\AttributeTok{hjust =} \FloatTok{0.5}
-\NormalTok{  ) }\SpecialCharTok{+}
-  
-  \FunctionTok{xlim}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{2}\NormalTok{, }\DecValTok{412}\NormalTok{) }\SpecialCharTok{+}
-  
-  \CommentTok{\# Modify the y{-}axis label and scale}
-  \FunctionTok{labs}\NormalTok{(}
-    \AttributeTok{y =} \FunctionTok{expression}\NormalTok{(}\StringTok{"Growth feedback (10"}\SpecialCharTok{\^{}}\DecValTok{4}\SpecialCharTok{*}\StringTok{")"}\NormalTok{), }
-    \AttributeTok{x =} \StringTok{"Accession rank"}\NormalTok{,}
-    \AttributeTok{title =} \StringTok{"SNP distribution and genotype highlights"}
-\NormalTok{  ) }\SpecialCharTok{+}
-  
-  \CommentTok{\# Scale y{-}axis to divide values by 10,000 for display}
-  \FunctionTok{scale\_y\_continuous}\NormalTok{(}\AttributeTok{labels =} \ControlFlowTok{function}\NormalTok{(x) x }\SpecialCharTok{/} \DecValTok{10000}\NormalTok{) }\SpecialCharTok{+}
-  
-  \CommentTok{\# Customize shape legend}
-  \FunctionTok{scale\_shape\_manual}\NormalTok{(}
-    \AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"Labeled Genotypes"} \OtherTok{=} \DecValTok{1}\NormalTok{, }\StringTok{"SNPs"} \OtherTok{=} \DecValTok{16}\NormalTok{), }\CommentTok{\# Open circle for labeled genotypes, filled for SNPs}
-    \AttributeTok{name =} \StringTok{"Circle Type"} \CommentTok{\# Legend title for circles}
-\NormalTok{  ) }\SpecialCharTok{+}
-  
-  \CommentTok{\# Styling and theme}
-  \FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+}
-  \FunctionTok{theme}\NormalTok{(}
-    \AttributeTok{axis.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
-    \AttributeTok{axis.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{), }
-    \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
-    \AttributeTok{legend.position =} \FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{),  }\CommentTok{\# Move legend to the very top{-}right corner}
-    \AttributeTok{legend.justification =} \FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{),   }\CommentTok{\# Align legend box to the top{-}right}
-    \AttributeTok{legend.background =} \FunctionTok{element\_rect}\NormalTok{(}\AttributeTok{fill =} \StringTok{"white"}\NormalTok{, }\AttributeTok{color =} \StringTok{"black"}\NormalTok{),  }\CommentTok{\# Optional: Add background}
-    \AttributeTok{legend.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),  }\CommentTok{\# Smaller legend title}
-    \AttributeTok{legend.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{)    }\CommentTok{\# Smaller legend items}
-\NormalTok{  )}
-
-\CommentTok{\# Display the plot}
-\NormalTok{ACC\_ratio}
-
-
-
-\CommentTok{\# Purpose: Displays the relative growth feedback plot.}
-
-\CommentTok{\# Save the combined plot to a PDF file}
-\FunctionTok{ggsave}\NormalTok{(}\StringTok{"SNPMMF1\_ACC\_feedback.pdf"}\NormalTok{, }\AttributeTok{plot =}\NormalTok{ ACC\_ratio, }\AttributeTok{height =} \DecValTok{7}\NormalTok{, }\AttributeTok{width =} \DecValTok{16}\NormalTok{, }\AttributeTok{units =} \StringTok{"cm"}\NormalTok{, }\AttributeTok{dpi =} \DecValTok{600}\NormalTok{, }\AttributeTok{path =} \StringTok{"Output/Figures"}\NormalTok{)}
-\CommentTok{\# Purpose: Saves the plot as a PDF file.}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{figure}[H]
+\begin{figure}
 
 \centering{
 
@@ -1030,40 +517,7 @@ of accessions carrying SNPMMF1.}
 \subsection{Boxplot illustrating SNP Effect on growth
 feedback}\label{boxplot-illustrating-snp-effect-on-growth-feedback}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Create the boxplot with jitter for SNP effect}
-\NormalTok{SNP\_effect }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{(plant\_region\_areas\_DAG15, }\FunctionTok{aes}\NormalTok{(SNP, area\_diff, }\AttributeTok{fill =}\NormalTok{ SNP)) }\SpecialCharTok{+}
-  \FunctionTok{geom\_boxplot}\NormalTok{(}\AttributeTok{outlier.colour =} \ConstantTok{NA}\NormalTok{, }\AttributeTok{show.legend =} \ConstantTok{FALSE}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.6}\NormalTok{) }\SpecialCharTok{+}
-  \FunctionTok{geom\_jitter}\NormalTok{(}\AttributeTok{width =} \FloatTok{0.15}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.6}\NormalTok{, }\AttributeTok{size =} \FloatTok{0.8}\NormalTok{, }\AttributeTok{show.legend =} \ConstantTok{FALSE}\NormalTok{, }
-              \FunctionTok{aes}\NormalTok{(}\AttributeTok{color =}\NormalTok{ SNP)) }\SpecialCharTok{+}
-  \FunctionTok{labs}\NormalTok{(}\AttributeTok{y =} \StringTok{"Growth feedback"}\NormalTok{, }\AttributeTok{x =} \StringTok{"Alternative allele"}\NormalTok{, }\AttributeTok{title =} \StringTok{"SNP effect"}\NormalTok{) }\SpecialCharTok{+}
-  \FunctionTok{scale\_fill\_manual}\NormalTok{(}\AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"slategrey"}\NormalTok{, }\StringTok{"red3"}\NormalTok{)) }\SpecialCharTok{+}
-  \FunctionTok{scale\_color\_manual}\NormalTok{(}\AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"slategrey"}\NormalTok{, }\StringTok{"red3"}\NormalTok{)) }\SpecialCharTok{+}
-  \FunctionTok{theme}\NormalTok{(}\AttributeTok{panel.background =} \FunctionTok{element\_blank}\NormalTok{(),  }\CommentTok{\# Remove panel background}
-    \AttributeTok{panel.grid.minor =} \FunctionTok{element\_blank}\NormalTok{(),  }\CommentTok{\# Remove minor grid lines}
-    \AttributeTok{panel.border =} \FunctionTok{element\_rect}\NormalTok{(}\AttributeTok{color =} \StringTok{"black"}\NormalTok{, }\AttributeTok{fill =} \ConstantTok{NA}\NormalTok{),  }\CommentTok{\# Add border around the panel}
-    \AttributeTok{panel.grid.major =} \FunctionTok{element\_line}\NormalTok{(}\AttributeTok{color =} \StringTok{"lightgrey"}\NormalTok{, }\AttributeTok{linewidth =} \FloatTok{0.3}\NormalTok{),  }\CommentTok{\# Show major grid lines}
-    \AttributeTok{axis.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{10}\NormalTok{),}
-      \AttributeTok{legend.position =} \StringTok{"none"}\NormalTok{,}
-      \AttributeTok{legend.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{11}\NormalTok{),}
-      \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{12}\NormalTok{),}
-      \AttributeTok{axis.title.y =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{10}\NormalTok{),}
-      \AttributeTok{axis.title.x =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{10}\NormalTok{),}
-      \FunctionTok{theme\_bw}\NormalTok{())}
-\CommentTok{\# Purpose: Creates a boxplot with jitter to visualize the effect of SNP on the growth feedback response.}
-
-\CommentTok{\# Display the plot}
-\FunctionTok{print}\NormalTok{(SNP\_effect)}
-\CommentTok{\# Purpose: Displays the boxplot for SNP effect.}
-
-\CommentTok{\# Save the plot}
-\FunctionTok{ggsave}\NormalTok{(}\StringTok{"SNPMMF1\_effect\_plot.pdf"}\NormalTok{, }\AttributeTok{plot =}\NormalTok{ SNP\_effect, }\AttributeTok{width =} \FloatTok{4.6}\NormalTok{, }\AttributeTok{height =} \FloatTok{6.6}\NormalTok{, }\AttributeTok{units =} \StringTok{"cm"}\NormalTok{, }\AttributeTok{dpi =} \DecValTok{300}\NormalTok{, }\AttributeTok{path =} \StringTok{"Output/Figures"}\NormalTok{)}
-\CommentTok{\# Purpose: Saves the SNP effect plot as a PDF file.}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{figure}[H]
+\begin{figure}
 
 \centering{
 
@@ -1085,24 +539,6 @@ accession with the major and minor allele at SNPMMF1.}
 
 \subsection{Combined SNPMMF1 effect
 plots}\label{combined-snpmmf1-effect-plots}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\NormalTok{combined }\OtherTok{\textless{}{-}} \FunctionTok{plot\_grid}\NormalTok{(ACC\_ratio, SNP\_effect, }\AttributeTok{labels =} \FunctionTok{c}\NormalTok{(}\StringTok{"A."}\NormalTok{, }\StringTok{"B."}\NormalTok{), }\AttributeTok{ncol =} \DecValTok{2}\NormalTok{, }\AttributeTok{label\_size =} \DecValTok{12}\NormalTok{, }\AttributeTok{rel\_widths =} \FunctionTok{c}\NormalTok{(}\DecValTok{4}\NormalTok{, }\FloatTok{1.5}\NormalTok{), }\AttributeTok{rel\_heights =} \FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{1}\NormalTok{))}
-\CommentTok{\# Purpose: Combines the relative growth feedback plot and the SNP effect plot into a single plot grid.}
-
-\NormalTok{combined}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Purpose: Displays the combined plot grid.}
-
-\FunctionTok{ggsave}\NormalTok{(}\StringTok{"SNPMMF1\_feedback.pdf"}\NormalTok{, }\AttributeTok{width =} \DecValTok{24}\NormalTok{, }\AttributeTok{height =} \DecValTok{9}\NormalTok{, }\AttributeTok{units =} \StringTok{"cm"}\NormalTok{, }\AttributeTok{dpi =} \DecValTok{600}\NormalTok{, }\AttributeTok{plot =}\NormalTok{ combined, }\AttributeTok{path =} \StringTok{"Output/Figures"}\NormalTok{)}
-\CommentTok{\# Purpose: Saves the combined plot grid as a PDF file.}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{itemize}
 \tightlist
@@ -1156,28 +592,6 @@ Data}\label{load-arabidopsis-genome-data}
 We load the Arabidopsis genome data from the Ensembl Plants database
 using the \texttt{biomaRt} package.
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Load necessary libraries}
-\FunctionTok{library}\NormalTok{(biomaRt)}
-\FunctionTok{library}\NormalTok{(stringr)}
-\FunctionTok{library}\NormalTok{(plyranges)}
-\CommentTok{\# Purpose: Loads the necessary libraries for working with genomic data.}
-
-\NormalTok{araGenome }\OtherTok{\textless{}{-}}\NormalTok{ biomaRt}\SpecialCharTok{::}\FunctionTok{getBM}\NormalTok{(}\FunctionTok{c}\NormalTok{(}\StringTok{"ensembl\_gene\_id"}\NormalTok{,}
-                              \StringTok{"chromosome\_name"}\NormalTok{,}
-                              \StringTok{"start\_position"}\NormalTok{,}
-                              \StringTok{"end\_position"}\NormalTok{,}
-                              \StringTok{"strand"}\NormalTok{,}
-                              \StringTok{"description"}\NormalTok{,}
-                              \StringTok{"transcript\_biotype"}\NormalTok{),}
-                            \AttributeTok{mart =}\NormalTok{ biomaRt}\SpecialCharTok{::}\FunctionTok{useMart}\NormalTok{(}\AttributeTok{biomart =} \StringTok{"plants\_mart"}\NormalTok{, }
-                                                    \AttributeTok{dataset =} \StringTok{"athaliana\_eg\_gene"}\NormalTok{, }
-                                                    \AttributeTok{host =} \StringTok{\textquotesingle{}plants.ensembl.org\textquotesingle{}}\NormalTok{))}
-\CommentTok{\# Purpose: Retrieves genomic data for Arabidopsis thaliana from the Ensembl Plants database using \textasciigrave{}biomaRt\textasciigrave{}.}
-\end{Highlighting}
-\end{Shaded}
-
 \subsubsection{Format Arabidopsis Genome Data as
 GRanges}\label{format-arabidopsis-genome-data-as-granges}
 
@@ -1186,45 +600,6 @@ suitable for genomic range operations. We also prepare gene labels for
 plotting by filtering and mutating the genomic data. Finally, we filter
 the Arabidopsis genome data to include only the specific region
 surrounding SNPMMMF1 on chromosome 3.
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\#| label: tab{-}Gen{-}reg{-}SNPMMF1}
-\CommentTok{\#| fig{-}cap: "The table of all the genes in the region of SNPMMF1."}
-
-\CommentTok{\# Format araGenome as a GRanges object}
-\NormalTok{araGenes }\OtherTok{\textless{}{-}}\NormalTok{ araGenome }\SpecialCharTok{\%\textgreater{}\%}
-\NormalTok{  dplyr}\SpecialCharTok{::}\FunctionTok{rename}\NormalTok{(}\AttributeTok{GeneId=}\NormalTok{ensembl\_gene\_id) }\SpecialCharTok{\%\textgreater{}\%}
-\NormalTok{  dplyr}\SpecialCharTok{::}\FunctionTok{mutate}\NormalTok{(}\AttributeTok{strand=}\NormalTok{dplyr}\SpecialCharTok{::}\FunctionTok{case\_when}\NormalTok{(strand }\SpecialCharTok{==} \DecValTok{1} \SpecialCharTok{\textasciitilde{}} \StringTok{"+"}\NormalTok{,}
-\NormalTok{                                        strand }\SpecialCharTok{==} \SpecialCharTok{{-}}\DecValTok{1} \SpecialCharTok{\textasciitilde{}} \StringTok{"{-}"}\NormalTok{),}
-                \AttributeTok{start =}\NormalTok{ start\_position,}
-                \AttributeTok{end =}\NormalTok{ end\_position) }\SpecialCharTok{\%\textgreater{}\%}
-\NormalTok{  dplyr}\SpecialCharTok{::}\FunctionTok{filter}\NormalTok{(stringr}\SpecialCharTok{::}\FunctionTok{str\_detect}\NormalTok{(chromosome\_name,}\StringTok{"[1{-}9]"}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%}
-\NormalTok{  dplyr}\SpecialCharTok{::}\FunctionTok{mutate}\NormalTok{(}\AttributeTok{seqnames=}\FunctionTok{paste0}\NormalTok{(}\StringTok{"Chr"}\NormalTok{,chromosome\_name)) }\SpecialCharTok{\%\textgreater{}\%}
-\NormalTok{  plyranges}\SpecialCharTok{::}\FunctionTok{as\_granges}\NormalTok{()}
-\CommentTok{\# Purpose: Formats the Arabidopsis genome data as a GRanges object, which is suitable for genomic range operations.}
-
-\NormalTok{gene\_labels }\OtherTok{\textless{}{-}}\NormalTok{ araGenome }\SpecialCharTok{\%\textgreater{}\%}
-\NormalTok{      dplyr}\SpecialCharTok{::}\FunctionTok{filter}\NormalTok{(chromosome\_name }\SpecialCharTok{==}\NormalTok{ chromosome\_name,}
-\NormalTok{                    start\_position }\SpecialCharTok{\%in\%} \FunctionTok{c}\NormalTok{(start\_position}\SpecialCharTok{:}\NormalTok{end\_position),}
-\NormalTok{                    end\_position }\SpecialCharTok{\%in\%} \FunctionTok{c}\NormalTok{(start\_position}\SpecialCharTok{:}\NormalTok{end\_position)) }\SpecialCharTok{\%\textgreater{}\%}
-\NormalTok{      dplyr}\SpecialCharTok{::}\FunctionTok{mutate}\NormalTok{(}\AttributeTok{gene =}\NormalTok{ ensembl\_gene\_id,}
-                    \AttributeTok{molecule =} \DecValTok{0}\NormalTok{,}
-                    \AttributeTok{start =}\NormalTok{ start\_position,}
-                    \AttributeTok{end =}\NormalTok{ end\_position,}
-                    \AttributeTok{direction =}\NormalTok{ strand,}
-                    \AttributeTok{strand =}\NormalTok{ dplyr}\SpecialCharTok{::}\FunctionTok{case\_when}\NormalTok{(strand }\SpecialCharTok{==} \SpecialCharTok{{-}}\DecValTok{1} \SpecialCharTok{\textasciitilde{}} \StringTok{"reverse"}\NormalTok{, }
-                                              \ConstantTok{TRUE} \SpecialCharTok{\textasciitilde{}} \StringTok{"forward"}\NormalTok{),}
-                    \AttributeTok{layer\_var =} \StringTok{"ORF"}\NormalTok{)}
-\CommentTok{\# Purpose: Prepares gene labels for plotting by filtering and mutating the genomic data.}
-
-\NormalTok{araGenome\_filt }\OtherTok{\textless{}{-}}\NormalTok{ araGenome }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(chromosome\_name }\SpecialCharTok{==} \StringTok{"3"}\NormalTok{, }
-\NormalTok{                                       start\_position }\SpecialCharTok{\textgreater{}=} \DecValTok{16170000}\NormalTok{, }
-\NormalTok{                                       end\_position }\SpecialCharTok{\textless{}=} \DecValTok{16230000}\NormalTok{)}
-\CommentTok{\# Purpose: Filters the Arabidopsis genome data to include only a specific region on chromosome 3.}
-\FunctionTok{kable}\NormalTok{(araGenome\_filt[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{5}\NormalTok{, }\DecValTok{1}\SpecialCharTok{:}\DecValTok{5}\NormalTok{], }\AttributeTok{caption =} \StringTok{"Table with genomic region surrounding SNPMMF1."}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{longtable}[]{@{}
   >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2388}}
@@ -1285,159 +660,9 @@ relative to genes and their effect on phenotypes.
   SNPs and genes.
 \end{itemize}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\NormalTok{SNPMMF1\_linkage }\OtherTok{\textless{}{-}}\NormalTok{ tot\_plant\_specific\_snps\_DAG20 }\SpecialCharTok{\%\textgreater{}\%} 
-  \FunctionTok{snp\_linkage}\NormalTok{(}\AttributeTok{rank =} \DecValTok{7}\NormalTok{, }\AttributeTok{use\_phenotype\_table =}\NormalTok{ plant\_region\_areas, }
-              \AttributeTok{plot =} \ConstantTok{TRUE}\NormalTok{, }\AttributeTok{acc\_col =} \StringTok{"genotype\_id"}\NormalTok{, }
-              \AttributeTok{nuc\_range =} \DecValTok{50000}\NormalTok{, }\AttributeTok{ld\_stats =} \StringTok{"LLR"}\NormalTok{, }
-              \AttributeTok{SNPmatrix =} \StringTok{"Input/SNPmatrix\_full.fst"}\NormalTok{, }\AttributeTok{anchored =} \ConstantTok{TRUE}\NormalTok{)}
-
-\NormalTok{SNPMMF1\_linkage }\OtherTok{\textless{}{-}}\NormalTok{ SNPMMF1\_linkage[[}\DecValTok{1}\NormalTok{]]}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\NormalTok{tot\_plant\_specific\_snps\_DAG20\_chrm3\_filt }\OtherTok{\textless{}{-}}\NormalTok{ tot\_plant\_specific\_snps\_DAG20 }\SpecialCharTok{\%\textgreater{}\%} 
-          \FunctionTok{filter}\NormalTok{(chrom }\SpecialCharTok{==} \DecValTok{3}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%} 
-          \FunctionTok{filter}\NormalTok{(pos }\SpecialCharTok{\textgreater{}} \DecValTok{16170000} \SpecialCharTok{\&}\NormalTok{ pos }\SpecialCharTok{\textless{}} \DecValTok{16230000}\NormalTok{)}
-
-
-
-\CommentTok{\# Define the primary plot}
-\NormalTok{plot\_SNPs }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{(}\AttributeTok{data =}\NormalTok{ tot\_plant\_specific\_snps\_DAG20\_chrm3\_filt) }\SpecialCharTok{+}
-    
-    \CommentTok{\# Horizontal shading}
-    \FunctionTok{annotate}\NormalTok{(}\StringTok{"rect"}\NormalTok{, }\AttributeTok{xmin =} \SpecialCharTok{{-}}\ConstantTok{Inf}\NormalTok{, }\AttributeTok{xmax =} \ConstantTok{Inf}\NormalTok{, }\AttributeTok{ymin =} \FloatTok{3.5}\NormalTok{, }\AttributeTok{ymax =} \FloatTok{4.5}\NormalTok{, }
-             \AttributeTok{fill =} \StringTok{"lightgrey"}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.4}\NormalTok{) }\SpecialCharTok{+}
-    \FunctionTok{geom\_vline}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{xintercept =} \DecValTok{16203882}\NormalTok{), }\AttributeTok{color =} \StringTok{"darkred"}\NormalTok{, }\AttributeTok{size =} \FloatTok{0.6}\NormalTok{, }
-               \AttributeTok{alpha =} \FloatTok{0.6}\NormalTok{) }\SpecialCharTok{+}
-    
-    \CommentTok{\# SNPs}
-    \FunctionTok{annotate}\NormalTok{(}\StringTok{"rect"}\NormalTok{, }\AttributeTok{xmin =} \DecValTok{16195848}\NormalTok{, }\AttributeTok{xmax =} \DecValTok{16201225}\NormalTok{, }\AttributeTok{ymin =} \SpecialCharTok{{-}}\ConstantTok{Inf}\NormalTok{, }\AttributeTok{ymax =} \ConstantTok{Inf}\NormalTok{, }
-             \AttributeTok{fill =} \StringTok{"grey"}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.02}\NormalTok{) }\SpecialCharTok{+}
-    \FunctionTok{geom\_point}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ pos, }\AttributeTok{y =}\NormalTok{ log10\_p, }\AttributeTok{color =}\NormalTok{ Significant), }\AttributeTok{size =} \FloatTok{2.0}\NormalTok{, }
-               \AttributeTok{alpha =} \FloatTok{0.8}\NormalTok{) }\SpecialCharTok{+}
-    
-    \CommentTok{\# Color scale for \textasciigrave{}Significant\textasciigrave{}}
-    \FunctionTok{scale\_colour\_manual}\NormalTok{(}\AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"red4"}\NormalTok{, }\StringTok{"slategray4"}\NormalTok{), }\AttributeTok{name =} \StringTok{"Significant"}\NormalTok{) }\SpecialCharTok{+}
-    
-    \CommentTok{\# Gene annotations with specific gene coloring and alpha}
-\NormalTok{    gggenes}\SpecialCharTok{::}\FunctionTok{geom\_gene\_arrow}\NormalTok{(}
-        \AttributeTok{arrowhead\_width =}\NormalTok{ grid}\SpecialCharTok{::}\FunctionTok{unit}\NormalTok{(}\DecValTok{3}\NormalTok{, }\StringTok{"mm"}\NormalTok{),}
-        \AttributeTok{arrowhead\_height =}\NormalTok{ grid}\SpecialCharTok{::}\FunctionTok{unit}\NormalTok{(}\DecValTok{6}\NormalTok{, }\StringTok{"mm"}\NormalTok{),}
-        \AttributeTok{arrow\_body\_height =}\NormalTok{ grid}\SpecialCharTok{::}\FunctionTok{unit}\NormalTok{(}\DecValTok{4}\NormalTok{, }\StringTok{"mm"}\NormalTok{),}
-        \FunctionTok{aes}\NormalTok{(}
-            \AttributeTok{xmin =}\NormalTok{ start\_position, }\AttributeTok{xmax =}\NormalTok{ end\_position, }\AttributeTok{y =} \DecValTok{4}\NormalTok{,}
-            \AttributeTok{forward =}\NormalTok{ strand }\SpecialCharTok{==} \StringTok{"1"}\NormalTok{,}
-            \AttributeTok{fill =} \FunctionTok{ifelse}\NormalTok{(ensembl\_gene\_id }\SpecialCharTok{\%in\%} \FunctionTok{c}\NormalTok{(}\StringTok{"AT3G44630"}\NormalTok{, }\StringTok{"AT3G44670"}\NormalTok{), }
-                          \StringTok{"TNLs"}\NormalTok{, }\StringTok{"non{-}TNLs"}\NormalTok{),}
-            \AttributeTok{alpha =} \FunctionTok{ifelse}\NormalTok{(ensembl\_gene\_id }\SpecialCharTok{\%in\%} \FunctionTok{c}\NormalTok{(}\StringTok{"AT3G44630"}\NormalTok{, }\StringTok{"AT3G44670"}\NormalTok{), }
-                           \FloatTok{0.5}\NormalTok{, }\FloatTok{0.7}\NormalTok{) }\CommentTok{\# Different alpha levels}
-\NormalTok{        ), }
-        \AttributeTok{data =}\NormalTok{ araGenome\_filt}
-\NormalTok{    ) }\SpecialCharTok{+}
-    \FunctionTok{scale\_fill\_manual}\NormalTok{(}
-        \AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"TNLs"} \OtherTok{=} \StringTok{"orange"}\NormalTok{, }\StringTok{"non{-}TNLs"} \OtherTok{=} \StringTok{"lightblue2"}\NormalTok{),}
-        \AttributeTok{name =} \StringTok{"Genes"}
-\NormalTok{    ) }\SpecialCharTok{+}
-    \FunctionTok{scale\_alpha\_continuous}\NormalTok{(}
-        \AttributeTok{range =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.8}\NormalTok{, }\FloatTok{0.6}\NormalTok{), }\CommentTok{\# Ensure alpha is within valid range}
-        \AttributeTok{guide =} \StringTok{"none"}       \CommentTok{\# Suppress alpha legend}
-\NormalTok{    ) }\SpecialCharTok{+}
-    
-    \CommentTok{\# Gene labels}
-\NormalTok{    gggenes}\SpecialCharTok{::}\FunctionTok{geom\_gene\_label}\NormalTok{(}
-        \FunctionTok{aes}\NormalTok{(}\AttributeTok{xmin =}\NormalTok{ start\_position, }\AttributeTok{xmax =}\NormalTok{ end\_position, }\AttributeTok{y =} \DecValTok{4}\NormalTok{, }
-            \AttributeTok{label =}\NormalTok{ ensembl\_gene\_id), }
-        \AttributeTok{min.size =} \DecValTok{4}\NormalTok{, }
-        \AttributeTok{data =}\NormalTok{ araGenome\_filt}
-\NormalTok{    ) }\SpecialCharTok{+}
-    
-    \CommentTok{\# Minimal theme}
-    \FunctionTok{theme\_minimal}\NormalTok{() }\SpecialCharTok{+}
-    \FunctionTok{theme}\NormalTok{(}
-        \AttributeTok{axis.title.x =} \FunctionTok{element\_blank}\NormalTok{(),}
-        \AttributeTok{panel.spacing.y =} \FunctionTok{unit}\NormalTok{(}\DecValTok{0}\NormalTok{, }\StringTok{"lines"}\NormalTok{),}
-        \AttributeTok{plot.background =} \FunctionTok{element\_rect}\NormalTok{(}\AttributeTok{fill =} \StringTok{"white"}\NormalTok{),}
-        \AttributeTok{legend.position =} \StringTok{"bottom"}\NormalTok{,}
-        \AttributeTok{panel.border =} \FunctionTok{element\_rect}\NormalTok{(}\AttributeTok{color =} \StringTok{"black"}\NormalTok{, }\AttributeTok{fill =} \ConstantTok{NA}\NormalTok{),}
-        \AttributeTok{panel.grid.minor.y =} \FunctionTok{element\_blank}\NormalTok{()}
-\NormalTok{    ) }\SpecialCharTok{+}
-    
-    \FunctionTok{expand\_limits}\NormalTok{(}\AttributeTok{y =} \FunctionTok{c}\NormalTok{(}\FloatTok{3.5}\NormalTok{, }\DecValTok{9}\NormalTok{), }\AttributeTok{x =} \FunctionTok{c}\NormalTok{(}\DecValTok{16198882}\NormalTok{, }\DecValTok{16208882}\NormalTok{)) }\SpecialCharTok{+}
-    \FunctionTok{geom\_label}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{label =} \StringTok{"SNPMMF1"}\NormalTok{, }\AttributeTok{x =} \DecValTok{16203882}\NormalTok{, }\AttributeTok{y =} \FloatTok{8.8}\NormalTok{), }\AttributeTok{size =} \FloatTok{2.5}\NormalTok{, }
-               \AttributeTok{fill =} \StringTok{"white"}\NormalTok{, }\AttributeTok{color =} \StringTok{"grey40"}\NormalTok{) }\SpecialCharTok{+}
-    
-    \CommentTok{\# Adjust text for secondary axis}
-    \FunctionTok{theme}\NormalTok{(}
-        \AttributeTok{axis.title.y.right =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{color =} \StringTok{"black"}\NormalTok{),}
-        \AttributeTok{axis.text.y.right =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{color =} \StringTok{"black"}\NormalTok{)}
-\NormalTok{    )}
-
-\CommentTok{\# Print the combined plot}
-\NormalTok{plot\_SNPs}
-\end{Highlighting}
-\end{Shaded}
-
-\pandocbounded{\includegraphics[keepaspectratio]{02_GWAS_Analysis_files/figure-pdf/unnamed-chunk-23-1.pdf}}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\FunctionTok{ggsave}\NormalTok{(}\StringTok{"SNPs\_MMF1\_region.pdf"}\NormalTok{, }\AttributeTok{height =} \DecValTok{6}\NormalTok{, }\AttributeTok{width =} \DecValTok{20}\NormalTok{, }\AttributeTok{units =} \StringTok{"cm"}\NormalTok{, }\AttributeTok{dpi =} \DecValTok{600}\NormalTok{, }\AttributeTok{path =} \StringTok{"Output/Figures"}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\NormalTok{combined }\OtherTok{\textless{}{-}} \FunctionTok{plot\_grid}\NormalTok{(plot\_SNPs, SNP\_effect, }\AttributeTok{labels =} \FunctionTok{c}\NormalTok{(}\StringTok{"A."}\NormalTok{, }\StringTok{"B."}\NormalTok{), }
-                      \AttributeTok{ncol =} \DecValTok{2}\NormalTok{, }\AttributeTok{label\_size =} \DecValTok{12}\NormalTok{, }\AttributeTok{rel\_widths =} \FunctionTok{c}\NormalTok{(}\DecValTok{4}\NormalTok{, }\FloatTok{1.5}\NormalTok{), }
-                      \AttributeTok{rel\_heights =} \FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{1}\NormalTok{))}
-\CommentTok{\# Purpose: Combines the relative growth feedback plot and the SNP effect plot into a single plot grid.}
-
-\NormalTok{combined}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Purpose: Displays the combined plot grid.}
-
-\FunctionTok{ggsave}\NormalTok{(}\StringTok{"SNPMMF1\_genomic\_feedback.pdf"}\NormalTok{, }\AttributeTok{width =} \DecValTok{24}\NormalTok{, }\AttributeTok{height =} \DecValTok{9}\NormalTok{, }\AttributeTok{units =} \StringTok{"cm"}\NormalTok{, }\AttributeTok{dpi =} \DecValTok{600}\NormalTok{, }\AttributeTok{plot =}\NormalTok{ combined, }\AttributeTok{path =} \StringTok{"Output/Figures"}\NormalTok{)}
-\CommentTok{\# Purpose: Saves the combined plot grid as a PDF file.}
-\end{Highlighting}
-\end{Shaded}
+\pandocbounded{\includegraphics[keepaspectratio]{02_GWAS_Analysis_files/figure-pdf/Genomic region urrounding top SNP-1.pdf}}
 
 \section{Export data to Dataset3}\label{export-data-to-dataset3}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Load the package}
-\FunctionTok{library}\NormalTok{(openxlsx)}
-
-\CommentTok{\# Create a new workbook}
-\NormalTok{Dataset3 }\OtherTok{\textless{}{-}} \FunctionTok{createWorkbook}\NormalTok{()}
-
-\CommentTok{\# Add worksheets and data}
-\FunctionTok{addWorksheet}\NormalTok{(Dataset3, }\StringTok{"SNP\_table\_dag20"}\NormalTok{)}
-\FunctionTok{writeData}\NormalTok{(Dataset3, }\StringTok{"SNP\_table\_dag20"}\NormalTok{, tot\_plant\_specific\_snps\_DAG20)}
-
-\FunctionTok{addWorksheet}\NormalTok{(Dataset3, }\StringTok{"SNP\_gene\_table"}\NormalTok{)}
-\FunctionTok{writeData}\NormalTok{(Dataset3, }\StringTok{"SNP\_gene\_table"}\NormalTok{, nearest\_genes)}
-
-\FunctionTok{addWorksheet}\NormalTok{(Dataset3, }\StringTok{"Accessions\_SNPMMF1\_DAG15"}\NormalTok{)}
-\FunctionTok{writeData}\NormalTok{(Dataset3, }\StringTok{"Accessions\_SNPMMF1\_DAG15"}\NormalTok{, plant\_region\_areas\_DAG15)}
-
-\CommentTok{\# Subset the required columns (1, 2, 7, 8, 9, and 10)}
-\NormalTok{subset\_data }\OtherTok{\textless{}{-}}\NormalTok{ ACC\_coordinates[, }\FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{, }\DecValTok{7}\NormalTok{, }\DecValTok{8}\NormalTok{, }\DecValTok{9}\NormalTok{, }\DecValTok{10}\NormalTok{)]}
-\FunctionTok{addWorksheet}\NormalTok{(Dataset3, }\StringTok{"Accessions\_coordinates"}\NormalTok{)}
-\FunctionTok{writeData}\NormalTok{(Dataset3, }\StringTok{"Accessions\_coordinates"}\NormalTok{, subset\_data)}
-
-\CommentTok{\# Save the workbook to an Excel file}
-\FunctionTok{saveWorkbook}\NormalTok{(Dataset3, }\AttributeTok{file =} \StringTok{"Output/Tables/Dataset3.xlsx"}\NormalTok{, }\AttributeTok{overwrite =} \ConstantTok{TRUE}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
 
 \section{Session Information}\label{session-information}
 
@@ -1451,7 +676,7 @@ relative to genes and their effect on phenotypes.
 \end{itemize}
 
 \begin{verbatim}
-R version: R version 4.4.2 (2024-10-31) 
+R version: R version 4.4.1 (2024-06-14) 
 \end{verbatim}
 
 \begin{verbatim}
@@ -1459,8 +684,8 @@ Attached packages:
 \end{verbatim}
 
 \begin{verbatim}
-openxlsx - 4.2.7.1 
-ggnewscale - 0.5.0 
+openxlsx - 4.2.8 
+ggnewscale - 0.5.1 
 plyranges - 1.22.0 
 GenomicRanges - 1.58.0 
 GenomeInfoDb - 1.42.1 
@@ -1470,6 +695,7 @@ BiocGenerics - 0.52.0
 biomaRt - 2.58.2 
 fstcore - 0.9.18 
 maps - 3.4.2.1 
+ggvenn - 0.1.10 
 readxl - 1.4.3 
 knitr - 1.49 
 cowplot - 1.1.3 

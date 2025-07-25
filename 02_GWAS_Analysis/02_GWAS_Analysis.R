@@ -1,7 +1,6 @@
-## ----r setup, include=TRUE, message=FALSE, warning=FALSE----------------------
+## ----r------------------------------------------------------------------------
 knitr::knit_hooks$set(purl = knitr::hook_purl)
-knitr::opts_chunk$set(echo = TRUE)
-
+knitr::opts_chunk$set(echo = FALSE)
 ## Clear the objects from memory
 rm(list=ls())
 # Purpose: Removes all objects from the R environment to ensure a clean workspace.
@@ -21,7 +20,7 @@ library(knitr)
 library(readxl)
 # Purpose: Loads necessary libraries for data manipulation, visualization, and analysis.
 
-## ----r, echo=TRUE,include=TRUE, message=FALSE, warning=FALSE------------------
+## ----r echo=FALSE, message=FALSE, warning=FALSE-------------------------------
 #Import SNP table
 tot_plant_specific_snps <- read_excel("Input/Dataset3.xlsx", 
                                       sheet = "SNP_table_dag20")
@@ -31,9 +30,9 @@ plant_region_areas <- read_excel("Input/Dataset3.xlsx",
                                  sheet = "plant_region_area")
 # Purpose: Imports the files containing phenotype and SNP data into R.
 
-## ----r, echo=TRUE, message=FALSE, warning=FALSE-------------------------------
+## ----r echo=FALSE, message=FALSE, warning=FALSE-------------------------------
 # Filter SNPs for phenotypes from DAG 0 to DAG 20
-tot_plant_specific_snps_DAG20 <- filter(tot_plant_specific_snps, dag < 21)
+tot_plant_specific_snps_DAG20 <- filter(tot_plant_specific_snps, dag < 22)
 tot_plant_specific_snps_DAG20 <- 
   tot_plant_specific_snps_DAG20[order(tot_plant_specific_snps_DAG20$log10_p, 
                                       decreasing = TRUE),]
@@ -41,13 +40,13 @@ tot_plant_specific_snps_DAG20 <-
 # Modify the SNP table to correctly show the days after germination, starting from DAG=0 by adding +1 to each value in the "dag" column
 
 tot_plant_specific_snps_DAG20 <- tot_plant_specific_snps_DAG20 %>%
-  mutate(dag = dag + 1)
+  mutate(dag = dag - 1)
 
 kable(tot_plant_specific_snps_DAG20[1:5, ], caption = "SNP table for DAG<20.")
 
 # Purpose: Filters the SNP data to include only data from days after germination (DAG) 0 to 20.
 
-## ----r, echo=TRUE, message=TRUE, warning=FALSE, fig.height=5, fig.width=10----
+## ----r------------------------------------------------------------------------
 # Create the Manhattan plot
 manhattan_plot <- tot_plant_specific_snps_DAG20 %>% 
   ggplot(aes(x = pos, y = log10_p, label = pos)) +
@@ -111,7 +110,7 @@ print(manhattan_plot)
 ggsave("Manhattan_plot.pdf", plot = manhattan_plot, height = 7.0, width = 16.3, units = "cm", path = "Output/Figures")
 # Purpose: Saves the Manhattan plot as a PDF file.
 
-## ----r, echo=TRUE ,message=FALSE, warning=FALSE-------------------------------
+## ----r------------------------------------------------------------------------
 nearest_genes <- tot_plant_specific_snps_DAG20 %>% 
   get_nearest_genes(n_hit = 100)
 # Purpose: Identifies the 20 closest genes to the top SNPs using the `get_nearest_genes` function.
@@ -119,7 +118,160 @@ nearest_genes <- tot_plant_specific_snps_DAG20 %>%
 kable(nearest_genes[1:10, 1:7], caption = "Table with genes located closest to the top SNPs.")
 # Purpose: Displays the nearest genes to the top SNPs.
 
-## ----r, echo=TRUE ,message=FALSE, warning=FALSE, fig.height=5-----------------
+## ----r------------------------------------------------------------------------
+# Compute chromosome sizes
+don <- tot_plant_specific_snps_DAG20 %>% 
+  group_by(chrom) %>% 
+  summarise(chr_len = max(pos)) %>% 
+  
+  # Calculate cumulative position for each chromosome
+  mutate(tot = cumsum(chr_len) - chr_len) %>%
+  select(-chr_len) %>%
+  
+  # Merge back to original dataset
+  left_join(tot_plant_specific_snps_DAG20, ., by = c("chrom" = "chrom")) %>%
+  
+  # Compute cumulative SNP position
+  arrange(chrom, pos) %>%
+  mutate(BPcum = pos + tot)
+
+# Compute chromosome midpoints for x-axis labels
+axisdf <- don %>%
+  group_by(chrom) %>%
+  summarise(center = (max(BPcum) + min(BPcum)) / 2)
+
+# Plot
+
+plot <- ggplot(don, aes(x = BPcum, y = log10_p)) +
+  geom_point(
+    aes(color = ifelse(Significant == "Bonferroni", "red4", as.factor(chrom))),
+    alpha = 0.8, size = 1
+  ) +
+  scale_color_manual(
+    values = c(
+      "red4" = "red4",
+      setNames(rep(c( "#A0A0A0", "#00798c"), length(unique(don$chrom))), unique(don$chrom))
+    )
+  ) +
+  geom_hline(
+    yintercept = -log10(0.05 / nrow(don)),
+    linetype = "dashed",
+    color = "gray30",
+    size = 0.4
+  ) +
+  scale_x_continuous(
+    name = "Chromosome",
+    labels = axisdf$chrom,
+    breaks = axisdf$center,
+    expand = c(0.01, 0)
+  ) +
+  scale_y_continuous(
+    name = expression(-log[10](italic(p))),
+    limits = c(4.8, 10),
+    expand = c(0, 0)
+  ) +
+  ggtitle("Manhattan Plot") +
+  theme_bw() +
+  theme(
+    panel.grid.major = element_blank(),  # Removes ALL major gridlines
+    panel.grid.minor = element_blank(),  # Removes ALL minor gridlines
+    panel.border = element_rect(color = "black", fill = NA, size = 0.5),
+    axis.text = element_text(size = 7),
+    axis.title = element_text(size = 7),
+    plot.title = element_text(size = 7, hjust = 0.5),
+    legend.position = "none"
+  )
+
+print(plot)
+ggsave("Manhattan_plot.pdf", plot = plot, height = 7, width = 16.3, units = "cm", path = "Output/Figures")
+
+## ----r------------------------------------------------------------------------
+#Funtion to plot the VENN diagram
+display_venn <- function(x, ...){
+  library(VennDiagram)
+  grid.newpage()
+  venn_object <- venn.diagram(x, filename = NULL, ...)
+  grid.draw(venn_object)
+}
+
+## ----r------------------------------------------------------------------------
+nearest_genes_filt <- tot_plant_specific_snps %>%
+  get_nearest_genes(100)
+
+
+BX_roots_DEG <- read_excel("Input/Dataset3.xlsx", 
+                                      sheet = "DEG_roots")
+BX_shoot_DEG <- read_excel("Input/Dataset3.xlsx", 
+                                      sheet = "DEG_shoots")
+
+#Filter for DEGs for padj <= 0.05 and log2FoldChange >= 0.5 and log2FoldChange <= -0.5
+BX_roots_DEG_filt <- dplyr::filter(BX_roots_DEG, log2FoldChange >= 0.5 | log2FoldChange <= -0.5)
+BX_shoots_DEG_filt <- dplyr::filter(BX_shoot_DEG, log2FoldChange >= 0.5 | log2FoldChange <= -0.5)
+BX_roots_DEG_filt <- dplyr::filter(BX_roots_DEG_filt, padj <= 0.05)
+BX_shoots_DEG_filt <- dplyr::filter(BX_shoots_DEG_filt, padj <= 0.05)
+
+## ----r------------------------------------------------------------------------
+list_genes <- list(BX_roots_DEG_filt$Gene, BX_shoots_DEG_filt$Gene, nearest_genes_filt$GeneId)
+names(list_genes) <- c("Roots", "Shoots", "GWAS")
+
+## ----r------------------------------------------------------------------------
+# Load required libraries
+library(ggvenn)
+
+# Prepare named list of sets (already done)
+list_genes <- list(
+  Roots = BX_roots_DEG_filt$Gene,
+  Shoots = BX_shoots_DEG_filt$Gene,
+  GWAS = nearest_genes_filt$GeneId
+)
+
+# Define earthy pastel colors
+venn_colors <- c("Roots" = "#A8C686", 
+                 "Shoots" = "#D4A5A5", 
+                 "GWAS" = "#A5BFD2")
+
+# Plot Venn
+venn_plot <- ggvenn(
+  list_genes,
+  fill_color = c("#A8C689", "#D4A5A6", "#A5BFD3"),
+  stroke_size = 0.3,
+  text_size = 4,
+  set_name_size = 4
+)
+
+# Display
+print(venn_plot)
+
+# Save to PDF
+ggsave("VENN_diagram.pdf", plot = venn_plot, height = 10, width = 10, units = "cm", path = "Output/Figures")
+
+## ----r------------------------------------------------------------------------
+# Pairwise overlaps
+overlap_roots_gwas <- intersect(BX_roots_DEG_filt$Gene, nearest_genes_filt$GeneId)
+overlap_shoots_gwas <- intersect(BX_shoots_DEG_filt$Gene, nearest_genes_filt$GeneId)
+overlap_roots_shoots <- intersect(BX_roots_DEG_filt$Gene, BX_shoots_DEG_filt$Gene)
+
+# Print results
+cat("Overlap between Roots and GWAS:\n")
+print(overlap_roots_gwas)
+
+cat("\nOverlap between Shoots and GWAS:\n")
+print(overlap_shoots_gwas)
+
+
+## ----r------------------------------------------------------------------------
+combined <- plot_grid(plot, venn_plot, labels = c("a", "b"), 
+                      ncol = 2, label_size = 12, rel_widths = c(4, 1.5), 
+                      rel_heights = c(1,1))
+# Purpose: Combines the relative growth feedback plot and the SNP effect plot into a single plot grid.
+
+combined
+# Purpose: Displays the combined plot grid.
+
+ggsave("Manhattan_VENN.pdf", width = 24, height = 9, units = "cm", dpi = 600, plot = combined, path = "Output/Figures")
+# Purpose: Saves the combined plot grid as a PDF file.
+
+## ----r------------------------------------------------------------------------
 # Subset data for Chromosome 3 and SNPs < DAG20
 tot_plant_specific_snps_DAG20_chrm3 <- subset(tot_plant_specific_snps_DAG20, 
                                               chrom == "3")
@@ -174,7 +326,7 @@ print(manhattan_plot_small)
 ggsave("Manhattan_DAG<20_topSNP.pdf", plot = manhattan_plot_small, width = 15, height = 10, units = "cm", path = "Output/Figures")
 # Purpose: Saves the focused Manhattan plot as a PDF file.
 
-## ----r, echo=TRUE, message=FALSE, warning=FALSE, fig.show = 'none'------------
+## ----r------------------------------------------------------------------------
 # Load necessary libraries
 library(maps)
 # Purpose: Loads the `maps` package for map plotting.
@@ -224,7 +376,7 @@ base_world <- base_world_messy + cleanup
 #print(base_world)
 # Purpose: Displays the refined world map.
 
-## ----r, echo=TRUE, message=FALSE, fig.height=5, warning=FALSE-----------------
+## ----r echo=FALSE, fig.height=5, message=FALSE, warning=FALSE-----------------
 # Add simple data points to the map
 map_data <- base_world +
   geom_point(data = ACC_coordinates, 
@@ -242,7 +394,7 @@ print(map_data)
 ggsave("ACC_response_map_white.pdf", plot = map_data, height = 14, width = 16, units = "cm", dpi = 600, path = "Output/Figures")
 # Purpose: Saves the map with ACC coordinates as a PDF file.
 
-## ----r echo=TRUE, message=FALSE, warning=FALSE--------------------------------
+## ----r------------------------------------------------------------------------
 # Extract plant area
 temp1 <- tot_plant_specific_snps %>%
   {gwaR::phenotype_by_snp(plant_region_areas %>% mutate(ACC_ID = genotype_id),
@@ -279,8 +431,7 @@ rm(temp1, temp2)
 
 kable(plant_region_areas_SNP[1:5, ], caption = "Table with plant region area by SNP.")
 
-## ----r, echo=TRUE, include=TRUE, message=FALSE, warning=FALSE-----------------
-
+## ----r------------------------------------------------------------------------
 # Subset to plants with exactly 15 days old
 plant_region_areas_DAG15 <- 
   plant_region_areas_SNP[plant_region_areas_SNP$dag == 15, -6]
@@ -340,7 +491,7 @@ kable(plant_region_areas_DAG15[1:5, ], caption = "Table with accession growth fe
 # Purpose: Displays the first few rows of the final data frame.
 
 
-## ----r, echo=TRUE ,message=FALSE,include=TRUE, fig.height=5, warning=FALSE----
+## ----r------------------------------------------------------------------------
 # Create the plot for the relative growth feedback of all accessions
 # Prepare data for labeling specific genotypes
 # Prepare data for labeling specific genotypes
@@ -449,7 +600,7 @@ ACC_ratio
 ggsave("SNPMMF1_ACC_feedback.pdf", plot = ACC_ratio, height = 7, width = 16, units = "cm", dpi = 600, path = "Output/Figures")
 # Purpose: Saves the plot as a PDF file.
 
-## ----r, echo=TRUE ,message=FALSE, include=TRUE, fig.height=5------------------
+## ----r------------------------------------------------------------------------
 # Create the boxplot with jitter for SNP effect
 SNP_effect <- ggplot(plant_region_areas_DAG15, aes(SNP, area_diff, fill = SNP)) +
   geom_boxplot(outlier.colour = NA, show.legend = FALSE, alpha = 0.6) +
@@ -479,7 +630,7 @@ print(SNP_effect)
 ggsave("SNPMMF1_effect_plot.pdf", plot = SNP_effect, width = 4.6, height = 6.6, units = "cm", dpi = 300, path = "Output/Figures")
 # Purpose: Saves the SNP effect plot as a PDF file.
 
-## ----r, echo=TRUE ,message=FALSE,warning=FALSE, fig.height=5------------------
+## ----r message=FALSE, warning=FALSE-------------------------------------------
 combined <- plot_grid(ACC_ratio, SNP_effect, labels = c("A.", "B."), ncol = 2, label_size = 12, rel_widths = c(4, 1.5), rel_heights = c(1,1))
 # Purpose: Combines the relative growth feedback plot and the SNP effect plot into a single plot grid.
 
@@ -489,7 +640,7 @@ combined
 ggsave("SNPMMF1_feedback.pdf", width = 24, height = 9, units = "cm", dpi = 600, plot = combined, path = "Output/Figures")
 # Purpose: Saves the combined plot grid as a PDF file.
 
-## ----r message=FALSE, warning=FALSE-------------------------------------------
+## ----r------------------------------------------------------------------------
 # plant_region_areas_dag15 <- plant_region_areas %>% filter(dag == 15)
 # # Purpose: Filters the plant region areas data to include only observations at 15 days after germination.
 # 
@@ -505,7 +656,7 @@ ggsave("SNPMMF1_feedback.pdf", width = 24, height = 9, units = "cm", dpi = 600, 
 #                   impacts = c("MODERATE", "HIGH"))
 # kable(linkage_Pheno_table[1:5, ], caption = "Table with genomic region surrounding SNPMMF1.")
 
-## ----r message=FALSE, warning=FALSE-------------------------------------------
+## ----r------------------------------------------------------------------------
 # # Get mean per ACC
 # linkage_Pheno_table_ACC <- linkage_Pheno_table
 # linkage_Pheno_table_ACC$mean_ACC <- NA  # Initialize an empty vector
@@ -547,7 +698,7 @@ ggsave("SNPMMF1_feedback.pdf", width = 24, height = 9, units = "cm", dpi = 600, 
 # linkage_Pheno_table_ACC$area_diff <- linkage_Pheno_table_ACC$`+` - linkage_Pheno_table_ACC$`-`
 # linkage_Pheno_table_ACC <- linkage_Pheno_table_ACC[order(linkage_Pheno_table_ACC$pos, decreasing = F),]
 
-## ----r fig.height=5, message=FALSE, warning=FALSE-----------------------------
+## ----r------------------------------------------------------------------------
 # # Subset data for Chromosome 3 and SNPs < DAG20
 # linkage_Pheno_table_ACC_pos16200156 <- subset(linkage_Pheno_table_ACC, pos == "16200156")
 # # Purpose: Filters the data to include only SNPs at position 16200156 on Chromosome 3.
@@ -583,7 +734,7 @@ ggsave("SNPMMF1_feedback.pdf", width = 24, height = 9, units = "cm", dpi = 600, 
 # ggsave("SNP_effect_plot_pos16200156.pdf", plot = SNP_effect_pos16200156, width = 10, height = 10, units = "cm", dpi = 300, path = "Output/Figures")
 # 
 
-## ----r fig.height=5, message=FALSE, warning=FALSE-----------------------------
+## ----r------------------------------------------------------------------------
 # # Subset data for Chromosome 3 and SNPs < DAG20
 # linkage_Pheno_table_ACC_pos16218427 <- subset(linkage_Pheno_table_ACC,
 #                                               pos == "16218427")
@@ -619,7 +770,7 @@ ggsave("SNPMMF1_feedback.pdf", width = 24, height = 9, units = "cm", dpi = 600, 
 # ggsave("SNP_effect_plot_pos16218427.pdf", plot = SNP_effect_pos16218427, width = 10, height = 10, units = "cm", dpi = 300, path = "Output/Figures")
 # 
 
-## ----r message=FALSE, warning=FALSE-------------------------------------------
+## ----r------------------------------------------------------------------------
 # # Get mean per ACC
 # linkage_Pheno_table$mean_ACC <- NA # Initialize an empty vector
 # 
@@ -655,7 +806,7 @@ ggsave("SNPMMF1_feedback.pdf", width = 24, height = 9, units = "cm", dpi = 600, 
 # kable(linkage_Pheno_table[1:5, 1:7], caption = "Table with SNPs linked to SNPMMF1 and the effects on feedbacks.")
 # 
 
-## ----r, echo=TRUE ,message=FALSE, warning=FALSE-------------------------------
+## ----r------------------------------------------------------------------------
 # Load necessary libraries
 library(biomaRt)
 library(stringr)
@@ -674,8 +825,7 @@ araGenome <- biomaRt::getBM(c("ensembl_gene_id",
                                                     host = 'plants.ensembl.org'))
 # Purpose: Retrieves genomic data for Arabidopsis thaliana from the Ensembl Plants database using `biomaRt`.
 
-## ----r, echo=TRUE ,message=FALSE, warning=FALSE-------------------------------
-
+## ----r------------------------------------------------------------------------
 #| label: tab-Gen-reg-SNPMMF1
 #| fig-cap: "The table of all the genes in the region of SNPMMF1."
 
@@ -712,7 +862,7 @@ araGenome_filt <- araGenome %>% filter(chromosome_name == "3",
 kable(araGenome_filt[1:5, 1:5], caption = "Table with genomic region surrounding SNPMMF1.")
 
 
-## ----r fig.height=5, message=FALSE, warning=FALSE-----------------------------
+## ----r------------------------------------------------------------------------
 # # Filter data to keep only positions with both SNP = TRUE and SNP = FALSE
 # linkage_Pheno_table <- linkage_Pheno_table %>%
 #   group_by(pos) %>%
@@ -970,10 +1120,10 @@ plot_SNPs <- ggplot(data = tot_plant_specific_snps_DAG20_chrm3_filt) +
 
 # Print the combined plot
 plot_SNPs
-ggsave("SNPs_MMF1_region.pdf", height = 6, width = 20, units = "cm", dpi = 600, path = "Output/Figures")
+ggsave("SNPs_MMF1_region.pdf", height = 6, width = 10, units = "cm", dpi = 600, path = "Output/Figures")
 
-## ----r, echo=TRUE ,message=FALSE,warning=FALSE, fig.height=5------------------
-combined <- plot_grid(plot_SNPs, SNP_effect, labels = c("A.", "B."), 
+## ----r------------------------------------------------------------------------
+combined <- plot_grid(plot_SNPs, SNP_effect, labels = c("c", "d"), 
                       ncol = 2, label_size = 12, rel_widths = c(4, 1.5), 
                       rel_heights = c(1,1))
 # Purpose: Combines the relative growth feedback plot and the SNP effect plot into a single plot grid.
