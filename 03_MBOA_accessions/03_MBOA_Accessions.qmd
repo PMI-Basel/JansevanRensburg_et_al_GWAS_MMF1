@@ -55,13 +55,21 @@ MBOA show similar effects to all the accessions, irrespective of their growth fe
 
 # Setup and Load Libraries
 
-```{r, include=FALSE}
+```{r include=FALSE}
+#| label: Setup
+#| message: false
+#| warning: false
+#| paged-print: false
 knitr::knit_hooks$set(purl = knitr::hook_purl)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-#| echo: true
+#| label: Setup2
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
 # Remove all objects from memory and set the working directory
 rm(list=ls())
 
@@ -84,7 +92,11 @@ library(emmeans)
 # Import Phenotype Data
 
 ```{r}
-#| echo: true
+#| label: Import data
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
 # Import the required files
 root_length <- read_excel(path = "Input/Dataset2.xlsx", 
                           sheet = "accession_MBOA_root")
@@ -95,7 +107,11 @@ plant_region_ares_GWAS <- read_excel(path = "Input/Dataset2.xlsx",
 
 ### Helper Functions
 
-```{r echo=TRUE, message=FALSE}
+```{r message=FALSE}
+#| label: Function give.n
+#| warning: false
+#| include: false
+#| paged-print: false
 # Function to display the number of replicates below each bar
 give.n <- function(x){
   return(c(y = median(x) * -0.005, label = length(x)))
@@ -137,6 +153,11 @@ element_grob.element_textbox_highlight <- function(element, label = "", ...) {
 # Anova test of Root Length response to MBOA
 
 ```{r}
+#| label: ANOVA root length
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 root_length$treatment <- as.factor(root_length$treatment)
 root_length$accession <- as.factor(root_length$accession)
 root_length$response <- as.factor(root_length$response)
@@ -156,6 +177,11 @@ kable(pairwise_summary, caption = "Pairwise Comparisons of Root Length by Treatm
 ```
 
 ```{r}
+#| label: Pairwise comparison
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Extract p-values from the post hoc results
 p_values_df <- pairwise_summary %>%
   as.data.frame() %>%
@@ -227,6 +253,11 @@ ggsave("MBOA_accessions_root_length.pdf", plot_root_length, width = 8, height = 
 # Treatment response
 
 ```{r}
+#| label: Response
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 library(ggrepel)
 # Summarize the average root length for each accession and treatment
 avg_root_length <- root_length %>%
@@ -277,7 +308,11 @@ print(plot_avg_root_length)
 # Filter Data for Specific Genotypes
 
 ```{r}
-#| echo: true
+#| label: Filter top accesions
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # List of specific genotype_ids
 selected_genotypes <- c(9851, 7350, 5867, 5921, 9972, 10006, 
                         6909, 9392, 8365, 6136, 7217, 506, 9653)
@@ -300,7 +335,12 @@ write.xlsx(filtered_data, "Output/Tables/accession_rosette_areaDAG15.xlsx")
 
 ## Calculate and Merge Average Values
 
-```{r, echo=TRUE, include=TRUE, message=FALSE}
+```{r}
+#| label: Merge data
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Calculate the average plant_region_area for each genotype_id and bx
 average_area <- filtered_data %>%
   group_by(genotype_id, bx) %>%
@@ -353,7 +393,11 @@ kable(
 ## Merge Data and Calculate Correlation
 
 ```{r}
-#| echo: true
+#| label: Correlation
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 # Convert 'genotype_id' to character in 'average_area_wide' and rename to 'accession_id'
 average_area_wide <- average_area_wide %>%
   mutate(genotype_id = as.character(genotype_id)) %>%
@@ -391,7 +435,10 @@ print(paste("P-value: ", p_value))
 
 ```{r}
 #| label: Fig-MBOA_response
-#| echo: true
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
 
 
 # Add the "accession" column to merged_data based on accession_id
@@ -465,7 +512,11 @@ print(treatment_response_plot)
 -   **Purpose**: We plotted the correlation between the treatment response and the response values and the treatment response of each accession. The correlation plot shows the relationship between the treatment response and the response values, while the treatment response plot shows the response of each accession to the treatment.
 
 ```{r}
+#| label: Combined plot
+#| message: false
+#| warning: false
 #| include: false
+#| paged-print: false
 # Combine the two plots
 combined_plot <- plot_grid(treatment_response_plot, plot_correlation, nrow = 1, labels = c("B.", "C."), label_size = 12)
 
@@ -477,6 +528,11 @@ ggsave("MBOA_growth_correlation.pdf", combined_plot, width = 12, height = 5, dpi
 ```
 
 ```{r}
+#| label: Export tables
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
 # Create a new workbook
 Source_data_2 <- createWorkbook()
 

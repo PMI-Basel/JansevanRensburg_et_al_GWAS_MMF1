@@ -67,46 +67,6 @@
 \fi
 \makeatother
 
-\usepackage{color}
-\usepackage{fancyvrb}
-\newcommand{\VerbBar}{|}
-\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
-\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
-% Add ',fontsize=\small' for more characters per line
-\usepackage{framed}
-\definecolor{shadecolor}{RGB}{248,248,248}
-\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
-\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
-\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
-\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
-\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
-\newcommand{\BuiltInTok}[1]{#1}
-\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
-\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
-\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
-\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
-\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
-\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
-\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
-\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
-\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
-\newcommand{\ExtensionTok}[1]{#1}
-\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
-\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
-\newcommand{\ImportTok}[1]{#1}
-\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
-\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
-\newcommand{\NormalTok}[1]{#1}
-\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
-\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
-\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
-\newcommand{\RegionMarkerTok}[1]{#1}
-\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
-\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
-\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
-\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
-\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
-\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
 
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}\usepackage{longtable,booktabs,array}
@@ -194,7 +154,7 @@
 
 \title{03\_MBOA\_accessions}
 \author{Henry Janse van Rensburg}
-\date{2025-01-30}
+\date{2025-06-27}
 
 \begin{document}
 \maketitle
@@ -237,81 +197,9 @@ growth feedbacks
 
 \section{Setup and Load Libraries}\label{setup-and-load-libraries}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Remove all objects from memory and set the working directory}
-\FunctionTok{rm}\NormalTok{(}\AttributeTok{list=}\FunctionTok{ls}\NormalTok{())}
-
-\CommentTok{\# Load necessary libraries}
-\FunctionTok{library}\NormalTok{(ggplot2)}
-\FunctionTok{library}\NormalTok{(tidyverse)}
-\FunctionTok{library}\NormalTok{(tidyr)}
-\FunctionTok{library}\NormalTok{(ggpubr)}
-\FunctionTok{library}\NormalTok{(pander)}
-\FunctionTok{library}\NormalTok{(cowplot)}
-\FunctionTok{library}\NormalTok{(knitr)}
-\FunctionTok{library}\NormalTok{(Rmisc)}
-\FunctionTok{library}\NormalTok{(tibble)}
-\FunctionTok{library}\NormalTok{(broom)  }\CommentTok{\# For tidying statistical outputs}
-\FunctionTok{library}\NormalTok{(readxl)}
-\FunctionTok{library}\NormalTok{(knitr)}
-\FunctionTok{library}\NormalTok{(emmeans)}
-\end{Highlighting}
-\end{Shaded}
-
 \section{Import Phenotype Data}\label{import-phenotype-data}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Import the required files}
-\NormalTok{root\_length }\OtherTok{\textless{}{-}} \FunctionTok{read\_excel}\NormalTok{(}\AttributeTok{path =} \StringTok{"Input/Dataset2.xlsx"}\NormalTok{, }
-                          \AttributeTok{sheet =} \StringTok{"accession\_MBOA\_root"}\NormalTok{)}
-
-\NormalTok{plant\_region\_ares\_GWAS }\OtherTok{\textless{}{-}} \FunctionTok{read\_excel}\NormalTok{(}\AttributeTok{path =} \StringTok{"Input/Dataset2.xlsx"}\NormalTok{, }
-                                     \AttributeTok{sheet =} \StringTok{"accession\_rosette\_area\_dag15"}\NormalTok{) }
-\end{Highlighting}
-\end{Shaded}
-
 \subsubsection{Helper Functions}\label{helper-functions}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Function to display the number of replicates below each bar}
-\NormalTok{give.n }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(x)\{}
-  \FunctionTok{return}\NormalTok{(}\FunctionTok{c}\NormalTok{(}\AttributeTok{y =} \FunctionTok{median}\NormalTok{(x) }\SpecialCharTok{*} \SpecialCharTok{{-}}\FloatTok{0.005}\NormalTok{, }\AttributeTok{label =} \FunctionTok{length}\NormalTok{(x)))}
-\NormalTok{\}}
-
-\CommentTok{\# Function to make colored facets at the bottom}
-\NormalTok{element\_textbox\_highlight }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(..., }
-                                      \AttributeTok{hi.labels =} \ConstantTok{NULL}\NormalTok{, }\AttributeTok{hi.fill =} \ConstantTok{NULL}\NormalTok{,}
-                                      \AttributeTok{hi.col =} \ConstantTok{NULL}\NormalTok{, }\AttributeTok{hi.box.col =} \ConstantTok{NULL}\NormalTok{,}
-                                      \AttributeTok{hi.labels2 =} \ConstantTok{NULL}\NormalTok{, }\AttributeTok{hi.fill2 =} \ConstantTok{NULL}\NormalTok{,}
-                                      \AttributeTok{hi.col2 =} \ConstantTok{NULL}\NormalTok{, }\AttributeTok{hi.box.col2 =} \ConstantTok{NULL}\NormalTok{) \{}
-  \FunctionTok{structure}\NormalTok{(}
-    \FunctionTok{c}\NormalTok{(}\FunctionTok{element\_textbox}\NormalTok{(...),}
-      \FunctionTok{list}\NormalTok{(}\AttributeTok{hi.labels =}\NormalTok{ hi.labels, }\AttributeTok{hi.fill =}\NormalTok{ hi.fill, }\AttributeTok{hi.col =}\NormalTok{ hi.col, }\AttributeTok{hi.box.col =}\NormalTok{ hi.box.col,}
-           \AttributeTok{hi.labels2 =}\NormalTok{ hi.labels2, }\AttributeTok{hi.fill2 =}\NormalTok{ hi.fill2, }
-           \AttributeTok{hi.col2 =}\NormalTok{ hi.col2, }\AttributeTok{hi.box.col2 =}\NormalTok{ hi.box.col2)}
-\NormalTok{    ),}
-    \AttributeTok{class =} \FunctionTok{c}\NormalTok{(}\StringTok{"element\_textbox\_highlight"}\NormalTok{, }\StringTok{"element\_textbox"}\NormalTok{, }\StringTok{"element\_text"}\NormalTok{, }\StringTok{"element"}\NormalTok{)}
-\NormalTok{  )}
-\NormalTok{\}}
-
-\NormalTok{element\_grob.element\_textbox\_highlight }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(element, }\AttributeTok{label =} \StringTok{""}\NormalTok{, ...) \{}
-  \ControlFlowTok{if}\NormalTok{ (label }\SpecialCharTok{\%in\%}\NormalTok{ element}\SpecialCharTok{$}\NormalTok{hi.labels) \{}
-\NormalTok{    element}\SpecialCharTok{$}\NormalTok{fill }\OtherTok{\textless{}{-}}\NormalTok{ element}\SpecialCharTok{$}\NormalTok{hi.fill }\SpecialCharTok{\%||\%}\NormalTok{ element}\SpecialCharTok{$}\NormalTok{fill}
-\NormalTok{    element}\SpecialCharTok{$}\NormalTok{colour }\OtherTok{\textless{}{-}}\NormalTok{ element}\SpecialCharTok{$}\NormalTok{hi.col }\SpecialCharTok{\%||\%}\NormalTok{ element}\SpecialCharTok{$}\NormalTok{colour}
-\NormalTok{    element}\SpecialCharTok{$}\NormalTok{box.colour }\OtherTok{\textless{}{-}}\NormalTok{ element}\SpecialCharTok{$}\NormalTok{hi.box.col }\SpecialCharTok{\%||\%}\NormalTok{ element}\SpecialCharTok{$}\NormalTok{box.colour}
-\NormalTok{  \}}
-  \ControlFlowTok{if}\NormalTok{ (label }\SpecialCharTok{\%in\%}\NormalTok{ element}\SpecialCharTok{$}\NormalTok{hi.labels2) \{}
-\NormalTok{    element}\SpecialCharTok{$}\NormalTok{fill }\OtherTok{\textless{}{-}}\NormalTok{ element}\SpecialCharTok{$}\NormalTok{hi.fill2 }\SpecialCharTok{\%||\%}\NormalTok{ element}\SpecialCharTok{$}\NormalTok{fill}
-\NormalTok{    element}\SpecialCharTok{$}\NormalTok{colour }\OtherTok{\textless{}{-}}\NormalTok{ element}\SpecialCharTok{$}\NormalTok{hi.col2 }\SpecialCharTok{\%||\%}\NormalTok{ element}\SpecialCharTok{$}\NormalTok{colour}
-\NormalTok{    element}\SpecialCharTok{$}\NormalTok{box.colour }\OtherTok{\textless{}{-}}\NormalTok{ element}\SpecialCharTok{$}\NormalTok{hi.box.col2 }\SpecialCharTok{\%||\%}\NormalTok{ element}\SpecialCharTok{$}\NormalTok{box.colour}
-\NormalTok{  \}}
-  \FunctionTok{NextMethod}\NormalTok{()}
-\NormalTok{\}}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{itemize}
 \tightlist
@@ -324,18 +212,6 @@ growth feedbacks
 \section{Anova test of Root Length response to
 MBOA}\label{anova-test-of-root-length-response-to-mboa}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\NormalTok{root\_length}\SpecialCharTok{$}\NormalTok{treatment }\OtherTok{\textless{}{-}} \FunctionTok{as.factor}\NormalTok{(root\_length}\SpecialCharTok{$}\NormalTok{treatment)}
-\NormalTok{root\_length}\SpecialCharTok{$}\NormalTok{accession }\OtherTok{\textless{}{-}} \FunctionTok{as.factor}\NormalTok{(root\_length}\SpecialCharTok{$}\NormalTok{accession)}
-\NormalTok{root\_length}\SpecialCharTok{$}\NormalTok{response }\OtherTok{\textless{}{-}} \FunctionTok{as.factor}\NormalTok{(root\_length}\SpecialCharTok{$}\NormalTok{response)}
-
-\CommentTok{\# Perform ANOVA}
-\NormalTok{anova\_results }\OtherTok{\textless{}{-}} \FunctionTok{aov}\NormalTok{(root\_length }\SpecialCharTok{\textasciitilde{}}\NormalTok{ treatment }\SpecialCharTok{*}\NormalTok{ accession , }\AttributeTok{data =}\NormalTok{ root\_length)}
-\FunctionTok{summary}\NormalTok{(anova\_results)}
-\end{Highlighting}
-\end{Shaded}
-
 \begin{verbatim}
                      Df Sum Sq Mean Sq F value   Pr(>F)    
 treatment             1  33.20   33.20 123.622  < 2e-16 ***
@@ -345,18 +221,6 @@ Residuals           941 252.72    0.27
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 \end{verbatim}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Perform post hoc tests for each genotype (accession)}
-\NormalTok{posthoc\_results }\OtherTok{\textless{}{-}}\NormalTok{ emmeans}\SpecialCharTok{::}\FunctionTok{emmeans}\NormalTok{(anova\_results, }\SpecialCharTok{\textasciitilde{}}\NormalTok{ treatment }\SpecialCharTok{|}\NormalTok{ accession)}
-\NormalTok{pairwise\_comparisons }\OtherTok{\textless{}{-}}\NormalTok{ emmeans}\SpecialCharTok{::}\FunctionTok{contrast}\NormalTok{(posthoc\_results, }\AttributeTok{method =} \StringTok{"pairwise"}\NormalTok{, }\AttributeTok{adjust =} \StringTok{"bonferroni"}\NormalTok{)}
-\NormalTok{pairwise\_summary }\OtherTok{\textless{}{-}} \FunctionTok{summary}\NormalTok{(pairwise\_comparisons)}
-
-\CommentTok{\# Display pairwise comparison results}
-\FunctionTok{kable}\NormalTok{(pairwise\_summary, }\AttributeTok{caption =} \StringTok{"Pairwise Comparisons of Root Length by Treatment and Accessions"}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{longtable}[]{@{}
   >{\raggedright\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.2206}}
@@ -434,87 +298,7 @@ control - MBOA & Tac-0 & 0.3906219 & 0.1266393 & 941 & 3.084523 &
 0.0020983 \\
 \end{longtable}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\#print(pairwise\_summary)}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Extract p{-}values from the post hoc results}
-\NormalTok{p\_values\_df }\OtherTok{\textless{}{-}}\NormalTok{ pairwise\_summary }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{as.data.frame}\NormalTok{() }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{mutate}\NormalTok{(}
-    \AttributeTok{label =} \FunctionTok{sprintf}\NormalTok{(}\StringTok{"p = \%.3g"}\NormalTok{, p.value),  }\CommentTok{\# Format p{-}values as text labels}
-    \AttributeTok{treatment\_pair =} \FunctionTok{paste}\NormalTok{(contrast)  }\CommentTok{\# Combine treatment names for annotation}
-\NormalTok{  )}
-
-\CommentTok{\# Plot with p{-}values for post hoc tests}
-\NormalTok{plot\_root\_length }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{(root\_length, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ treatment, }\AttributeTok{y =}\NormalTok{ root\_length)) }\SpecialCharTok{+}
-  \FunctionTok{geom\_boxplot}\NormalTok{(}
-    \FunctionTok{aes}\NormalTok{(}\AttributeTok{fill =}\NormalTok{ treatment),}
-    \AttributeTok{size =} \FloatTok{0.3}\NormalTok{,}
-    \AttributeTok{alpha =} \FloatTok{0.5}\NormalTok{,}
-    \AttributeTok{notch =} \ConstantTok{FALSE}\NormalTok{,}
-    \AttributeTok{outlier.size =} \FloatTok{1.0}
-\NormalTok{  ) }\SpecialCharTok{+}
-  \FunctionTok{scale\_fill\_manual}\NormalTok{(}\AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"orange2"}\NormalTok{, }\StringTok{"red4"}\NormalTok{)) }\SpecialCharTok{+}
-  \FunctionTok{coord\_cartesian}\NormalTok{(}\AttributeTok{ylim =} \FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{, }\FloatTok{5.0}\NormalTok{)) }\SpecialCharTok{+}
-  \FunctionTok{geom\_point}\NormalTok{(}
-    \FunctionTok{aes}\NormalTok{(}\AttributeTok{fill =} \FunctionTok{factor}\NormalTok{(treatment)),}
-    \AttributeTok{position =} \FunctionTok{position\_jitter}\NormalTok{(}\AttributeTok{width =} \FloatTok{0.15}\NormalTok{, }\AttributeTok{height =} \DecValTok{0}\NormalTok{),}
-    \AttributeTok{shape =} \DecValTok{20}\NormalTok{,}
-    \AttributeTok{alpha =} \FloatTok{0.2}\NormalTok{,}
-    \AttributeTok{size =} \FloatTok{0.5}\NormalTok{,}
-    \AttributeTok{stroke =} \DecValTok{1}\NormalTok{,}
-    \AttributeTok{show.legend =} \ConstantTok{FALSE}
-\NormalTok{  ) }\SpecialCharTok{+}
-  \FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+}
-  \FunctionTok{labs}\NormalTok{(}
-    \AttributeTok{x =} \StringTok{"Treatment"}\NormalTok{,}
-    \AttributeTok{y =} \StringTok{"Root length (cm)"}\NormalTok{,}
-    \AttributeTok{title =} \StringTok{"Root Length by Treatment and Accessions"}
-\NormalTok{  ) }\SpecialCharTok{+}
-  \FunctionTok{theme}\NormalTok{(}
-    \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{10}\NormalTok{),}
-    \AttributeTok{axis.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{8}\NormalTok{),}
-    \AttributeTok{axis.text.x =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{6}\NormalTok{, }\AttributeTok{colour =} \StringTok{"black"}\NormalTok{),}
-    \AttributeTok{strip.text.x =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{8}\NormalTok{),}
-    \AttributeTok{legend.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{8}\NormalTok{),}
-    \AttributeTok{legend.position =} \StringTok{"none"}
-\NormalTok{  ) }\SpecialCharTok{+}
-  \FunctionTok{facet\_wrap}\NormalTok{(}\SpecialCharTok{\textasciitilde{}} \FunctionTok{factor}\NormalTok{(accession, }\AttributeTok{levels =} \FunctionTok{c}\NormalTok{(}
-    \StringTok{"IP{-}Hue{-}3"}\NormalTok{, }\StringTok{"Tac{-}0"}\NormalTok{, }\StringTok{"Dra2{-}1"}\NormalTok{, }\StringTok{"DraIV 3{-}7"}\NormalTok{, }
-    \StringTok{"Bozen{-}1.2"}\NormalTok{, }\StringTok{"Kastel{-}1"}\NormalTok{, }\StringTok{"Col{-}0"}\NormalTok{, }\StringTok{"Hadd{-}3"}\NormalTok{, }
-    \StringTok{"Rak{-}2"}\NormalTok{, }\StringTok{"T840"}\NormalTok{, }\StringTok{"Lm{-}2"}\NormalTok{, }\StringTok{"BRR60"}\NormalTok{, }\StringTok{"Giffo{-}1"}
-\NormalTok{  )), }\AttributeTok{nrow =} \DecValTok{2}\NormalTok{) }\SpecialCharTok{+}
-  \CommentTok{\# Annotate with p{-}values from post hoc tests}
-  \FunctionTok{geom\_text}\NormalTok{(}
-    \AttributeTok{data =}\NormalTok{ p\_values\_df,}
-    \FunctionTok{aes}\NormalTok{(}
-      \AttributeTok{x =} \FloatTok{1.5}\NormalTok{,  }\CommentTok{\# Adjust x position (centered between treatments)}
-      \AttributeTok{y =} \FloatTok{4.5}\NormalTok{,  }\CommentTok{\# Adjust y position to place labels above the boxplots}
-      \AttributeTok{label =}\NormalTok{ label}
-\NormalTok{    ),}
-    \AttributeTok{color =} \StringTok{"black"}\NormalTok{,}
-    \AttributeTok{size =} \DecValTok{3}\NormalTok{,}
-    \AttributeTok{hjust =} \FloatTok{0.5}
-\NormalTok{  )}
-
-\CommentTok{\# Display the plot}
-\FunctionTok{print}\NormalTok{(plot\_root\_length)}
-\end{Highlighting}
-\end{Shaded}
-
-\pandocbounded{\includegraphics[keepaspectratio]{03_MBOA_Accessions_files/figure-pdf/unnamed-chunk-6-1.pdf}}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Save the plot as a PDF}
-\FunctionTok{ggsave}\NormalTok{(}\StringTok{"MBOA\_accessions\_root\_length.pdf"}\NormalTok{, plot\_root\_length, }\AttributeTok{width =} \DecValTok{8}\NormalTok{, }\AttributeTok{height =} \DecValTok{5}\NormalTok{, }\AttributeTok{dpi =} \DecValTok{600}\NormalTok{,}\AttributeTok{path =} \StringTok{"Output/Figures/"}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
+\pandocbounded{\includegraphics[keepaspectratio]{03_MBOA_Accessions_files/figure-pdf/Pairwise comparison-1.pdf}}
 
 \begin{itemize}
 \tightlist
@@ -526,78 +310,10 @@ control - MBOA & Tac-0 & 0.3906219 & 0.1266393 & 941 & 3.084523 &
 
 \section{Treatment response}\label{treatment-response}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\FunctionTok{library}\NormalTok{(ggrepel)}
-\CommentTok{\# Summarize the average root length for each accession and treatment}
-\NormalTok{avg\_root\_length }\OtherTok{\textless{}{-}}\NormalTok{ root\_length }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{group\_by}\NormalTok{(accession, treatment, response) }\SpecialCharTok{\%\textgreater{}\%}
-\NormalTok{  dplyr}\SpecialCharTok{::}\FunctionTok{summarize}\NormalTok{(}\AttributeTok{mean\_root\_length =} \FunctionTok{mean}\NormalTok{(root\_length, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{), }\AttributeTok{.groups =} \StringTok{\textquotesingle{}drop\textquotesingle{}}\NormalTok{)}
-
-\CommentTok{\# Define a named vector of colors for the response variable}
-\NormalTok{response\_colors }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}
-  \StringTok{"positive"} \OtherTok{=} \StringTok{"\#0072B2"}\NormalTok{,}
-  \StringTok{"negative"} \OtherTok{=} \StringTok{"orange2"} \CommentTok{\# Add more colors as needed for your responses}
-\NormalTok{)}
-
-\NormalTok{plot\_avg\_root\_length }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{(avg\_root\_length, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ treatment, }
-                                                    \AttributeTok{y =}\NormalTok{ mean\_root\_length,}
-                                                    \AttributeTok{group =}\NormalTok{ accession)) }\SpecialCharTok{+}
-  \FunctionTok{geom\_line}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{color =}\NormalTok{ response), }\AttributeTok{size =} \DecValTok{1}\NormalTok{) }\SpecialCharTok{+} \CommentTok{\# Line connecting points}
-  \FunctionTok{geom\_point}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{color =}\NormalTok{ response), }\AttributeTok{size =} \DecValTok{2}\NormalTok{) }\SpecialCharTok{+} \CommentTok{\# Points for averages}
-  \FunctionTok{geom\_text\_repel}\NormalTok{(}
-    \AttributeTok{data =}\NormalTok{ avg\_root\_length }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(treatment }\SpecialCharTok{==} \StringTok{"MBOA"}\NormalTok{), }\CommentTok{\# Filter for "control" treatment}
-    \FunctionTok{aes}\NormalTok{(}\AttributeTok{label =}\NormalTok{ accession, }\AttributeTok{color =} \StringTok{"black"}\NormalTok{), }\CommentTok{\# Add labels with matching colors}
-    \AttributeTok{nudge\_x =} \FloatTok{0.3}\NormalTok{, }\CommentTok{\# Nudges text horizontally away from the point}
-    \AttributeTok{nudge\_y =} \DecValTok{0}\NormalTok{,  }\CommentTok{\# Nudges text vertically}
-    \AttributeTok{size =} \DecValTok{3}\NormalTok{, }\CommentTok{\# Text size}
-    \AttributeTok{segment.size =} \FloatTok{0.2}\NormalTok{, }\CommentTok{\# Line thickness connecting text and point}
-    \AttributeTok{segment.color =} \StringTok{"grey50"}\NormalTok{, }\CommentTok{\# Line color}
-    \AttributeTok{max.overlaps =} \FloatTok{3.5} \CommentTok{\# Limits overlap of labels}
-\NormalTok{  ) }\SpecialCharTok{+}
-  \FunctionTok{scale\_color\_manual}\NormalTok{(}\AttributeTok{values =}\NormalTok{ response\_colors) }\SpecialCharTok{+} \CommentTok{\# Apply the custom colors}
-  \FunctionTok{theme\_bw}\NormalTok{() }\SpecialCharTok{+}
-  \FunctionTok{labs}\NormalTok{(}
-    \AttributeTok{title =} \StringTok{"Average Root Length by Treatment for Each Accession"}\NormalTok{,}
-    \AttributeTok{x =} \StringTok{"Treatment"}\NormalTok{,}
-    \AttributeTok{y =} \StringTok{"Average Root Length (cm)"}\NormalTok{,}
-    \AttributeTok{color =} \StringTok{"Response"} \CommentTok{\# Legend title for response}
-\NormalTok{  ) }\SpecialCharTok{+}
-  \FunctionTok{theme}\NormalTok{(}
-    \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{12}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
-    \AttributeTok{axis.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{10}\NormalTok{),}
-    \AttributeTok{axis.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{8}\NormalTok{),}
-    \AttributeTok{legend.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{10}\NormalTok{),}
-    \AttributeTok{legend.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{8}\NormalTok{)}
-\NormalTok{  )}
-
-\CommentTok{\# Display the plot}
-\FunctionTok{print}\NormalTok{(plot\_avg\_root\_length)}
-\end{Highlighting}
-\end{Shaded}
-
-\pandocbounded{\includegraphics[keepaspectratio]{03_MBOA_Accessions_files/figure-pdf/unnamed-chunk-7-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{03_MBOA_Accessions_files/figure-pdf/Response-1.pdf}}
 
 \section{Filter Data for Specific
 Genotypes}\label{filter-data-for-specific-genotypes}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# List of specific genotype\_ids}
-\NormalTok{selected\_genotypes }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\DecValTok{9851}\NormalTok{, }\DecValTok{7350}\NormalTok{, }\DecValTok{5867}\NormalTok{, }\DecValTok{5921}\NormalTok{, }\DecValTok{9972}\NormalTok{, }\DecValTok{10006}\NormalTok{, }
-                        \DecValTok{6909}\NormalTok{, }\DecValTok{9392}\NormalTok{, }\DecValTok{8365}\NormalTok{, }\DecValTok{6136}\NormalTok{, }\DecValTok{7217}\NormalTok{, }\DecValTok{506}\NormalTok{, }\DecValTok{9653}\NormalTok{)}
-
-\CommentTok{\# Filter the data for \textquotesingle{}dag\textquotesingle{} = 15 and selected \textquotesingle{}genotype\_id\textquotesingle{}}
-\NormalTok{filtered\_data }\OtherTok{\textless{}{-}}\NormalTok{ plant\_region\_ares\_GWAS }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{filter}\NormalTok{(dag }\SpecialCharTok{==} \DecValTok{15}\NormalTok{, genotype\_id }\SpecialCharTok{\%in\%}\NormalTok{ selected\_genotypes)}
-
-\CommentTok{\# Display the filtered data}
-\FunctionTok{kable}\NormalTok{(}
-\NormalTok{  filtered\_data[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{, ],}
-  \AttributeTok{caption =} \StringTok{"Extreme contrasting Accessions at DAG = 15"}
-\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{longtable}[]{@{}rlrlrr@{}}
 \caption{Extreme contrasting Accessions at DAG = 15}\tabularnewline
@@ -618,14 +334,6 @@ plant\_region\_area \\
 23912 & T840 & 6136 & + & 15 & 38120 \\
 \end{longtable}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Save filtered\_data as xls document}
-\FunctionTok{library}\NormalTok{(openxlsx)}
-\FunctionTok{write.xlsx}\NormalTok{(filtered\_data, }\StringTok{"Output/Tables/accession\_rosette\_areaDAG15.xlsx"}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
 \begin{itemize}
 \tightlist
 \item
@@ -636,30 +344,6 @@ plant\_region\_area \\
 
 \subsection{Calculate and Merge Average
 Values}\label{calculate-and-merge-average-values}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Calculate the average plant\_region\_area for each genotype\_id and bx}
-\NormalTok{average\_area }\OtherTok{\textless{}{-}}\NormalTok{ filtered\_data }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{group\_by}\NormalTok{(genotype\_id, bx) }\SpecialCharTok{\%\textgreater{}\%}
-\NormalTok{  dplyr}\SpecialCharTok{::}\FunctionTok{summarize}\NormalTok{(}\AttributeTok{avg\_plant\_region\_area =} \FunctionTok{mean}\NormalTok{(plant\_region\_area, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{ungroup}\NormalTok{()}
-
-\CommentTok{\# Spread the data to wide format to have separate columns for \textquotesingle{}bx\textquotesingle{} plus and minus}
-\NormalTok{average\_area\_wide }\OtherTok{\textless{}{-}}\NormalTok{ average\_area }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{pivot\_wider}\NormalTok{(}\AttributeTok{names\_from =}\NormalTok{ bx, }\AttributeTok{values\_from =}\NormalTok{ avg\_plant\_region\_area)}
-
-\CommentTok{\# Calculate the response by subtracting \textquotesingle{}bx\textquotesingle{} minus from \textquotesingle{}bx\textquotesingle{} plus}
-\NormalTok{average\_area\_wide }\OtherTok{\textless{}{-}}\NormalTok{ average\_area\_wide }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{response =} \StringTok{\textasciigrave{}}\AttributeTok{+}\StringTok{\textasciigrave{}} \SpecialCharTok{{-}} \StringTok{\textasciigrave{}}\AttributeTok{{-}}\StringTok{\textasciigrave{}}\NormalTok{)}
-
-\CommentTok{\# Display the resulting data frame}
-\FunctionTok{kable}\NormalTok{(}
-\NormalTok{  average\_area\_wide[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{, ],}
-  \AttributeTok{caption =} \StringTok{"Rosette area of extreme contrasting Accessions at DAG = 15"}
-\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{longtable}[]{@{}rrrr@{}}
 \caption{Rosette area of extreme contrasting Accessions at DAG =
@@ -678,34 +362,6 @@ genotype\_id & + & - & response \\
 5867 & 49635.50 & 15475.500 & 34160.00 \\
 5921 & 46544.67 & 9785.667 & 36759.00 \\
 \end{longtable}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Step 1: Calculate the average root\_length for each accession\_id and treatment}
-\NormalTok{average\_root\_length }\OtherTok{\textless{}{-}}\NormalTok{ root\_length }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{group\_by}\NormalTok{(accession\_id, treatment) }\SpecialCharTok{\%\textgreater{}\%}
-\NormalTok{  dplyr}\SpecialCharTok{::}\FunctionTok{summarize}\NormalTok{(}\AttributeTok{avg\_root\_length =} \FunctionTok{mean}\NormalTok{(root\_length, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{ungroup}\NormalTok{()}
-
-\CommentTok{\# Step 2: Reshape the data to wide format to separate \textquotesingle{}control\textquotesingle{} and \textquotesingle{}MBOA\textquotesingle{} treatments}
-\NormalTok{average\_root\_length\_wide }\OtherTok{\textless{}{-}}\NormalTok{ average\_root\_length }\SpecialCharTok{\%\textgreater{}\%}
-    \FunctionTok{pivot\_wider}\NormalTok{(}\AttributeTok{names\_from =}\NormalTok{ treatment, }\AttributeTok{values\_from =}\NormalTok{ avg\_root\_length)}
-
-\CommentTok{\# Step 3: Calculate the treatment response (Control {-} MBOA)}
-\NormalTok{average\_root\_length\_wide }\OtherTok{\textless{}{-}}\NormalTok{ average\_root\_length\_wide }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{treatment\_response =}\NormalTok{ MBOA }\SpecialCharTok{{-}}\NormalTok{ control)}
-
-\CommentTok{\# Replace "Col\_0" with "6909" in the \textquotesingle{}accession\_id\textquotesingle{} column}
-\NormalTok{average\_root\_length\_wide }\OtherTok{\textless{}{-}}\NormalTok{ average\_root\_length\_wide }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{accession\_id =} \FunctionTok{ifelse}\NormalTok{(accession\_id }\SpecialCharTok{==} \StringTok{"Col\_0"}\NormalTok{, }\StringTok{"6909"}\NormalTok{, accession\_id))}
-
-\CommentTok{\# Display the resulting data frame}
-\FunctionTok{kable}\NormalTok{(}
-\NormalTok{  average\_root\_length\_wide[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{, ],}
-  \AttributeTok{caption =} \StringTok{"Root lenght of extreme contrasting Accessions in response to MBOA"}
-\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{longtable}[]{@{}rrrr@{}}
 \caption{Root lenght of extreme contrasting Accessions in response to
@@ -739,46 +395,9 @@ accession\_id & control & MBOA & treatment\_response \\
 \subsection{Merge Data and Calculate
 Correlation}\label{merge-data-and-calculate-correlation}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Convert \textquotesingle{}genotype\_id\textquotesingle{} to character in \textquotesingle{}average\_area\_wide\textquotesingle{} and rename to \textquotesingle{}accession\_id\textquotesingle{}}
-\NormalTok{average\_area\_wide }\OtherTok{\textless{}{-}}\NormalTok{ average\_area\_wide }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{genotype\_id =} \FunctionTok{as.character}\NormalTok{(genotype\_id)) }\SpecialCharTok{\%\textgreater{}\%}
-\NormalTok{  dplyr}\SpecialCharTok{::}\FunctionTok{rename}\NormalTok{(}\AttributeTok{accession\_id =}\NormalTok{ genotype\_id)}
-
-\CommentTok{\# Ensure \textquotesingle{}accession\_id\textquotesingle{} in \textquotesingle{}average\_root\_length\_wide\textquotesingle{} is character}
-\NormalTok{average\_root\_length\_wide }\OtherTok{\textless{}{-}}\NormalTok{ average\_root\_length\_wide }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{accession\_id =} \FunctionTok{as.character}\NormalTok{(accession\_id))}
-
-\CommentTok{\# Merge the two tables on \textquotesingle{}accession\_id\textquotesingle{}}
-\NormalTok{merged\_data }\OtherTok{\textless{}{-}} \FunctionTok{inner\_join}\NormalTok{(average\_root\_length\_wide, average\_area\_wide, }
-                          \AttributeTok{by =} \StringTok{"accession\_id"}\NormalTok{)}
-
-\CommentTok{\# Assign colors based on the response value}
-\NormalTok{merged\_data }\OtherTok{\textless{}{-}}\NormalTok{ merged\_data }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{feedback =} \FunctionTok{ifelse}\NormalTok{(response }\SpecialCharTok{\textgreater{}} \DecValTok{0}\NormalTok{, }\StringTok{"BXplus"}\NormalTok{, }\StringTok{"BXminus"}\NormalTok{))}
-
-
-\CommentTok{\# Calculate the correlation and p{-}value}
-\NormalTok{cor\_test }\OtherTok{\textless{}{-}} \FunctionTok{cor.test}\NormalTok{(merged\_data}\SpecialCharTok{$}\NormalTok{treatment\_response, merged\_data}\SpecialCharTok{$}\NormalTok{response,}
-                     \AttributeTok{use =} \StringTok{"complete.obs"}\NormalTok{)}
-\NormalTok{correlation }\OtherTok{\textless{}{-}}\NormalTok{ cor\_test}\SpecialCharTok{$}\NormalTok{estimate}
-\NormalTok{p\_value }\OtherTok{\textless{}{-}}\NormalTok{ cor\_test}\SpecialCharTok{$}\NormalTok{p.value}
-
-\CommentTok{\# Print the correlation and p{-}value}
-\FunctionTok{print}\NormalTok{(}\FunctionTok{paste}\NormalTok{(}\StringTok{"Correlation: "}\NormalTok{, }\FunctionTok{round}\NormalTok{(correlation, }\DecValTok{2}\NormalTok{)))}
-\end{Highlighting}
-\end{Shaded}
-
 \begin{verbatim}
 [1] "Correlation:  0.49"
 \end{verbatim}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\FunctionTok{print}\NormalTok{(}\FunctionTok{paste}\NormalTok{(}\StringTok{"P{-}value: "}\NormalTok{, p\_value))}
-\end{Highlighting}
-\end{Shaded}
 
 \begin{verbatim}
 [1] "P-value:  0.0929578480866174"
@@ -800,121 +419,17 @@ Correlation}\label{merge-data-and-calculate-correlation}
 \subsubsection{Plot Correlation and Treatment
 Response}\label{plot-correlation-and-treatment-response}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Add the "accession" column to merged\_data based on accession\_id}
-\NormalTok{merged\_data }\OtherTok{\textless{}{-}}\NormalTok{ merged\_data }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{accession =}\NormalTok{ root\_length}\SpecialCharTok{$}\NormalTok{accession[}\FunctionTok{match}\NormalTok{(accession\_id, root\_length}\SpecialCharTok{$}\NormalTok{accession\_id)])}
-
-\CommentTok{\# Reorder accession\_id based on response}
-\NormalTok{merged\_data }\OtherTok{\textless{}{-}}\NormalTok{ merged\_data }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{accession =} \FunctionTok{fct\_reorder}\NormalTok{(accession, response))}
-
-\CommentTok{\# Ensure feedback is a factor with correct levels}
-\NormalTok{merged\_data }\OtherTok{\textless{}{-}}\NormalTok{ merged\_data }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{feedback =} \FunctionTok{factor}\NormalTok{(feedback, }\AttributeTok{levels =} \FunctionTok{c}\NormalTok{(}\StringTok{"BXplus"}\NormalTok{, }\StringTok{"BXminus"}\NormalTok{)))}
-
-\CommentTok{\# Define custom color mapping}
-\NormalTok{feedback\_colors }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{"BXminus"} \OtherTok{=} \StringTok{"orange2"}\NormalTok{, }\StringTok{"BXplus"} \OtherTok{=} \StringTok{"\#0072B2"}\NormalTok{)}
-
-\CommentTok{\# Plot the correlation}
-\NormalTok{plot\_correlation }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{(merged\_data, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ treatment\_response, }
-                                            \AttributeTok{y =}\NormalTok{ response)) }\SpecialCharTok{+}
-  \FunctionTok{geom\_point}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{color =}\NormalTok{ feedback), }\AttributeTok{size =} \DecValTok{3}\NormalTok{) }\SpecialCharTok{+}
-  \FunctionTok{geom\_smooth}\NormalTok{(}\AttributeTok{method =} \StringTok{"lm"}\NormalTok{, }\AttributeTok{col =} \StringTok{"red4"}\NormalTok{) }\SpecialCharTok{+}
-  \FunctionTok{labs}\NormalTok{(}
-    \AttributeTok{x =} \StringTok{"Root Length Response to MBOA"}\NormalTok{,}
-    \AttributeTok{y =} \FunctionTok{expression}\NormalTok{(}\StringTok{"Growth feedback (10"}\SpecialCharTok{\^{}}\DecValTok{4}\SpecialCharTok{*}\StringTok{")"}\NormalTok{),}
-    \AttributeTok{title =} \StringTok{"Correlation Analysis"}
-\NormalTok{  ) }\SpecialCharTok{+}
-  \FunctionTok{theme\_minimal}\NormalTok{() }\SpecialCharTok{+}
-  \FunctionTok{theme}\NormalTok{(}
-    \AttributeTok{panel.border =} \FunctionTok{element\_rect}\NormalTok{(}\AttributeTok{color =} \StringTok{"black"}\NormalTok{, }\AttributeTok{fill =} \ConstantTok{NA}\NormalTok{, }\AttributeTok{size =} \FloatTok{0.6}\NormalTok{),}
-    \AttributeTok{axis.text.x =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
-    \AttributeTok{axis.text.y =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
-    \AttributeTok{axis.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
-    \AttributeTok{legend.position =} \StringTok{"bottom"}\NormalTok{,}
-    \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{)}
-\NormalTok{  ) }\SpecialCharTok{+}
-  \FunctionTok{scale\_color\_manual}\NormalTok{(}\AttributeTok{values =}\NormalTok{ feedback\_colors) }\SpecialCharTok{+} 
-  \FunctionTok{annotate}\NormalTok{(}
-    \StringTok{"text"}\NormalTok{, }\AttributeTok{x =} \ConstantTok{Inf}\NormalTok{, }\AttributeTok{y =} \SpecialCharTok{{-}}\ConstantTok{Inf}\NormalTok{, }
-    \AttributeTok{label =} \FunctionTok{paste}\NormalTok{(}\StringTok{"r ="}\NormalTok{, }\FunctionTok{round}\NormalTok{(correlation, }\DecValTok{2}\NormalTok{), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{P ="}\NormalTok{, }
-                  \FunctionTok{format.pval}\NormalTok{(p\_value, }\AttributeTok{digits =} \DecValTok{2}\NormalTok{)), }
-    \AttributeTok{hjust =} \FloatTok{1.1}\NormalTok{, }\AttributeTok{vjust =} \SpecialCharTok{{-}}\FloatTok{1.1}\NormalTok{, }\AttributeTok{size =} \DecValTok{5}\NormalTok{, }\AttributeTok{color =} \StringTok{"black"}
-\NormalTok{  )}
-
-\CommentTok{\# Plot the treatment response}
-\NormalTok{treatment\_response\_plot }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{(merged\_data, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ treatment\_response, }
-                                                   \AttributeTok{y =}\NormalTok{ accession)) }\SpecialCharTok{+}
-  \FunctionTok{geom\_point}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{color =}\NormalTok{ feedback), }\AttributeTok{size =} \DecValTok{3}\NormalTok{) }\SpecialCharTok{+}
-  \FunctionTok{geom\_vline}\NormalTok{(}\AttributeTok{xintercept =} \DecValTok{0}\NormalTok{, }\AttributeTok{linetype =} \StringTok{"dashed"}\NormalTok{, }\AttributeTok{color =} \StringTok{"red4"}\NormalTok{, }\AttributeTok{size =} \FloatTok{0.8}\NormalTok{) }\SpecialCharTok{+}
-  \FunctionTok{labs}\NormalTok{(}
-    \AttributeTok{x =} \StringTok{"Root Length Response to MBOA"}\NormalTok{,}
-    \AttributeTok{y =} \StringTok{"Accessions"}\NormalTok{,}
-    \AttributeTok{title =} \StringTok{"Treatment Response of Each Accession"}
-\NormalTok{  ) }\SpecialCharTok{+}
-  \FunctionTok{theme\_minimal}\NormalTok{() }\SpecialCharTok{+}
-  \FunctionTok{theme}\NormalTok{(}
-    \AttributeTok{panel.border =} \FunctionTok{element\_rect}\NormalTok{(}\AttributeTok{color =} \StringTok{"black"}\NormalTok{, }\AttributeTok{fill =} \ConstantTok{NA}\NormalTok{, }\AttributeTok{size =} \FloatTok{0.6}\NormalTok{),}
-    \AttributeTok{axis.text.x =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
-    \AttributeTok{axis.text.y =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
-    \AttributeTok{axis.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
-    \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{7}\NormalTok{),}
-    \AttributeTok{legend.position =} \StringTok{"bottom"}
-\NormalTok{  ) }\SpecialCharTok{+}
-  \FunctionTok{scale\_color\_manual}\NormalTok{(}\AttributeTok{values =}\NormalTok{ feedback\_colors)  }\CommentTok{\# Same color scheme as first plot}
-
-\CommentTok{\# Display the plots}
-\FunctionTok{print}\NormalTok{(plot\_correlation)}
-\end{Highlighting}
-\end{Shaded}
-
 \pandocbounded{\includegraphics[keepaspectratio]{03_MBOA_Accessions_files/figure-pdf/Fig-MBOA_response-1.pdf}}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\FunctionTok{print}\NormalTok{(treatment\_response\_plot)}
-\end{Highlighting}
-\end{Shaded}
 
 \pandocbounded{\includegraphics[keepaspectratio]{03_MBOA_Accessions_files/figure-pdf/Fig-MBOA_response-2.pdf}}
 
 \begin{itemize}
-\tightlist
 \item
   \textbf{Purpose}: We plotted the correlation between the treatment
   response and the response values and the treatment response of each
   accession. The correlation plot shows the relationship between the
   treatment response and the response values, while the treatment
   response plot shows the response of each accession to the treatment.
-\end{itemize}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Create a new workbook}
-\NormalTok{Source\_data\_2 }\OtherTok{\textless{}{-}} \FunctionTok{createWorkbook}\NormalTok{()}
-
-\CommentTok{\# Add sheets and write data frames}
-\FunctionTok{addWorksheet}\NormalTok{(Source\_data\_2, }\StringTok{"accession\_rosette\_area\_dag15"}\NormalTok{)}
-\FunctionTok{writeData}\NormalTok{(Source\_data\_2, }\StringTok{"accession\_rosette\_area\_dag15"}\NormalTok{, filtered\_data)}
-
-\FunctionTok{addWorksheet}\NormalTok{(Source\_data\_2, }\StringTok{"accession\_MBOA\_root"}\NormalTok{)}
-\FunctionTok{writeData}\NormalTok{(Source\_data\_2, }\StringTok{"accession\_MBOA\_root"}\NormalTok{, root\_length)}
-
-\FunctionTok{addWorksheet}\NormalTok{(Source\_data\_2, }\StringTok{"MBOA\_root\_response"}\NormalTok{)}
-\FunctionTok{writeData}\NormalTok{(Source\_data\_2, }\StringTok{"MBOA\_root\_response"}\NormalTok{, average\_root\_length\_wide)}
-
-\FunctionTok{addWorksheet}\NormalTok{(Source\_data\_2, }\StringTok{"avg\_feedback\_rosette\_area"}\NormalTok{)}
-\FunctionTok{writeData}\NormalTok{(Source\_data\_2, }\StringTok{"avg\_feedback\_rosette\_area"}\NormalTok{, average\_area\_wide)}
-
-\CommentTok{\# Save the workbook}
-\FunctionTok{saveWorkbook}\NormalTok{(Source\_data\_2, }\StringTok{"Output/Tables/Source\_data\_4.xlsx"}\NormalTok{, }\AttributeTok{overwrite =} \ConstantTok{TRUE}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{itemize}
-\tightlist
 \item
   \textbf{Purpose}: We combined the two plots into a single plot for
   better visualization and saved the combined plot as a PDF.

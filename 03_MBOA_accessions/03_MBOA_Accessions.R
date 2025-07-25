@@ -1,4 +1,4 @@
-## ----r, include=FALSE---------------------------------------------------------
+## ----r include=FALSE----------------------------------------------------------
 knitr::knit_hooks$set(purl = knitr::hook_purl)
 knitr::opts_chunk$set(echo = TRUE)
 
@@ -29,7 +29,7 @@ root_length <- read_excel(path = "Input/Dataset2.xlsx",
 plant_region_ares_GWAS <- read_excel(path = "Input/Dataset2.xlsx", 
                                      sheet = "accession_rosette_area_dag15") 
 
-## ----r echo=TRUE, message=FALSE-----------------------------------------------
+## ----r message=FALSE----------------------------------------------------------
 # Function to display the number of replicates below each bar
 give.n <- function(x){
   return(c(y = median(x) * -0.005, label = length(x)))
@@ -214,7 +214,7 @@ kable(
 library(openxlsx)
 write.xlsx(filtered_data, "Output/Tables/accession_rosette_areaDAG15.xlsx")
 
-## ----r, echo=TRUE, include=TRUE, message=FALSE--------------------------------
+## ----r------------------------------------------------------------------------
 # Calculate the average plant_region_area for each genotype_id and bx
 average_area <- filtered_data %>%
   group_by(genotype_id, bx) %>%
