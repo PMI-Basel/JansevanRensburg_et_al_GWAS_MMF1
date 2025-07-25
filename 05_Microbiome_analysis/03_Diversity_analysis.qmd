@@ -1,0 +1,629 @@
+# 03_Beta_diversity
+
+
+## Setup
+
+```{r}
+#| label: setup_3
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+
+##clear the object from memory
+rm(list=ls())
+
+#knitr settings
+knitr::opts_chunk$set(echo=TRUE, fig.align="center")
+options(tinytex.verbose = TRUE)
+
+#set seed
+set.seed(100)
+
+## set source to file location
+# Set source file location for running code interactively (for rendering it's set in the YAML)
+if (interactive()) {
+if (!require(rstudioapi)) { install.packages("rstudioapi") }
+library(rstudioapi)
+setwd(dirname(getActiveDocumentContext()$path))
+}
+
+#set CRAN mirror for downloading libraries
+options(repos = c(CRAN = "https://stat.ethz.ch/CRAN/")) #ETH Switzerland
+
+## load functions
+source("functions/functions.R")
+functions(path="functions/")
+
+## installs (if necessary) and loads libraries
+libraries()
+
+```
+
+## Load files
+
+We import the design-files, normalized, unscaled count-tables with microbial load (without host ASVs), taxonomy files and PHYSEQ objects from *02_Taxa_analysis.qmd*.
+
+```{r}
+#| label: import
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+
+# Import
+
+#from here on we only use the normalized dataasets without host
+#for simplicity, we don't call them <<X>>m_microbial_load anymore
+
+#Import RDS files
+bDESIGN <- readRDS("interim/02_Taxa_Analysis/bDESIGN.RDS")
+bCOUNT <- readRDS("interim/02_Taxa_Analysis/bCOUNTm_microbial_load.RDS")
+bTAXA <- readRDS("interim/02_Taxa_Analysis/bTAXA_microbial_load.RDS")
+bPHYSEQ <- readRDS("interim/02_Taxa_Analysis/bPHYSEQ_microbial_load.RDS")
+
+fDESIGN <- readRDS("interim/02_Taxa_Analysis/fDESIGN.RDS")
+fCOUNT <- readRDS("interim/02_Taxa_Analysis/fCOUNTm_microbial_load.RDS")
+fTAXA <- readRDS("interim/02_Taxa_Analysis/fTAXA_microbial_load.RDS")
+fPHYSEQ <- readRDS("interim/02_Taxa_Analysis/fPHYSEQ_microbial_load.RDS")
+
+oDESIGN <- readRDS("interim/02_Taxa_Analysis/oDESIGN.RDS")
+oCOUNT <- readRDS("interim/02_Taxa_Analysis/oCOUNTm_microbial_load.RDS")
+oTAXA <- readRDS("interim/02_Taxa_Analysis/oTAXA_microbial_load.RDS")
+oPHYSEQ <- readRDS("interim/02_Taxa_Analysis/oPHYSEQ_microbial_load.RDS")
+
+#colors
+level_cols_condition <- readRDS("interim/01_Import_Normalization/level_cols_condition.RDS")
+level_cols_line <- readRDS("interim/01_Import_Normalization/level_cols_line.RDS")
+
+```
+
+\pagebreak
+
+## Alpha diversity
+
+### Shannon indices 
+
+As a proxy for alpha diversity we calculate the Shannon diversity index of each sample for the bacterial, fungal and oomycete communities.
+
+```{r}
+#| label: Shannon diversity
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+# Calculate Shannon index using the vegan package
+bSHANNON <- diversity(t(bCOUNT), index="shannon")
+fSHANNON <- diversity(t(fCOUNT), index="shannon")
+oSHANNON <- diversity(t(oCOUNT), index="shannon")
+
+# Print the calculated Shannon diversity indices
+#print(bSHANNON)
+#print(fSHANNON)
+#print(oSHANNON)
+```
+
+### Differences in alpha diversity between lines and conditions
+
+We analyse for differences in bacterial alpha diversity between the different Arabidopsis lines and conditions using a two-way ANOVA with the model: *shanon-index ~ lines \* conditions* followed by a Post-hoc Tukey's HSD test.
+
+```{r}
+#| label: Shannon diversity statistics - fuction
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+analyze_shannon_diversity <- function(count_table, design_table, label = "Microbiome", test="ANOVA") {
+  library(dplyr)
+  library(knitr)
+
+  # Step 1: Compute Shannon diversity
+  shannon <- vegan::diversity(t(count_table), index = "shannon") %>% as.data.frame()
+  colnames(shannon) <- "shannon"
+  shannon <- shannon %>%
+    tibble::rownames_to_column(var = "sample_name")
+
+  # Step 2: Merge with metadata
+  merged_data <- merge(shannon, design_table, by = "sample_name")
+  merged_data$condition <- as.factor(merged_data$condition)
+  merged_data$line <- as.factor(merged_data$line)
+
+  # Step 3: Two-way ANOVA
+  anova_model <- aov(shannon ~ condition * line, data = merged_data)
+  anova_results <- summary(anova_model)
+
+  # Step 4: Tukey's HSD post-hoc
+  posthoc_results <- TukeyHSD(anova_model)
+
+  # Step 5: Output
+  if(test=="ANOVA"){
+      anova_table <- as.data.frame(anova_results[[1]])
+      return(kable(anova_table, caption = paste0(label, ": ANOVA"),
+        col.names = c("Df", "Sum Sq", "Mean Sq", "F Value", "Pr(>F)")))
+
+  }
+  if(test=="Tukey"){
+      tukey_table <- as.data.frame(posthoc_results$`condition:line`)
+      tukey_table <- tibble::rownames_to_column(tukey_table, var = "Comparison")
+      return(kable(tukey_table, caption = paste0(label, ": Tukey HSD"),
+        col.names = c("Comparison", "Diff", "Lower", "Upper", "p-value")))
+  }
+}
+
+```
+
+```{r}
+#| label: shannon diversity statistics bacteria
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+analyze_shannon_diversity(bCOUNT, bDESIGN, "Bacteria", test = "ANOVA")
+analyze_shannon_diversity(bCOUNT, bDESIGN, "Bacteria", test = "Tukey")
+
+```
+
+\pagebreak
+
+```{r}
+#| label: shannon diversity statistics fungi
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+analyze_shannon_diversity(fCOUNT, fDESIGN, "Fungi", test = "ANOVA")
+analyze_shannon_diversity(fCOUNT, fDESIGN, "Fungi", test = "Tukey")
+
+```
+
+```{r}
+#| label: shannon diversity statistics oomycetes
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+analyze_shannon_diversity(oCOUNT, oDESIGN, "Oomycetes", test = "ANOVA")
+analyze_shannon_diversity(oCOUNT, oDESIGN, "Oomycetes", test = "Tukey")
+
+```
+
+\pagebreak
+
+### Alpha diversity - plot
+
+```{r}
+#| label: plot shannon diversity function
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+#| fig-width: 9  # Adjust figure width
+#| fig-height: 5  # Adjust figure height
+
+
+
+
+plot_shannon_diversity <- function(count_table, design_table, title_label = "Microbiome") {
+
+  # Compute Shannon diversity
+  shannon <- vegan::diversity(t(count_table), index = "shannon") %>% as.data.frame()
+  colnames(shannon) <- "shannon"
+  shannon <- rownames_to_column(shannon, var = "sample_name")
+
+  # Merge with metadata
+  merged_data <- merge(shannon, design_table, by = "sample_name")
+  merged_data$condition <- as.factor(merged_data$condition)
+  merged_data$line <- as.factor(merged_data$line)
+
+  # Plot
+  p <- ggplot(
+    merged_data, 
+    aes(x = line, y = shannon, fill = condition, alpha = line)
+  ) +
+    geom_boxplot(outlier.shape = NA) +
+    geom_point(
+      position = position_dodge(width = 0.75),
+      size = 1.5,
+      color = "black",
+      aes(color = condition, shape = line)
+    ) +
+    theme_minimal() +
+    theme(
+      legend.position = "bottom",
+      panel.border = element_rect(color = "black", fill = NA, size = 0.5),
+      text = element_text(size = 7),
+      axis.title = element_text(size = 7),
+      axis.text = element_text(size = 7),
+      legend.title = element_text(size = 7),
+      legend.text = element_text(size = 7),
+      plot.title = element_text(size = 7),
+      plot.subtitle = element_text(size = 7)
+    ) +
+    labs(
+      title = paste("Shannon index -", title_label),
+      x = "Condition", 
+      y = "Shannon index",
+      fill = "Condition", 
+      color = "Condition", 
+      alpha = "Line"
+    ) +
+    scale_fill_manual(values = level_cols_condition) +
+    scale_color_manual(values = level_cols_condition) +
+    scale_alpha_manual(values = c(0.9, 0.5)) +
+    expand_limits(y = 0) +  # Ensures Y-axis starts at 0
+    stat_compare_means(
+      method = "kruskal.test", 
+      label = "p.signif",
+      label.y = max(merged_data$shannon, na.rm = TRUE) + 0.8
+    )
+
+  return(p)
+}
+
+bSHANNON_plot <- plot_shannon_diversity(bCOUNT, bDESIGN, "Bacteria")
+fSHANNON_plot <- plot_shannon_diversity(fCOUNT, fDESIGN, "Fungi")
+oSHANNON_plot <- plot_shannon_diversity(oCOUNT, oDESIGN, "Oomycetes")
+
+# Combine all three figures
+SHANNON_plot <- plot_grid(
+  bSHANNON_plot + theme(legend.position = "none"),
+  fSHANNON_plot + theme(legend.position = "bottom"),
+  oSHANNON_plot + theme(legend.position = "none"),
+  align = "hv", 
+  nrow = 1
+)
+SHANNON_plot
+
+ggsave(
+  filename = "alpha_diversity_plot.pdf", 
+  plot = SHANNON_plot, 
+  width = 16.5, 
+  height = 7, 
+  units = "cm", 
+  path = "Output/figures/"
+)
+
+
+
+```
+
+\pagebreak
+
+## Beta diversity
+
+### Bray-Curtis distances
+
+We get an overview of the community structure by calculating Bray-Curtis (BC) distances as proxy for beta diversity between all samples for the bacterial, fungal and oomycete communities. 
+
+### Differences in beta diversity between lines and conditions
+
+We investigate the full model to see which factors alters the beta diversity by performing a PERMANOVA using the model: *BC ~ lines \* conditions* and visualize our findings by ploting the first two axes of a unconstrained PCoA and a constrained CAP (model: *BC ~ lines \* conditions*).
+
+```{r}
+#| label: PERMANOVA
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+
+
+set.seed(100010)
+
+#Bacteria
+bdist <- vegdist(t(bCOUNT), method="bray")
+bdist_paov <- adonis2(bdist ~ line * condition, by = "terms", data=bDESIGN)
+kable(bdist_paov, caption = "Bacteria: PERMANOVA",
+      col.names = c("Term", "DF", "Sums of Squares", "Mean Squares", "F-Model", "P-Value"))
+
+#Fungi
+fdist <- vegdist(t(fCOUNT), method="bray")
+fdist_paov <- adonis2(fdist ~ line * condition, by = "terms", data=fDESIGN)
+kable(fdist_paov, caption = "Fungi: PERMANOVA",
+      col.names = c("Term", "DF", "Sums of Squares", "Mean Squares", "F-Model", "P-Value"))
+
+#Oomycetes
+odist <- vegdist(t(oCOUNT), method="bray")
+odist_paov <- adonis2(odist ~ line * condition, by = "terms", data=oDESIGN)
+kable(odist_paov, caption = "Oomycetes: PERMANOVA",
+      col.names = c("Term", "DF", "Sums of Squares", "Mean Squares", "F-Model", "P-Value"))
+
+```
+
+**Conclusion:** The bacterial communities are different between the different Arabidopsis-lines, and the interaction between lines and condition. No community alteration was detected for fungi while we find a difference between the conditions for oomycetes.
+
+
+```{r}
+#| label: Pairwise PERMANOVA
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+library(vegan)
+library(dplyr)
+library(knitr)
+
+# Function to run pairwise PERMANOVA and display with kable
+run_pairwise_permanova <- function(count_data, design_data, group_label = "Group") {
+  pairwise_results <- list()
+
+  # Ensure sample order matches
+  count_data <- count_data[, design_data$bc_ID]
+
+  # 1. WT vs 318 at each condition
+  for (cond in unique(design_data$condition)) {
+    sub_design <- design_data %>% filter(condition == cond)
+    sub_data <- t(count_data[, sub_design$bc_ID])
+    dist <- vegdist(sub_data, method = "bray")
+    result <- adonis2(dist ~ line, data = sub_design)
+    pairwise_results[[paste0("Line_", cond)]] <- result
+  }
+
+  # 2. plus vs minus within each line
+  for (ln in unique(design_data$line)) {
+    sub_design <- design_data %>% filter(line == ln)
+    sub_data <- t(count_data[, sub_design$bc_ID])
+    dist <- vegdist(sub_data, method = "bray")
+    result <- adonis2(dist ~ condition, data = sub_design)
+    pairwise_results[[paste0("Condition_", ln)]] <- result
+  }
+
+  # Display all results
+  for (name in names(pairwise_results)) {
+    cat("\n\n")
+    cat(paste0("### ", group_label, ": ", gsub("_", " ", name), "\n\n"))
+    print(
+      kable(pairwise_results[[name]],
+            caption = paste(group_label, "- PERMANOVA:", gsub("_", " ", name)),
+            col.names = c("Term", "DF", "Sums of Squares", "Mean Squares", "F-Model", "P-Value"),
+            digits = 4)
+    )
+  }
+}
+```
+
+```{r}
+#| label: Pairwise PERMANOVA output
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+# Bacteria
+run_pairwise_permanova(bCOUNT, bDESIGN, "Bacteria")
+
+# Fungi
+run_pairwise_permanova(fCOUNT, fDESIGN, "Fungi")
+
+# Oomycetes
+run_pairwise_permanova(oCOUNT, oDESIGN, "Oomycetes")
+```
+
+
+\pagebreak
+
+##  PCoA - line and condition effect on beta diversity
+
+```{r}
+#| label: centroid line function
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+#function to get centroid lines
+centroid_lines <- function(PHYSEQ, dist_matrix, group, axes=c(1,2)){
+  #get ordination values
+  lines <- as.data.frame(plot_ordination(PHYSEQ, dist_matrix, axes=axes, justDF=T))
+  colnames(lines)[1:2] <- c("Axis.1","Axis.2")
+  lines <- lines[,colnames(lines) %in% c("Axis.1","Axis.2",group)]#subset
+  #get centroids (means of each group)
+  means1 <- aggregate(lines$Axis.1, by=as.list(lines[,colnames(lines) %in% group, drop=F]), FUN=mean)
+  means2 <- aggregate(lines$Axis.2, by=as.list(lines[,colnames(lines) %in% group, drop=F]), FUN=mean)
+  #concat groups (for multiple groups)
+  lines$concact <- lines[,colnames(lines) %in% group,drop=F] %>% apply(2, as.character) %>% apply(1, paste, collapse="")
+  means1$concact <- means1[,colnames(means1) %in% group,drop=F] %>% apply(2, as.character) %>% apply(1, paste, collapse="")
+  means2$concact <- means2[,colnames(means2) %in% group,drop=F] %>% apply(2, as.character) %>% apply(1, paste, collapse="")
+  #add means to COUNTa.frame
+  lines$Axis.1.means <- NA
+  lines$Axis.2.means <- NA
+  group_values <- unique(lines$concact)
+  for (i in group_values) {
+    lines$Axis.1.means[lines$concact == i] <- means1$x[means1$concact == i]
+    lines$Axis.2.means[lines$concact == i] <- means2$x[means1$concact == i]
+  }
+  #subset df
+  lines <- lines[,colnames(lines) %in% c("Axis.1","Axis.2","Axis.1.means","Axis.2.means")]
+  #return
+  return(lines)
+}
+
+```
+
+```{r}
+#| label: PCoA
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+#| fig-width: 9  # Adjust figure width
+#| fig-height: 3  # Adjust figure height
+
+
+#Bacteria
+bPCoA_bray <- ordinate(bPHYSEQ, method="PCoA", distance="bray")
+p0 <- plot_ordination(bPHYSEQ, bPCoA_bray, color= "condition", shape="line", axes = c(1,2))
+blines <- centroid_lines(PHYSEQ = bPHYSEQ, dist_matrix = bPCoA_bray, group = c("condition","line"))
+p0 <- p0 + geom_segment(aes(xend=blines$Axis.1, yend=blines$Axis.2), x = blines$Axis.1.means, y = blines$Axis.2.means, alpha=0.3)
+p0 <- p0 + geom_point(size=2)
+#p0 <- p0 + geom_text(aes(label=bPHYSEQ@sam_data$sample_name))
+p0 <- p0 + scale_color_manual(values=level_cols_condition)
+p0 <- p0 + theme_bw()
+fig_bac <- p0
+
+#Fungi
+fPCoA_bray <- ordinate(fPHYSEQ, method="PCoA", distance="bray")
+p0 <- plot_ordination(fPHYSEQ, fPCoA_bray, color= "condition", shape="line", axes = c(1,2))
+flines <- centroid_lines(PHYSEQ = fPHYSEQ, dist_matrix = fPCoA_bray, group = c("condition","line"))
+p0 <- p0 + geom_segment(aes(xend=flines$Axis.1, yend=flines$Axis.2), x = flines$Axis.1.means, y = flines$Axis.2.means, alpha=0.3)
+p0 <- p0 + geom_point(size=2)
+#p0 <- p0 + geom_text(aes(label=fPHYSEQ@sam_data$sample_name))
+p0 <- p0 + scale_color_manual(values=level_cols_condition)
+p0 <- p0 + theme_bw()
+fig_fun <- p0
+
+#Oomycetes
+oPCoA_bray <- ordinate(oPHYSEQ, method="PCoA", distance="bray")
+p0 <- plot_ordination(oPHYSEQ, oPCoA_bray, color= "condition", shape="line", axes = c(1,2))
+olines <- centroid_lines(PHYSEQ = oPHYSEQ, dist_matrix = oPCoA_bray, group = c("condition","line"))
+p0 <- p0 + geom_segment(aes(xend=olines$Axis.1, yend=olines$Axis.2), x = olines$Axis.1.means, y = olines$Axis.2.means, alpha=0.3)
+p0 <- p0 + geom_point(size=2)
+#p0 <- p0 + geom_text(aes(label=oPHYSEQ@sam_data$sample_name))
+p0 <- p0 + scale_color_manual(values=level_cols_condition)
+p0 <- p0 + theme_bw()
+fig_oom <- p0
+
+
+### PLOT
+#combine the two plots (library cowplot)
+fig_5.1 <- plot_grid(fig_bac + theme(legend.position="none"),
+               fig_fun + theme(legend.position="none") + labs(colour=""),
+               fig_oom + theme(legend.position="none") + labs(colour=""),
+               labels=c("Bacteria","Fungi", "Oomycetes"),
+               align = "hv",
+               nrow=1)
+
+#add legend
+legend <- get_legend(fig_bac + theme(legend.position="bottom") + labs(fill="line"))
+fig_5.1 <- plot_grid(fig_5.1, legend, nrow=2, rel_heights=c(1, .1))
+
+#print
+fig_5.1
+
+```
+
+## CAP - line and condition effect on beta diversity
+
+```{r}
+#| label: CAP plot
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+#| fig-width: 9  # Adjust figure width
+#| fig-height: 4  # Adjust figure height
+
+# Function to process and plot CAP
+process_CAP <- function(PHYSEQ, dist_paov, title, colors) {
+  CAP_bray <- ordinate(PHYSEQ, method = "CAP", formula = ~ line * condition, distance = "bray")
+  
+  # Use full PHYSEQ, no subsetting by phylum
+  score <- paste(
+    " ~ line * condition \n line: ",
+    format(dist_paov$R2[rownames(dist_paov) == "line"] * 100, digits = 2, nsmall = 1),
+    "% var, P=", format(dist_paov$`Pr(>F)`[rownames(dist_paov) == "line"], digits = 2),
+    "\n condition: ",
+    format(dist_paov$R2[rownames(dist_paov) == "condition"] * 100, digits = 2, nsmall = 1),
+    "% var, P=", format(dist_paov$`Pr(>F)`[rownames(dist_paov) == "condition"], digits = 2),
+    "\n line:condition: ",
+    format(dist_paov$R2[rownames(dist_paov) == "line:condition"] * 100, digits = 2, nsmall = 1),
+    "% var, P=", format(dist_paov$`Pr(>F)`[rownames(dist_paov) == "line:condition"], digits = 2)
+  )
+
+  p0 <- phyloseq::plot_ordination(PHYSEQ, CAP_bray, title = title, axes = c(1, 2))
+  p0$layers <- p0$layers[-1]
+  p0 <- p0 +
+    stat_ellipse(
+      geom = "polygon", type = "t", level = 0.95, size = 0.4,
+      aes(group = condition, color = condition, fill = condition), 
+      alpha = 0.01
+    ) +
+    scale_fill_manual(values = colors) +
+    scale_color_manual(values = colors) +
+    ggnewscale::new_scale_color() +
+    geom_point(aes(shape = factor(line), color = condition), size = 1.0) +
+    scale_shape_manual(values = c(16, 2)) +
+    scale_color_manual(values = colors) +
+    labs(
+      subtitle = score,
+      color = "Microbiome", fill = "Microbiome", 
+      shape = "Line", alpha = "Line"
+    ) +
+    theme_bw() +
+    theme(
+      text = element_text(size = 7),
+      axis.title = element_text(size = 7),
+      axis.text = element_text(size = 7),
+      legend.title = element_text(size = 7),
+      legend.text = element_text(size = 7),
+      plot.title = element_text(size = 7),
+      plot.subtitle = element_text(size = 7)
+    )
+  return(p0)
+}
+
+# ==============================
+# Create plots 
+# ==============================
+
+
+fig_bac <- process_CAP(bPHYSEQ, bdist_paov, "Bacteria", level_cols_condition)
+fig_fun <- process_CAP(fPHYSEQ, fdist_paov, "Fungi", level_cols_condition)
+fig_oom <- process_CAP(oPHYSEQ, odist_paov, "Oomycetes", level_cols_condition)
+
+# ==============================
+# Combine and Save Plots ---------------------------
+# ==============================
+
+# Combine all three figures
+fig_5.2 <- plot_grid(
+  fig_bac + theme(legend.position = "none"),
+  fig_fun + theme(legend.position = "none"),
+  fig_oom + theme(legend.position = "none"),
+  align = "hv", 
+  nrow = 1
+)
+
+# Extract legend from the Bacteria plot
+legend <- get_legend(fig_bac + theme(legend.position = "bottom") + labs(fill = "line"))
+
+# Add legend to the combined plot
+CAP_plot <- plot_grid(fig_5.2, legend, nrow = 2, rel_heights = c(1, 0.1))
+
+print(CAP_plot)
+
+# Print and save
+ggsave(
+  "CAP_condition_color.pdf", 
+  plot = CAP_plot, 
+  width = 17.5, 
+  height = 8, 
+  units = "cm", 
+  path = "Output/Figures/"
+)
+
+```
+
+\vspace{5mm}
+
+**Conclusion:** Even though we find difference between line and condition, we see that they can explain only a small percent of the community structures.The largest effect is between WT and mmf1-2 mutants on the BXplus soil.
+
+\pagebreak
+
+## Session info
+
+```{r}
+#| label: session info 3
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+sessionInfo()
+
+```

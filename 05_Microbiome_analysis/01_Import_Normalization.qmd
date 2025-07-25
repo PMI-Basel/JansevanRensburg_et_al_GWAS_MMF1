@@ -1,0 +1,1296 @@
+# 01_Import_Normalization
+
+
+\pagebreak
+
+## Setup
+
+```{r}
+#| label: Setup_01
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+# Clear all objects from memory
+rm(list = ls())
+
+# knitr settings: ensures code is echoed and figures are centered
+knitr::opts_chunk$set(echo = TRUE, fig.align = "center")
+options(tinytex.verbose = TRUE)
+
+# Set seed for reproducibility
+set.seed(100)
+
+# Define paths to the different data files and function scripts
+
+paths <- list(
+  DESIGN = "Input/01_dadapipe/01_design/design.xlsx",
+  bcount = "Input/01_dadapipe/13_output/bacteria/100/bacteria_COUNT100.tab",
+  btaxa = "Input/01_dadapipe/13_output/bacteria/100/bacteria_TAXA100.tab",
+  bseq = "Input/01_dadapipe/13_output/bacteria/100/bacteria_SEQ100.fasta",
+  fcount = "Input/01_dadapipe/13_output/fungi/100/fungi_COUNT100.tab",
+  ftaxa = "Input/01_dadapipe/13_output/fungi/100/fungi_TAXA100.tab",
+  otaxa = "Input/02_blast/oomycetes_TAXA100_NCBI.tab",
+  fseq = "Input/01_dadapipe/13_output/fungi/100/fungi_SEQ100.fasta",
+  fprimers = "Input/03_primer_tracing/03_R/fOTU_primer.RDS",
+  host_amplicon = "Input/At.GI_amplicon.fasta",
+  functions = "Input/functions/"
+)
+
+# Set source file location for running code interactively (for rendering it's set in the YAML)
+if (interactive()) {
+if (!require(rstudioapi)) { install.packages("rstudioapi") }
+library(rstudioapi)
+setwd(dirname(getActiveDocumentContext()$path))
+}
+
+#set CRAN mirror for downloading libraries
+options(repos = c(CRAN = "https://stat.ethz.ch/CRAN/")) #ETH Switzerland
+
+# Load custom functions from the specified path
+source(paste0(paths$functions, "functions.R"))
+functions(path = paths$functions)
+
+# Install (if necessary) and load required libraries
+libraries()
+library("knitr")
+
+```
+
+## Load and prepare DESIGN objects
+
+We import the metadata of each sample.
+
+```{r}
+#| label: design objects
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+
+#import design file
+DESIGN <- read_excel(paths$DESIGN, sheet = "Sheet1")
+
+#line
+
+DESIGN$line <- factor(DESIGN$line, levels=c("WT","318"))
+DESIGN <- DESIGN[!(is.na(DESIGN$line)),]
+
+# Assign custom colors to lines for visualization purposes
+DESIGN$cols_line <- NA
+DESIGN$cols_line[DESIGN$line == "WT"] <- "#01686c"
+DESIGN$cols_line[DESIGN$line == "318"] <- "#e3913e"
+
+# Create a collapsed color vector for the lines
+temp <- data.frame(DESIGN$line, DESIGN$cols_line)  #collaps color vector
+temp <- plyr::ddply(temp, .variables="DESIGN.cols_line", .fun=unique)
+level_cols_line <- as.character(temp[,2])
+names(level_cols_line) <- temp[,1]
+rm(temp)
+
+# Assign colors based on experimental conditions (plus/minus)
+DESIGN$cols_condition <- NA
+DESIGN$cols_condition[DESIGN$condition == "minus"] <- "seagreen"
+DESIGN$cols_condition[DESIGN$condition == "plus"] <- "gold2"
+
+# Collapse condition color vectors similarly
+temp <- data.frame(DESIGN$condition, DESIGN$cols_condition)
+temp <- plyr::ddply(temp, .variables="DESIGN.cols_condition", .fun=unique)
+level_cols_condition <- as.character(temp[,2])
+names(level_cols_condition) <- temp[,1]
+
+
+#remove unscaled samples
+DESIGN <- DESIGN[!(grepl("unscaled",DESIGN$sub_libr, fixed=T)),]
+
+#remove At duplicates
+DESIGN <- DESIGN[!(grepl("dupl_for_At", DESIGN$sub_libr, fixed=T)),]
+
+#add oomaycetes and arabidopsis taxa (not done before because of the dadapipe)
+DESIGN$taxa[DESIGN$sub_libr=="oomycetes"] <- "oomycetes"
+
+#separate DESIGN file
+bDESIGN <- DESIGN[DESIGN$taxa=="bacteria",]
+fDESIGN <- DESIGN[DESIGN$taxa=="fungi",]
+oDESIGN <- DESIGN[DESIGN$taxa=="oomycetes",]
+
+#overwrite sample nbr (if in same order)
+if(sum(bDESIGN$sample_nr == fDESIGN$sample_nr)==nrow(bDESIGN) &
+   sum(bDESIGN$sample_nr == oDESIGN$sample_nr)==nrow(bDESIGN)){
+  bDESIGN$sample_nr <- paste0("sample", 1:nrow(bDESIGN))
+  fDESIGN$sample_nr <- paste0("sample", 1:nrow(fDESIGN))
+  oDESIGN$sample_nr <- paste0("sample", 1:nrow(oDESIGN))
+
+}
+
+```
+
+## Load and prepare COUNT objects
+
+We import the raw COUNT tables and subset them to only contain samples used in this analysis as \_COUNTa (all ASVs). We then subset the ASVs to only contain those where reads are present in at least 1 sample.
+
+```{r}
+#| label: bCOUNT objects
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+#bacteria
+
+#import ASV table
+bCOUNTa <- read.delim(paths$bcount, header=T, row.names=1, sep="\t")
+bCOUNTa <- t(bCOUNTa)
+
+# adapt names
+colnames(bCOUNTa) <- gsub("BS09_", "", colnames(bCOUNTa))
+rownames(bCOUNTa) <- gsub("OTU", "bASV", rownames(bCOUNTa))
+
+#sort (and remove unused samples)
+order <- match(bDESIGN$bc_ID, colnames(bCOUNTa))
+bCOUNTa <- as.data.frame(bCOUNTa[, order])
+rm(order)
+
+#remove OTU with 0 seqs (not present in selected samples)
+bCOUNTa <- bCOUNTa[rowSums(bCOUNTa) >0,]
+
+
+```
+
+```{r}
+#| label: fCOUNT objects
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+#fungi
+
+#import ASV table
+fCOUNTa <- read.delim(paths$fcount, header=T, row.names=1, sep="\t")
+fCOUNTa <- t(fCOUNTa)
+
+# adapt names
+colnames(fCOUNTa) <- gsub("BS09_", "", colnames(fCOUNTa))
+rownames(fCOUNTa) <- gsub("OTU", "fASV", rownames(fCOUNTa))
+
+#sort (and remove unused samples)
+order <- match(fDESIGN$bc_ID, colnames(fCOUNTa))
+fCOUNTa <- as.data.frame(fCOUNTa[, order])
+rm(order)
+
+#remove OTU with 0 seqs (not present in selected samples)
+fCOUNTa <- fCOUNTa[rowSums(fCOUNTa) >0,]
+
+```
+
+```{r}
+#| label: oCOUNT objects
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+#oomycetes
+#analysed togehter with fungi
+
+#import ASV table
+oCOUNTa <- read.delim(paths$fcount, header=T, row.names=1, sep="\t")
+oCOUNTa <- t(oCOUNTa)
+
+# adapt names
+colnames(oCOUNTa) <- gsub("BS09_", "", colnames(oCOUNTa))
+rownames(oCOUNTa) <- gsub("OTU", "oASV", rownames(oCOUNTa))
+
+#sort (and remove GWAS samples)
+order <- match(oDESIGN$bc_ID, colnames(oCOUNTa))
+oCOUNTa <- as.data.frame(oCOUNTa[, order])
+rm(order)
+
+#remove OTU with 0 seqs (not present in selected samples)
+oCOUNTa <- oCOUNTa[rowSums(oCOUNTa) >0,]
+
+```
+
+```{r}
+#| label: Raw sample sizes
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# Save original sample names BEFORE filtering
+original_b_samples <- colnames(bCOUNTa)
+original_f_samples <- colnames(fCOUNTa)
+original_o_samples <- colnames(oCOUNTa)
+
+```
+
+## Load and prepare TAXA objects
+
+We load the TAXA tables, subset them to samples contain only microbial and host ASVs and match ASVs present in the COUNT tables
+
+```{r}
+#| label: Load and filter bTAXA
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# --- Load and filter bTAXA ---
+#BACTERIA
+
+#import taxonomy table
+bTAXA <- read.table(paths$btaxa, row.names=1, sep="\t", blank.lines.skip = FALSE)
+
+#rename
+colnames(bTAXA) <- tolower(colnames(bTAXA))
+bTAXA[is.na(bTAXA)] <- "unassigned"
+rownames(bTAXA) <- gsub("OTU", "bASV", rownames(bTAXA))
+
+#remove OTU with 0 seqs
+bTAXA <- bTAXA[rownames(bTAXA) %in% rownames(bCOUNTa),]
+
+# define ASVs for removal
+r2 <- -which(bTAXA$phylum=="Cyanobacteria")
+r3 <- -which(bTAXA$family=="Mitochondria")
+r4 <- -which(is.na(bTAXA)) #rows all na
+ASVs_to_remove <- c(r2,r3,r4)
+if(length(ASVs_to_remove)>0){
+  bTAXA <- bTAXA[ASVs_to_remove ,]
+  bCOUNTm <- bCOUNTa[rownames(bTAXA),]
+}
+rm(r2,r3,r4,ASVs_to_remove)
+
+#add ASV_ID
+bTAXA$ASV_ID <- rownames(bTAXA)
+#levels
+bTAXA$phylum <- as.factor(bTAXA$phylum)
+# defining ASV colors by phylum (using the bTAXAonomy file)
+bTAXA$labels <- as.character(bTAXA$phylum)
+bTAXA$labels[bTAXA$kingdom == "Eukaryota"] <- "Host"
+
+# create separate bTAXAonomy label specifying classes of Proteobacteria
+bTAXA$class <- as.factor(bTAXA$class)
+try(bTAXA[ bTAXA$class=="Alphaproteobacteria", ]$labels <- "Alphaproteobacteria")
+try(bTAXA[ bTAXA$class=="Betaproteobacteria", ]$labels <- "Betaproteobacteria")
+try(bTAXA[ bTAXA$class=="Gammaproteobacteria", ]$labels <- "Gammaproteobacteria")
+try(bTAXA[ bTAXA$class=="Deltaproteobacteria", ]$labels <- "Deltaproteobacteria")
+bTAXA$labels <- as.factor(bTAXA$labels)
+
+```
+
+```{r}
+#| label: Load and filter fTAXA
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+# --- Load and filter fTAXA ---
+
+fTAXA <- read.table(paths$ftaxa, row.names=1, sep="\t", blank.lines.skip = FALSE)
+
+#rename
+colnames(fTAXA) <- tolower(colnames(fTAXA))
+fTAXA[is.na(fTAXA)] <- "unassigned"
+rownames(fTAXA) <- gsub("OTU","fASV", rownames(fTAXA))
+
+#remove ASVs with 0 seqs and not fungal ASVs
+fTAXA <- fTAXA[rownames(fTAXA) %in% rownames(fCOUNTa),]
+
+# define ASVs for removal
+r1 <- -which(fTAXA$kingdom=="Protista")
+r2 <- -which(fTAXA$kingdom=="Plantae")
+r3 <- -which(fTAXA$kingdom=="Protozoa")
+r4 <- -which(fTAXA$kingdom=="Animalia")
+r5 <- -which(is.na(fTAXA)) #rows all na
+ASVs_to_remove <- c(r1,r2,r3,r4, r5)
+  if(length(ASVs_to_remove)>0){
+ fTAXA <- fTAXA[ASVs_to_remove ,]
+ fCOUNTm <- fCOUNTa[rownames(fTAXA),]
+}
+
+rm(r1,r2,r3,r4,r5,ASVs_to_remove)
+
+# No ASVs removed, rename fCOUNTa to fCOUNTm
+fCOUNTm <- fCOUNTa
+
+#add ASV_ID
+fTAXA$ASV_ID <- rownames(fTAXA)
+#defining ASV colors by phylum (using the bTAXAonomy file)
+fTAXA$labels <- as.character(fTAXA$phylum)
+#Defining fASV colors by phylum (using the taxonomy file)
+fTAXA$labels <- as.character(fTAXA$phylum)
+
+#add host to labels
+Host_ASVs <- read.delim(paths$otaxa) %>% filter(genus == "Arabidopsis") %>% rownames()
+
+# Convert OTU IDs to fASV format
+Host_ASVs <- gsub("OTU", "fASV", Host_ASVs)
+
+# Assign label "Host" to those ASVs
+fTAXA$labels[rownames(fTAXA) %in% Host_ASVs] <- "Host"
+
+#use NCBI to get At classification
+#fTAXA$labels[rownames(fTAXA)==paste0("f",Host_ASVs)] <- "Host"
+
+#use NCBI taxonomy
+Host_taxonomy <- read.delim(paths$otaxa) %>% filter(genus == "Arabidopsis")
+fTAXA[fTAXA$labels=="Host",1:8] <- Host_taxonomy
+
+#factor
+fTAXA$phylum <- as.factor(fTAXA$phylum)
+fTAXA$labels <- as.factor(fTAXA$labels)
+
+```
+
+```{r}
+#| label: Load and filter oTAXA
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+# --- Load and filter oTAXA ---
+oTAXA <- read.table(paths$otaxa, row.names=1, sep="\t", blank.lines.skip = FALSE)
+
+#rename
+colnames(oTAXA) <- tolower(colnames(oTAXA))
+oTAXA[is.na(oTAXA)] <- "unassigned"
+rownames(oTAXA) <- gsub("OTU","oASV", rownames(oTAXA))
+
+#remove ASVs with 0 seqs and not fungal ASVs
+oTAXA <- oTAXA[rownames(oTAXA) %in% rownames(oCOUNTa),]
+
+# Create cCOUNTm containing only microbial reads
+oCOUNTm <- oCOUNTa
+
+#add ASV_ID
+oTAXA$ASV_ID <- rownames(oTAXA)
+#defining ASV colors by phylum (using the bTAXAonomy file)
+oTAXA$labels <- as.character(oTAXA$phylum)
+#Defining fASV colors by phylum (using the taxonomy file)
+oTAXA$labels <- as.character(oTAXA$phylum)
+
+#add host to labels
+oTAXA$labels[oTAXA$genus=="Arabidopsis"] <- "Host"
+
+#factor
+oTAXA$phylum <- as.factor(oTAXA$phylum)
+oTAXA$labels <- as.factor(oTAXA$labels)
+
+```
+
+\pagebreak
+
+## Define host sequences
+
+We compare the eukaryotic ASVs to the At.GI sequence and remove eukaryotic ASVs which are less similar than 99%. We rename the sequences matching to GIGANEA as Host (to be used later in 02_Taxa_Analysis.qmd).
+
+### Bacteria
+
+```{r}
+#| label: host amplicon bac
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+# BACTERIA
+
+#At-gigantea seq
+AtSEQ <- Biostrings::readDNAStringSet(paths$host_amplicon)
+AtSEQ <- as.data.frame(AtSEQ)
+colnames(AtSEQ) <- "seqs"
+
+#host seqs
+bSEQ <- Biostrings::readDNAStringSet(paths$bseq)
+bSEQ <- as.data.frame(bSEQ)
+colnames(bSEQ) <- "seqs"
+rownames(bSEQ) <- gsub("OTU", "bASV", rownames(bSEQ))
+eOTU <- rownames(bTAXA)[bTAXA$labels=="Host"] #eukaryotic OTUs
+eSEQ <- bSEQ[rownames(bSEQ) %in% eOTU,, drop=F] #eukaryotic seqs
+rm(bSEQ, eOTU)
+
+### MAPPING ###
+
+#create new data.frame to save distances
+distances <- data.frame(matrix(NA, nrow = nrow(AtSEQ), ncol = nrow(eSEQ)), row.names = rownames(AtSEQ))
+colnames(distances) <- rownames(eSEQ)
+
+#mapping function
+map <- function(AtSEQ) {
+  eSEQs_to_map <- data.frame(seqs=c(as.character(AtSEQ),as.character(eSEQ$seqs[i]))) #create data.frame with hSEQ and bSEQ to map
+  eSEQs_to_map <- Biostrings::DNAStringSet(eSEQs_to_map$seqs) #convert to DNA string set
+  eSEQs_aln <- DECIPHER::AlignSeqs(eSEQs_to_map, processors = 1, verbose = F) #align, processors = NULL uses the max available number of processors
+  dist_all <- DECIPHER::DistanceMatrix(eSEQs_aln, processors = 1, verbose = F) #similarity table
+  return(dist_all[1,2])
+}
+
+#calculate distances
+for(i in 1:nrow(eSEQ)) {distances[,i] <- apply(AtSEQ, 1, map)}
+
+#similarity
+similarities <- 1 - distances
+
+#add OTU abundance and plot
+similarities <- rbind(similarities, n_seqs=rowSums(bCOUNTm[rownames(bCOUNTm)%in%colnames(distances),]))
+pander(t(similarities))
+
+
+#remove ASVs
+ASVs_to_remove <- colnames(similarities)[similarities[1,]<0.99]
+bCOUNTm <- bCOUNTm[!(rownames(bCOUNTm) %in% ASVs_to_remove),]
+bTAXA <- bTAXA[!(rownames(bTAXA) %in% ASVs_to_remove),]
+zeroASVs_to_remove <- names(which(colSums(bCOUNTm) == 0))
+bCOUNTm <- bCOUNTm[,!(colnames(bCOUNTm) %in% zeroASVs_to_remove)]
+bTAXA <- bTAXA[!(rownames(bTAXA) %in% zeroASVs_to_remove),]
+
+if(length(ASVs_to_remove)>0){
+  print(paste0("The following eukaryotic ASVs were removed: ", paste(ASVs_to_remove, collapse = ", ")))
+} else{
+  print("No eukaryotic ASVs were removed")
+}
+
+rm(eSEQ, AtSEQ, similarities, ASVs_to_remove, zeroASVs_to_remove, distances)
+
+```
+
+### Fungi
+
+```{r}
+#| label: host amplicon fun
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+
+#At-gigantea seq
+AtSEQ <- Biostrings::readDNAStringSet(paths$host_amplicon)
+AtSEQ <- as.data.frame(AtSEQ)
+colnames(AtSEQ) <- "seqs"
+
+#host seqs
+fSEQ <- Biostrings::readDNAStringSet(paths$fseq)
+fSEQ <- as.data.frame(fSEQ)
+colnames(fSEQ) <- "seqs"
+rownames(fSEQ) <- gsub("OTU", "fASV", rownames(fSEQ))
+fSEQ <- fSEQ[rownames(fSEQ) %in% rownames(fTAXA),, drop=F] #keep only fungal seqs
+eOTU <- rownames(fTAXA)[fTAXA$labels=="Host"] #eukaryotic OTUs
+eSEQ <- fSEQ[rownames(fSEQ) %in% eOTU,, drop=F] #eukaryotic seqs
+rm(fSEQ, eOTU)
+
+### MAPPING ###
+
+#create new data.frame to save distances
+distances <- data.frame(matrix(NA, nrow = nrow(AtSEQ), ncol = nrow(eSEQ)), row.names = rownames(AtSEQ))
+colnames(distances) <- rownames(eSEQ)
+
+#mapping function
+map <- function(AtSEQ) {
+  eSEQs_to_map <- data.frame(seqs=c(as.character(AtSEQ),as.character(eSEQ$seqs[i]))) #create data.frame with hSEQ and fSEQ to map
+  eSEQs_to_map <- Biostrings::DNAStringSet(eSEQs_to_map$seqs) #convert to DNA string set
+  eSEQs_aln <- DECIPHER::AlignSeqs(eSEQs_to_map, processors = 1, verbose = F) #align, processors = NULL uses the max available number of processors
+  dist_all <- DECIPHER::DistanceMatrix(eSEQs_aln, processors = 1, verbose = F) #similarity table
+  return(dist_all[1,2])
+}
+
+#calculate distances
+for(i in 1:nrow(eSEQ)) {distances[,i] <- apply(AtSEQ, 1, map)}
+
+#similarity
+similarities <- 1 - distances
+
+#add ASV abundance and plot
+similarities <- rbind(similarities, n_seqs=rowSums(fCOUNTm[rownames(fCOUNTm)%in%colnames(distances),]))
+pander(t(similarities))
+
+#remove ASVs
+ASVs_to_remove <- colnames(similarities)[similarities[1,]<0.99]
+fCOUNTm <- fCOUNTm[!(rownames(fCOUNTm) %in% ASVs_to_remove),]
+fTAXA <- fTAXA[!(rownames(fTAXA) %in% ASVs_to_remove),]
+zeroASVs_to_remove <- names(which(colSums(fCOUNTm) == 0))
+fCOUNTm <- fCOUNTm[,!(colnames(fCOUNTm) %in% zeroASVs_to_remove)]
+fTAXA <- fTAXA[!(rownames(fTAXA) %in% zeroASVs_to_remove),]
+
+if(length(ASVs_to_remove)>0){
+  print(paste0("The following eukaryotic ASVs were removed: ", paste(ASVs_to_remove, collapse = ", ")))
+} else{
+  print("No eukaryotic ASVs were removed")
+}
+
+rm(eSEQ, AtSEQ, similarities, ASVs_to_remove, zeroASVs_to_remove, distances)
+
+```
+
+Oomycetes is identical to fungal (same dataset).
+
+### Oomycetes
+
+```{r}
+#| label: host amplicon oom
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+# BACTERIA
+
+#At-gigantea seq
+AtSEQ <- Biostrings::readDNAStringSet(paths$host_amplicon)
+AtSEQ <- as.data.frame(AtSEQ)
+colnames(AtSEQ) <- "seqs"
+
+#host seqs
+oSEQ <- Biostrings::readDNAStringSet(paths$fseq) #in the same dataset as fungi
+oSEQ <- as.data.frame(oSEQ)
+colnames(oSEQ) <- "seqs"
+rownames(oSEQ) <- gsub("OTU", "oASV", rownames(oSEQ))
+oSEQ <- oSEQ[rownames(oSEQ) %in% rownames(oTAXA),, drop=F] #keep only oomycetal seqs
+eOTU <- rownames(oTAXA)[oTAXA$labels=="Host"] #eukaryotic OTUs
+eSEQ <- oSEQ[rownames(oSEQ) %in% eOTU,, drop=F] #eukaryotic seqs
+rm(oSEQ, eOTU)
+
+### MAPPING ###
+
+#create new data.frame to save distances
+distances <- data.frame(matrix(NA, nrow = nrow(AtSEQ), ncol = nrow(eSEQ)), row.names = rownames(AtSEQ))
+colnames(distances) <- rownames(eSEQ)
+
+#mapping function
+map <- function(AtSEQ) {
+  eSEQs_to_map <- data.frame(seqs=c(as.character(AtSEQ),as.character(eSEQ$seqs[i]))) #create data.frame with hSEQ and oSEQ to map
+  eSEQs_to_map <- Biostrings::DNAStringSet(eSEQs_to_map$seqs) #convert to DNA string set
+  eSEQs_aln <- DECIPHER::AlignSeqs(eSEQs_to_map, processors = 1, verbose = F) #align, processors = NULL uses the max available number of processors
+  dist_all <- DECIPHER::DistanceMatrix(eSEQs_aln, processors = 1, verbose = F) #similarity table
+  return(dist_all[1,2])
+}
+
+#calculate distances
+for(i in 1:nrow(eSEQ)) {distances[,i] <- apply(AtSEQ, 1, map)}
+
+#similarity
+similarities <- 1 - distances
+
+#add OTU abundance and plot
+similarities <- rbind(similarities, n_seqs=rowSums(oCOUNTm[rownames(oCOUNTm)%in%colnames(distances),]))
+pander(t(similarities))
+
+#remove ASVs
+ASVs_to_remove <- colnames(similarities)[similarities[1,]<0.99]
+oCOUNTm <- oCOUNTm[!(rownames(oCOUNTm) %in% ASVs_to_remove),]
+oTAXA <- oTAXA[!(rownames(oTAXA) %in% ASVs_to_remove),]
+zeroASVs_to_remove <- names(which(colSums(oCOUNTm) == 0))
+oCOUNTm <- oCOUNTm[,!(colnames(oCOUNTm) %in% zeroASVs_to_remove)]
+oTAXA <- oTAXA[!(rownames(oTAXA) %in% zeroASVs_to_remove),]
+
+if(length(ASVs_to_remove)>0){
+  print(paste0("The following eukaryotic ASVs were removed: ", paste(ASVs_to_remove, collapse = ", ")))
+} else{
+  print("No eukaryotic ASVs were removed")
+}
+
+rm(eSEQ, AtSEQ, similarities, ASVs_to_remove, zeroASVs_to_remove, distances)
+
+```
+
+\pagebreak
+
+## Sequencing depth
+
+### Sequencing depth - plots
+
+```{r}
+#| label: Sequencing depth - plots
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+#Bacateria
+
+#boxplot
+df <- data.frame(col_sum=colSums(bCOUNTm),colnames=colnames(bCOUNTm), line=bDESIGN$line, condition=bDESIGN$condition)
+ylim2=max(colSums(bCOUNTm))
+bac_seq_nr <- seq_nr_plot(df, "Bacteria: Sequencing depth") #create plot
+
+## barplot
+df <- df[order(df$col_sum, decreasing = T),]
+df <- df[order(df$condition),]
+df$x <- c(1:sum(df$condition == "minus"), 1:sum(df$condition == "plus"))
+bac_samples <- samples_plot(df) #create plot
+
+#Fungi
+
+#boxplot
+df <- data.frame(col_sum=colSums(fCOUNTm),colnames=colnames(fCOUNTm), line=fDESIGN$line, condition=fDESIGN$condition)
+ylim2=max(colSums(fCOUNTm))
+fun_seq_nr <- seq_nr_plot(df, "Fungi: Sequencing depth") #create plot
+
+## barplot
+df <- df[order(df$col_sum, decreasing = T),]
+df <- df[order(df$condition),]
+df$x <- c(1:sum(df$condition == "minus"), 1:sum(df$condition == "plus"))
+fun_samples <- samples_plot(df) #create plot
+
+#Oomycetes
+
+#boxplot
+df <- data.frame(col_sum=colSums(oCOUNTm),colnames=colnames(oCOUNTm), line=oDESIGN$line, condition=oDESIGN$condition)
+ylim2=max(colSums(oCOUNTm))
+oom_seq_nr <- seq_nr_plot(df, "Oomycetes: Sequencing depth") #create plot
+
+## barplot
+df <- df[order(df$col_sum, decreasing = T),]
+df <- df[order(df$condition),]
+df$x <- c(1:sum(df$condition == "minus"), 1:sum(df$condition == "plus"))
+oom_samples <- samples_plot(df) #create plot
+
+
+
+#combine the plots (library cowplot)
+plot <- plot_grid(bac_seq_nr + theme(legend.position="none"),
+               fun_seq_nr + theme(legend.position="none") + labs(colour=""),
+               oom_seq_nr + theme(legend.position="none") + labs(colour=""),
+               bac_samples + theme(legend.position="none") + labs(colour=""),
+               fun_samples + theme(legend.position="none") + labs(colour=""),
+               oom_samples + theme(legend.position="none") + labs(colour=""),
+               #labels=c("A","B"),
+               align = "hv",
+               rel_heights = c(9,5),
+               nrow=2)
+
+legend <- get_legend(bac_seq_nr + theme(legend.position="bottom") + labs(fill="line"))
+fig1 <- plot_grid(plot, legend, nrow=2, rel_heights=c(1, .1))
+
+fig1
+
+rm(bac_seq_nr, bac_samples, fun_seq_nr, fun_samples, oom_seq_nr, oom_samples, plot, legend, df, ylim2)
+
+```
+
+\pagebreak
+
+## Normalization
+
+### Asymptotic Kruskal-Wallis test
+
+We test for different sequencing depths between the treatments
+
+#### Bacteria
+
+```{r}
+#| label: sequencing depths bact
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+# Bacteria
+group <- paste(bDESIGN$line, bDESIGN$condition, sep="_") %>% as.factor
+sample_depth <- colSums(bCOUNTm)
+DAT_krusk <- coin::kruskal_test(sample_depth ~ group)
+DAT_krusk
+
+#get rarefaction threshold (round down to 100)
+brare_threshold <- floor((min(sample_depth))/100)*100
+
+rm(group, sample_depth, DAT_krusk)
+
+```
+
+#### Fungi
+
+```{r}
+#| label: seq numbers per group fun
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+# Bacteria
+group <- paste(fDESIGN$line, fDESIGN$condition, sep="_") %>% as.factor
+sample_depth <- colSums(fCOUNTm)
+DAT_krusk <- coin::kruskal_test(sample_depth ~ group)
+DAT_krusk
+
+#get rarefaction threshold (round down to 100)
+frare_threshold <- floor((min(sample_depth))/100)*100
+
+rm(group, sample_depth, DAT_krusk)
+
+```
+
+#### Oomycetes
+
+```{r}
+#| label: seq numbers per group oom
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+# Bacteria
+group <- paste(oDESIGN$line, oDESIGN$condition, sep="_") %>% as.factor
+sample_depth <- colSums(oCOUNTm)
+DAT_krusk <- coin::kruskal_test(sample_depth ~ group)
+DAT_krusk
+
+#get rarefaction threshold (round down to 100)
+orare_threshold <- floor((min(sample_depth))/100)*100
+
+rm(group, sample_depth, DAT_krusk)
+
+```
+
+**Conclusion:** Because there are significant differences between the treatments in bacteria and oomycetes, we normalize the data by rarefication for diversity comparisions (see Weiss et al. (2017), Microbiome Journal). For consistency we do it for bacteria, fungi and oomycetes. We define the rarefaction threshold per sample to `r brare_threshold` for bacteria, `r frare_threshold` for fungi and `r orare_threshold` for oomycetes.
+
+\pagebreak
+
+## Filter low sequence depth samples
+
+We remove samples with very low sequence numbers and show the sum, range and median of sequences over all samples.
+
+### Bacteria
+
+```{r}
+#| label: seq numbers bac
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+df <- data.frame(sum=NA, min=NA, max=NA, median=NA, ASVs=NA)
+
+#show sorted seq numbers
+#sort(colSums(bCOUNTm),decreasing = T)
+
+#remove samples with very low seq numbers
+threshold <-  65000
+samples_to_remove <- names(which(colSums(bCOUNTm) < threshold))
+print(paste(length(samples_to_remove), "samples removed due to low number of sequences ( threshold <", threshold, ")"))
+#pander(sort(colSums(bbCOUNT[,colnames(bbCOUNT) %in% samples_to_remove]),decreasing=T))
+
+bDESIGN <- bDESIGN[!(bDESIGN$bc_ID %in% samples_to_remove),]
+bCOUNTm <- bCOUNTm[,!(colnames(bCOUNTm) %in% samples_to_remove)]
+ASVs_to_remove <- names(which(rowSums(bCOUNTm) == 0))
+bCOUNTm <- bCOUNTm[!(rownames(bCOUNTm) %in% ASVs_to_remove),]
+bTAXA <- bTAXA[!(rownames(bTAXA) %in% ASVs_to_remove),]
+
+#seq numbers
+df$sum <- sum(colSums(bCOUNTm))
+df$min <- min(colSums(bCOUNTm))
+df$max <- max(colSums(bCOUNTm))
+df$median <- median(colSums(bCOUNTm))
+df$ASVs <- nrow(bCOUNTm)
+
+#out
+pander(df)
+
+rm(df, ASVs_to_remove, samples_to_remove, threshold)
+
+```
+
+### Fungi
+
+```{r}
+#| label: seq numbers fun
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+df <- data.frame(sum=NA, min=NA, max=NA, median=NA, ASVs=NA)
+
+#show sorted seq numbers
+#sort(colSums(fCOUNT),decreasing = T)
+
+#remove samples with very low seq numbers
+threshold <-  400
+samples_to_remove <- names(which(colSums(fCOUNTm) < threshold))
+print(paste(length(samples_to_remove), "samples removed due to low number of sequences ( threshold <", threshold, ")"))
+#pander(sort(colSums(fbCOUNT[,colnames(fbCOUNT) %in% samples_to_remove]),decreasing=T))
+
+#save values for plot later
+depth_fun_all <- colSums(fCOUNTm)
+
+fDESIGN <- fDESIGN[!(fDESIGN$bc_ID %in% samples_to_remove),]
+fCOUNTm <- fCOUNTm[,!(colnames(fCOUNTm) %in% samples_to_remove)]
+ASVs_to_remove <- names(which(rowSums(fCOUNTm) == 0))
+fCOUNTm <- fCOUNTm[!(rownames(fCOUNTm) %in% ASVs_to_remove),]
+fTAXA <- fTAXA[!(rownames(fTAXA) %in% ASVs_to_remove),]
+
+#seq numbers
+df$sum <- sum(colSums(fCOUNTm))
+df$min <- min(colSums(fCOUNTm))
+df$max <- max(colSums(fCOUNTm))
+df$median <- median(colSums(fCOUNTm))
+df$ASVs <- nrow(fCOUNTm)
+
+#out
+pander(df)
+
+rm(df, ASVs_to_remove, samples_to_remove, threshold)
+
+```
+
+### Oomycetes
+
+```{r}
+#| label: seq numbers oom
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+df <- data.frame(sum=NA, min=NA, max=NA, median=NA, ASVs=NA)
+
+#show sorted seq numbers
+#sort(colSums(oCOUNT),decreasing = T)
+
+#remove samples with very low seq numbers
+threshold <-  5700
+samples_to_remove <- names(which(colSums(oCOUNTm) < threshold))
+print(paste(length(samples_to_remove), "samples removed due to low number of sequences ( threshold <", threshold, ")"))
+#pander(sort(colSums(fbCOUNT[,colnames(fbCOUNT) %in% samples_to_remove]),decreasing=T))
+
+#save values for plot later
+depth_oom_all <- colSums(oCOUNTm)
+
+oDESIGN <- oDESIGN[!(oDESIGN$bc_ID %in% samples_to_remove),]
+oCOUNTm <- oCOUNTm[,!(colnames(oCOUNTm) %in% samples_to_remove)]
+ASVs_to_remove <- names(which(rowSums(oCOUNTm) == 0))
+oCOUNTm <- oCOUNTm[!(rownames(oCOUNTm) %in% ASVs_to_remove),]
+oTAXA <- oTAXA[!(rownames(oTAXA) %in% ASVs_to_remove),]
+
+#seq numbers
+df$sum <- sum(colSums(oCOUNTm))
+df$min <- min(colSums(oCOUNTm))
+df$max <- max(colSums(oCOUNTm))
+df$median <- median(colSums(oCOUNTm))
+df$ASVs <- nrow(oCOUNTm)
+
+#out
+pander(df)
+
+rm(df, ASVs_to_remove, samples_to_remove, threshold)
+
+```
+
+```{r}
+#| label: low depth removed samples
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# Note samples removed due to low sequencing depth
+removed_b_low_depth <- setdiff(original_b_samples, colnames(bCOUNTm))
+removed_f_low_depth <- setdiff(original_f_samples, colnames(fCOUNTm))
+removed_o_low_depth <- setdiff(original_o_samples, colnames(oCOUNTm))
+```
+
+\pagebreak
+
+## Rarefaction
+
+We rarefy at the previous described sequencing depth.
+
+```{r}
+#| label: rarefaction
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+
+#Bacteria
+
+# rarefication
+bCOUNTm_norm <- t(vegan::rrarefy(t(bCOUNTm), brare_threshold)) %>% as.data.frame()
+#remove ASVs with 0 seqs
+bCOUNTm_norm <- bCOUNTm_norm[rowSums(bCOUNTm_norm) > 0,]  # removal of rows with 0 values
+bTAXA_norm <- bTAXA[rownames(bTAXA)%in%rownames(bCOUNTm_norm),]
+
+#Fungi
+
+# rarefication
+fCOUNTm_norm <- t(vegan::rrarefy(t(fCOUNTm), frare_threshold)) %>% as.data.frame()
+#remove ASVs with 0 seqs
+fCOUNTm_norm <- fCOUNTm_norm[rowSums(fCOUNTm_norm) > 0,]  # removal of rows with 0 values
+fTAXA_norm <- fTAXA[rownames(fTAXA)%in%rownames(fCOUNTm_norm),]
+
+#Oomycetes
+
+# rarefication
+oCOUNTm_norm <- t(vegan::rrarefy(t(oCOUNTm), orare_threshold)) %>% as.data.frame()
+#remove ASVs with 0 seqs
+oCOUNTm_norm <- oCOUNTm_norm[rowSums(oCOUNTm_norm) > 0,]  # removal of rows with 0 values
+oTAXA_norm <- oTAXA[rownames(oTAXA)%in%rownames(oCOUNTm_norm),]
+
+
+```
+
+### Rarefaction plot
+
+We plot a rarefaction plot with the remaining samples to check if the sequence depth is enough to capture the microbial diversity.
+
+```{r}
+#| label: rarefaction plot
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+#plot rarefaction
+
+#BACTERIA
+
+#rarefy
+pdf("/dev/null") #prevents drawing of standard rarefaction plot (we will create our own with colors)
+brarefaction <- vegan::rarecurve(t(bCOUNTm), step=1000, 7000, label = FALSE)
+names(brarefaction) <- bDESIGN$sample_name
+invisible(dev.off())
+
+# long-transformation.
+protox <- mapply(FUN = function(x, y) {
+  mydf <- as.data.frame(x)
+  colnames(mydf) <- "value"
+  mydf$sample_name <- y
+  mydf$subsample <- attr(x, "Subsample")
+  mydf
+}, x = brarefaction, y = as.list(names(brarefaction)), SIMPLIFY = FALSE)
+
+brarefaction_long <- do.call(rbind, protox)
+rownames(brarefaction_long) <- NULL  # pretty
+
+#add line
+brarefaction_long$line <- NA
+for (i in 1:nrow(brarefaction_long)) {
+  brarefaction_long$line[i] <- as.character(bDESIGN$line[bDESIGN$bc_ID == brarefaction_long$sample_name[i]])
+}
+
+#add condition
+brarefaction_long$condition <- NA
+for (i in 1:nrow(brarefaction_long)) {
+  brarefaction_long$condition[i] <- as.character(bDESIGN$condition[bDESIGN$bc_ID == brarefaction_long$sample_name[i]])
+}
+
+library(ggrepel)
+
+#plot
+brareplot <- ggplot(brarefaction_long, aes(x = subsample, y = value, group = sample_name)) +
+                  theme_bw() +
+                  geom_line(aes(color=line, lty=condition))+
+                  scale_color_manual(values = level_cols_line)+
+                  geom_vline(xintercept=brare_threshold, lwd=0.5, col="red", alpha=0.5)+
+                  xlab("Sequencing Depth")+
+                  ylab("Number of ASVs")+
+                  #scale_y_continuous(trans = 'log2')+
+                  ggtitle("Bacteria: Rarefaction plot")
+                  #geom_text(aes(label=labels), hjust=-0.1, size=3)+
+                  #geom_label_repel(aes(label = bcID, color=condition), na.rm = TRUE, show.legend = F, size=2, box.padding = 0.1, alpha=.8)
+
+
+#FUNGI
+
+#rarefy
+pdf("/dev/null") #prevents drawing of standard rarefaction plot (we will create our own with colors)
+frarefaction <- vegan::rarecurve(t(fCOUNTm), step=50, 7000, label = FALSE)
+names(frarefaction) <- fDESIGN$sample_name
+invisible(dev.off())
+
+# long-transformation.
+protox <- mapply(FUN = function(x, y) {
+  mydf <- as.data.frame(x)
+  colnames(mydf) <- "value"
+  mydf$sample_name <- y
+  mydf$subsample <- attr(x, "Subsample")
+  mydf
+}, x = frarefaction, y = as.list(names(frarefaction)), SIMPLIFY = FALSE)
+
+frarefaction_long <- do.call(rbind, protox)
+rownames(frarefaction_long) <- NULL  # pretty
+
+#add line
+frarefaction_long$line <- NA
+for (i in 1:nrow(frarefaction_long)) {
+  frarefaction_long$line[i] <- as.character(fDESIGN$line[fDESIGN$bc_ID == frarefaction_long$sample_name[i]])
+}
+
+#add condition
+frarefaction_long$condition <- NA
+for (i in 1:nrow(frarefaction_long)) {
+  frarefaction_long$condition[i] <- as.character(fDESIGN$condition[fDESIGN$bc_ID == frarefaction_long$sample_name[i]])
+}
+
+library(ggrepel)
+
+#plot
+frareplot <- ggplot(frarefaction_long, aes(x = subsample, y = value, group = sample_name)) +
+                  theme_bw() +
+                  geom_line(aes(color=line, lty=condition))+
+                  scale_color_manual(values = level_cols_line)+
+                  geom_vline(xintercept=frare_threshold, lwd=0.5, col="red", alpha=0.5)+
+                  xlab("Sequencing Depth")+
+                  ylab("Number of ASVs")+
+                  #scale_y_continuous(trans = 'log2')+
+                  ggtitle("Fungi: Rarefaction plot")
+                  #geom_text(aes(label=labels), hjust=-0.1, size=3)+
+                  #geom_label_repel(aes(label = bcID, color=condition), na.rm = TRUE, show.legend = F, size=2, box.padding = 0.1, alpha=.8)
+
+
+#OOMYCETES
+
+#rarefy
+pdf("/dev/null") #prevents drawing of standard rarefaction plot (we will create our own with colors)
+orarefaction <- vegan::rarecurve(t(oCOUNTm), step=50, 7000, label = FALSE)
+names(orarefaction) <- oDESIGN$sample_name
+invisible(dev.off())
+
+# long-transformation.
+protox <- mapply(FUN = function(x, y) {
+  mydf <- as.data.frame(x)
+  colnames(mydf) <- "value"
+  mydf$sample_name <- y
+  mydf$subsample <- attr(x, "Subsample")
+  mydf
+}, x = orarefaction, y = as.list(names(orarefaction)), SIMPLIFY = FALSE)
+
+orarefaction_long <- do.call(rbind, protox)
+rownames(orarefaction_long) <- NULL  # pretty
+
+#add line
+orarefaction_long$line <- NA
+for (i in 1:nrow(orarefaction_long)) {
+  orarefaction_long$line[i] <- as.character(oDESIGN$line[oDESIGN$bc_ID == orarefaction_long$sample_name[i]])
+}
+
+#add condition
+orarefaction_long$condition <- NA
+for (i in 1:nrow(orarefaction_long)) {
+  orarefaction_long$condition[i] <- as.character(oDESIGN$condition[oDESIGN$bc_ID == orarefaction_long$sample_name[i]])
+}
+
+library(ggrepel)
+
+#plot
+orareplot <- ggplot(orarefaction_long, aes(x = subsample, y = value, group = sample_name)) +
+                  theme_bw() +
+                  geom_line(aes(color=line, lty=condition))+
+                  scale_color_manual(values = level_cols_line)+
+                  geom_vline(xintercept=orare_threshold, lwd=0.5, col="red", alpha=0.5)+
+                  xlab("Sequencing Depth")+
+                  ylab("Number of ASVs")+
+                  #scale_y_continuous(trans = 'log2')+
+                  ggtitle("Oomycetes: Rarefaction plot")
+                  #geom_text(aes(label=labels), hjust=-0.1, size=3)+
+                  #geom_label_repel(aes(label = bcID, color=condition), na.rm = TRUE, show.legend = F, size=2, box.padding = 0.1, alpha=.8)
+
+
+## Combine
+
+#combine the plots (library cowplot)
+plot <- plot_grid(brareplot + theme(legend.position="none"),
+               frareplot + theme(legend.position="none") + labs(colour=""),
+               orareplot + theme(legend.position="none") + labs(colour=""),
+               #labels=c("A","B"),
+               align = "hv",
+               nrow=1)
+
+legend <- get_legend(brareplot + theme(legend.position="bottom") + labs(fill="line"))
+fig2 <- plot_grid(plot, legend, nrow=2, rel_heights=c(1, .1))
+
+fig2
+
+rm(brarefaction, brarefaction_long, brareplot, frarefaction, frarefaction_long, frareplot, orarefaction, orarefaction_long, orareplot, plot, protox, legend)
+
+```
+
+\pagebreak
+
+## Sample control
+
+### Outlier detection
+
+We use the method CLOUD developped by Montassier et al. 2018, which is a non.parametric detection test for outliers. We perform the test with Bray-Curtis distances from the rarefied data for each substrate and each plastic treatment individually. We set the number of nearest neighbors to 60% of the samples size and chose an empirical outlier percentile of 0.1. We remove all outliers from our data.
+
+```{r}
+#| label: outlier detection
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+#function to detect outliers
+detect_outliers <- function(DESIGN, COUNT_norm, line){
+
+  #subset
+  samples_sub <- DESIGN$sample_name[DESIGN$line %in% line]
+  DAT_sub <- COUNT_norm[,colnames(COUNT_norm) %in% samples_sub]
+  bdist <- vegdist(t(DAT_sub), method="bray")
+
+  #test
+  k <- floor(ncol(DAT_sub) * 0.6) #number of nearest neighbors, here we chose 60% of sample size
+  test <- piecewise_kn_V1(d = bdist, test.ix = colnames(DAT_sub), k = k) #CLOUD test from Montassier et al. 2018
+  outliers <- colnames(DAT_sub)[test[["pvals"]]<=0.1] #outliers (p <= 0.1)
+
+  return(outliers)
+
+}
+
+#detect outliers
+boutliers <- detect_outliers(DESIGN=bDESIGN, COUNT_norm=bCOUNTm_norm, line=unique(bDESIGN$line))
+foutliers <- detect_outliers(DESIGN=fDESIGN, COUNT_norm=fCOUNTm_norm, line=unique(fDESIGN$line))
+ooutliers <- detect_outliers(DESIGN=oDESIGN, COUNT_norm=oCOUNTm_norm, line=unique(oDESIGN$line))
+
+#output
+outliers <- data.frame(taxa=c("Bacteria","Fungi","Oomycetes"),
+                       outliers=c(length(boutliers), length(foutliers), length(ooutliers)))
+
+
+pander(outliers, caption = "Number of outliers")
+
+print(paste("Bacteria:", paste(boutliers, collapse = ", ")))
+print(paste("Fungi:", paste(foutliers, collapse = ", ")))
+print(paste("Oomycetes:", paste(ooutliers, collapse = ", ")))
+
+```
+
+### Outlier removal
+
+```{r}
+#| label: outlier removal
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+#Bacteria
+bDESIGN <- bDESIGN[!(bDESIGN$sample_name %in% boutliers),]
+bCOUNTm_norm <- bCOUNTm_norm[,!(colnames(bCOUNTm_norm) %in% boutliers)]
+ASVs_to_remove <- names(which(rowSums(bCOUNTm_norm) == 0))
+bCOUNTm_norm <- bCOUNTm_norm[!(rownames(bCOUNTm_norm) %in% ASVs_to_remove),]
+bTAXA_norm <- bTAXA_norm[!(rownames(bTAXA_norm) %in% ASVs_to_remove),]
+# Remove outlier samples first;To be used later for diff abundance
+bCOUNTm <- bCOUNTm[, !(colnames(bCOUNTm) %in% boutliers)] 
+# Keep only ASVs present in the normalized (rarefied) table
+bCOUNTm <- bCOUNTm[rownames(bCOUNTm) %in% rownames(bCOUNTm_norm), ]
+
+#Fungi
+fDESIGN <- fDESIGN[!(fDESIGN$sample_name %in% foutliers),]
+fCOUNTm_norm <- fCOUNTm_norm[,!(colnames(fCOUNTm_norm) %in% foutliers)]
+ASVs_to_remove <- names(which(rowSums(fCOUNTm_norm) == 0))
+fCOUNTm_norm <- fCOUNTm_norm[!(rownames(fCOUNTm_norm) %in% ASVs_to_remove),]
+fTAXA_norm <- fTAXA_norm[!(rownames(fTAXA_norm) %in% ASVs_to_remove),]
+# Remove outlier samples first;To be used later for diff abundance
+fCOUNTm <- fCOUNTm[, !(colnames(fCOUNTm) %in% foutliers)] 
+# Keep only ASVs present in the normalized (rarefied) table
+fCOUNTm <- fCOUNTm[rownames(fCOUNTm) %in% rownames(fCOUNTm_norm), ]
+
+#Oomycetes
+oDESIGN <- oDESIGN[!(oDESIGN$sample_name %in% ooutliers),]
+oCOUNTm_norm <- oCOUNTm_norm[,!(colnames(oCOUNTm_norm) %in% ooutliers)]
+ASVs_to_remove <- names(which(rowSums(oCOUNTm_norm) == 0))
+oCOUNTm_norm <- oCOUNTm_norm[!(rownames(oCOUNTm_norm) %in% ASVs_to_remove),]
+oTAXA_norm <- oTAXA_norm[!(rownames(oTAXA_norm) %in% ASVs_to_remove),]
+# Remove outlier samples first;To be used later for diff abundance
+oCOUNTm <- oCOUNTm[, !(colnames(oCOUNTm) %in% ooutliers)] 
+# Keep only ASVs present in the normalized (rarefied) table
+oCOUNTm <- oCOUNTm[rownames(oCOUNTm) %in% rownames(oCOUNTm_norm), ]
+
+```
+
+```{r}
+#| label: sample removal info
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+#Note samples removed as outliers
+removed_b_outliers <- boutliers
+removed_f_outliers <- foutliers
+removed_o_outliers <- ooutliers
+
+
+#Total samples removed
+removed_b_total <- union(removed_b_low_depth, removed_b_outliers)
+removed_f_total <- union(removed_f_low_depth, removed_f_outliers)
+removed_o_total <- union(removed_o_low_depth, removed_o_outliers)
+
+# Note lost sample number
+cat("Bacteria samples removed:", length(removed_b_total), "\n")
+cat("Fungi samples removed:", length(removed_f_total), "\n")
+cat("Oomycetes samples removed:", length(removed_o_total), "\n")
+
+```
+
+## Sample size
+
+We end up with the following number of samples per treatment for the analysis.
+
+```{r sample size norm, echo=F, warning=FALSE}
+#| message: false
+#| paged-print: false
+
+#final number of samples
+pander(table(bDESIGN$line, bDESIGN$condition), caption = "Bacteria: Sample profile")
+pander(table(fDESIGN$line, fDESIGN$condition), caption = "Fungi: Sample profile")
+pander(table(oDESIGN$line, oDESIGN$condition), caption = "Oomycetes: Sample profile")
+
+```
+
+\pagebreak
+
+## Export RDS files
+
+We export the design-files, count-tables, normalized count-tables and taxonomy-tables for the following analysis scripts.
+
+```{r}
+#| label: export RDA files
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+# Export
+
+# create directory
+dir.create("interim")
+dir.create("interim/01_Import_Normalization")
+
+## set output directory
+setwd("interim/01_Import_Normalization")
+
+#save objects needed in the following scripts
+saveRDS(bDESIGN, "bDESIGN.RDS")
+saveRDS(bCOUNTm_norm, "bCOUNTm_norm.RDS")
+saveRDS(bTAXA_norm, "bTAXA_norm.RDS")
+saveRDS(bCOUNTm, "bCOUNTm.RDS")
+
+saveRDS(fDESIGN, "fDESIGN.RDS")
+saveRDS(fCOUNTm_norm, "fCOUNTm_norm.RDS")
+saveRDS(fTAXA_norm, "fTAXA_norm.RDS")
+saveRDS(fCOUNTm, "fCOUNTm.RDS")
+
+saveRDS(oDESIGN, "oDESIGN.RDS")
+saveRDS(oCOUNTm_norm, "oCOUNTm_norm.RDS")
+saveRDS(oTAXA_norm, "oTAXA_norm.RDS")
+saveRDS(oCOUNTm, "oCOUNTm.RDS")
+
+saveRDS(level_cols_condition, "level_cols_condition.RDS")
+saveRDS(level_cols_line, "level_cols_line.RDS")
+
+```
+
+## Session info
+
+```{r}
+#| label: session info 1
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+sessionInfo()
+
+```
+

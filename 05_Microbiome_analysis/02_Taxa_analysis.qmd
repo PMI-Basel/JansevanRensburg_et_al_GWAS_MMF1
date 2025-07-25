@@ -1,0 +1,680 @@
+# 02_Taxa_analysis
+
+
+## Setup
+
+```{r}
+#| label: setup_02
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+
+##clear the object from memory
+rm(list=ls())
+
+#knitr settings
+knitr::opts_chunk$set(echo=TRUE, fig.align="center")
+options(tinytex.verbose = TRUE)
+
+#set seed
+set.seed(100)
+
+# Set source file location for running code interactively (for rendering it's set in the YAML)
+if (interactive()) {
+if (!require(rstudioapi)) { install.packages("rstudioapi") }
+library(rstudioapi)
+setwd(dirname(getActiveDocumentContext()$path))
+}
+
+#set CRAN mirror for downloading libraries
+options(repos = c(CRAN = "https://stat.ethz.ch/CRAN/")) #ETH Switzerland
+
+## load functions
+source("functions/functions.R")
+functions(path="functions/")
+
+## installs (if necessary) and loads libraries
+libraries()
+
+```
+
+## Load files
+
+We import the design-files, normalized count-tables and taxonomy-files, which we have created in *01_Import_Normalization.qmd*.
+
+```{r}
+#| label: import_02
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+#Import RDS files
+bDESIGN <- readRDS("interim/01_Import_Normalization/bDESIGN.RDS")
+bTAXA_norm <- readRDS("interim/01_Import_Normalization/bTAXA_norm.RDS")
+bCOUNTm_norm <- readRDS("interim/01_Import_Normalization/bCOUNTm_norm.RDS")
+fDESIGN <- readRDS("interim/01_Import_Normalization/fDESIGN.RDS")
+fTAXA_norm <- readRDS("interim/01_Import_Normalization/fTAXA_norm.RDS")
+fCOUNTm_norm <- readRDS("interim/01_Import_Normalization/fCOUNTm_norm.RDS")
+oDESIGN <- readRDS("interim/01_Import_Normalization/oDESIGN.RDS")
+oTAXA_norm <- readRDS("interim/01_Import_Normalization/oTAXA_norm.RDS")
+oCOUNTm_norm <- readRDS("interim/01_Import_Normalization/oCOUNTm_norm.RDS")
+
+```
+
+## Prepare PHYSEQ objects
+
+We combine DESIGN, TAXA and COUNT tables to a PHYSEQ object. the we define:\
+- **low abundant phyla:** mean of the phyla abundance in all samples \<= 0.1%\
+- **high abundant phyla:** mean of the phyla abundance in all samples \> 0.1%
+
+```{r}
+#| label: get melted PHYSEQs
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+# Data as PHYLOSEQ object
+get_PHYSEQ_objects <- function(design, data, taxa, microbial_load=F){
+
+  #change order for melting later and (remove species for fungi and oomycetes)
+  taxa <- taxa[,c("labels", "kingdom", "phylum", "class", "order", "family", "genus", "ASV_ID")]
+  
+  #create phyloseq::phyloseq objects
+  design <- as.data.frame(design)
+  rownames(design) <- design$bc_ID
+  data <- as.matrix(data)
+  taxa <- as.matrix(taxa[rownames(data),])
+  physeq <- phyloseq::phyloseq(sample_data(design),
+                     otu_table(data, taxa_are_rows=T),
+                     tax_table(taxa))
+  
+  # agglomerate data by labels 
+  physeq_phyla <- phyloseq::taxglom(physeq, "labels") # merge by 'labels' 
+  
+  #copy for microbial load because we can't norm them
+  if(microbial_load){
+    #use this at the end, other is only to get high and low abu
+    physeq_phyla_unnorm <- physeq_phyla
+    # melt phyloseq::phyloseq object
+    physeq_phyla_melt_unnorm <- phyloseq::psmelt(physeq_phyla) 
+    # Defining ASV colors by labels
+    physeq_phyla_melt_unnorm$labels <- as.factor(physeq_phyla_melt_unnorm$labels)
+    physeq_phyla_melt_unnorm$cols <- as.character(physeq_phyla_melt_unnorm$labels)
+  }
+  
+  #norm
+  physeq_phyla <- phyloseq::transform_sample_counts(physeq_phyla, function(x) 100 * x/sum(x)) 
+  # melt phyloseq::phyloseq object
+  physeq_phyla_melt <- phyloseq::psmelt(physeq_phyla) 
+  # Defining ASV colors by labels
+  physeq_phyla_melt$labels <- as.factor(physeq_phyla_melt$labels)
+  physeq_phyla_melt$cols <- as.character(physeq_phyla_melt$labels)
+
+  #threshold
+  threshold <- ifelse(microbial_load, 1, 0.1) #higher threshold when there is no host DNA
+  
+  # Defining high abundant phyla
+  # phyla with MEAN abundances higher than 1% relative abundances
+  physeq_phyla_abu <-  rownames(otu_table(physeq_phyla))[apply(otu_table(physeq_phyla), 1, mean, na.rm=T) > threshold] #set it to 0.1 instead of 1 because we have a lot of plant seqs
+  try(physeq_phyla_abuP <- tax_table(physeq_phyla)[rownames(tax_table(physeq_phyla)) %in% physeq_phyla_abu, "labels"], silent=T)
+  
+  # Defining low abundant phyla
+  # phyla with MEAN abundances lower than 1% relative abundances
+  physeq_phyla_low <-  rownames(otu_table(physeq_phyla))[apply(otu_table(physeq_phyla), 1, mean, na.rm=T) <= threshold]
+  try(physeq_phyla_lowP <- tax_table(physeq_phyla)[rownames(tax_table(physeq_phyla)) %in% physeq_phyla_low, "labels"], silent=T)
+
+  # subsetting the color vector to abundant labels and classes
+  # delete labels name of low-abundant phyla (for plot) and put them at the bottom
+  physeq_phyla_melt$labels_2 <- as.character(physeq_phyla_melt$labels)
+  try(physeq_phyla_melt[physeq_phyla_melt$labels_2 %in% physeq_phyla_lowP, ]$labels_2 <- "Low abundant phyla", silent = T)
+  physeq_phyla_melt$labels_2 <- as.factor(physeq_phyla_melt$labels_2)
+  
+  #use unnorm data for microbial load
+  if(microbial_load){
+    physeq_phyla <- physeq_phyla_unnorm #overwrite
+    physeq_phyla_melt_unnorm$labels_2 <- physeq_phyla_melt$labels_2 #add low and high abu and overwrite
+    physeq_phyla_melt <- physeq_phyla_melt_unnorm
+  }
+  
+  #return(list(physeq, physeq_phyla_melt, bcol_class))
+  return(list(physeq, physeq_phyla_melt))
+
+}
+
+#get PHYSEQ
+temp <- get_PHYSEQ_objects(bDESIGN, bCOUNTm_norm, bTAXA_norm)
+bPHYSEQ <- temp[[1]]
+bPHYSEQ_phyla_melt <- temp[[2]]
+
+temp <- get_PHYSEQ_objects(fDESIGN, fCOUNTm_norm, fTAXA_norm)
+fPHYSEQ <- temp[[1]]
+fPHYSEQ_phyla_melt <- temp[[2]]
+
+temp <- get_PHYSEQ_objects(oDESIGN, oCOUNTm_norm, oTAXA_norm)
+oPHYSEQ <- temp[[1]]
+oPHYSEQ_phyla_melt <- temp[[2]]
+
+rm(temp)
+
+```
+
+In a last step, we add samples removed in *01_Import_Normalization.qmd* as dummy variables with 0 reads which allows to create nicely aligned plots in the next step.
+
+```{r}
+#| label: add removed samples
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+# Ensure all samples appear in plot data even if they had zero reads
+# For plotting purposes: adds dummy rows for samples missing in PHYSEQ_melt
+# by copying one metadata row from PHYSEQ_melt_all and setting abundance to 0.
+
+#function to add missing samples with abu 0
+add_missing_samples <- function(PHYSEQ_melt, PHYSEQ_melt_all){
+  
+  #get all samples
+  all_samples <- unique(PHYSEQ_melt_all$sample_nr)
+
+  for(s in all_samples){
+    #test if missing
+    if(!(s %in% PHYSEQ_melt$sample_nr)){
+      #df to add
+      to_add <- PHYSEQ_melt_all[PHYSEQ_melt_all$sample_nr==s,,drop=F] #get data to add from other datasets
+      to_add <- to_add[1,,drop=F] #select only first entry
+      to_add$Abundance <- 0 #change abu to 0
+      to_add$labels_2 <- "Low abundant phyla"
+      #add
+      PHYSEQ_melt <- rbind(PHYSEQ_melt, to_add)
+    }
+  }
+  #return
+  return(PHYSEQ_melt)
+}
+
+#concat all
+PHYSEQ_phyla_melt_unscaled_combined <- rbind(bPHYSEQ_phyla_melt, fPHYSEQ_phyla_melt, oPHYSEQ_phyla_melt)
+
+#add missing samples (for plot)
+bPHYSEQ_phyla_melt_unscaled_combined <- add_missing_samples(bPHYSEQ_phyla_melt, PHYSEQ_phyla_melt_unscaled_combined)
+fPHYSEQ_phyla_melt_unscaled_combined <- add_missing_samples(fPHYSEQ_phyla_melt, PHYSEQ_phyla_melt_unscaled_combined)
+oPHYSEQ_phyla_melt_unscaled_combined <- add_missing_samples(oPHYSEQ_phyla_melt, PHYSEQ_phyla_melt_unscaled_combined)
+
+```
+
+\pagebreak
+
+## Relative abundances
+
+We show the relative microbial abundance of each phlya and the host. The host DNA was 25x diluted. The scaled plot shows the data with diluted host DNA while we multiplied the host abundance 25 times to get original host abundance showed in the unscaled plot.
+
+```{r}
+#| label: function abundance fig
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+#plot_abundance() generates a faceted barplot of microbial relative abundances or microbial load values (depending on microbial_load = TRUE/FALSE) from a melted psmelt()-style data.frame.
+
+plot_abundance <- function(PHYSEQ_melt, title, microbial_load=F){
+
+  #create df for the plot
+  df <- PHYSEQ_melt
+  df <- aggregate(df$Abundance, by=list(df$Sample, df$condition, df$line, df$labels_2, df$sample_nr), function(x) mean(x, na.rm=T))
+  colnames(df) <- c("sample", "condition", "line", "labels_2", "sample_nr", "Abundance")
+  
+  if(!(microbial_load)){
+      #normalise abu to 100% per sample
+      for(id in unique(df$sample)){df$Abundance[df$sample==id] <- (df$Abundance[df$sample==id] / sum(df$Abundance[df$sample==id])) *100}
+  }
+  
+  #define color matrix
+  names <- (PHYSEQ_melt$labels_2) %>% unique()
+  getPalette <-  colorRampPalette(brewer.pal(11, "Spectral"))#function to increase palette
+  col_taxa <- getPalette(length(names))
+  abu <- aggregate(PHYSEQ_melt$Abundance, list(PHYSEQ_melt$labels_2), sum)
+  abu <- abu[order(abu$x, decreasing = F),]
+  abu <- abu[c(which(abu$Group.1!="Low abundant phyla"), which(abu$Group.1=="Low abundant phyla")),] #set low abu phyla to end
+  #abu <- abu[c(which(abu$Group.1!="unassigned"), which(abu$Group.1=="unassigned")),] #set unassigned phyla to end
+  abu <- abu[c(which(abu$Group.1!="Host"), which(abu$Group.1=="Host")),] #set host to end
+  names(col_taxa) <- abu$Group.1
+  
+  #adapt colors
+  col_taxa[names(col_taxa) == "Host"] <- "palegreen4"
+  col_taxa[names(col_taxa) == "unassigned"] <- "grey90"
+  col_taxa[names(col_taxa) == "Low abundant phyla"] <- "grey50"
+  
+  #factors
+  df$labels_2 <- factor(df$labels_2, levels=names(col_taxa)[names(col_taxa) %in% df$labels_2])
+  
+  #ylab and ylim for lines
+  ylab <- ifelse(!(microbial_load), "Relative abundance [%]", "Relative abundance [Microbial seqs / Host seq]")
+  ylim <- aggregate(df$Abundance, list(df$sample_nr), function(x) sum(x, na.rm=T))[,2] %>% max()
+
+  #plot
+  fig <- ggplot(df, aes_string(x="sample_nr", y="Abundance", fill="labels_2")) +
+    geom_bar(stat="identity")+
+    xlab("") +
+    ylab(ylab) +
+    scale_colour_manual(values=col_taxa)+
+    scale_fill_manual(values=col_taxa) +
+    #guides(fill=guide_legend(title="Phylum"))+
+    ggh4x::facet_nested( ~ line + condition, scale="free_x", space="free_x", nest_line = element_line())+
+    geom_segment(x=-Inf,xend=Inf,y=(ylim*1.05),yend=(ylim*1.05), lwd=1)+ #add lines under WT / bx1
+    geom_segment(x=-Inf,xend=Inf,y=ylim,yend=ylim,lwd=0.2, col="black")+ #box around grids
+    geom_segment(x=-Inf,xend=Inf,y=0,yend=0,lwd=0.2, col="black")+ #box around grids
+    ggtitle(title)+
+    theme_minimal()+
+    #theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+    theme(axis.text.x=element_blank(), axis.ticks.x=element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+
+  return(list(col_taxa, fig))
+}
+
+```
+
+## Taxonomy plot with scaled relative abundances
+
+```{r}
+#| label: abundace plots scaled
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+#Bacteria
+temp <- plot_abundance(bPHYSEQ_phyla_melt_unscaled_combined, "Bacteria: Taxonomy (scaled)")
+bcol_taxa <- temp[[1]]
+fig_bac <- temp[[2]]
+
+#Fungi
+temp <- plot_abundance(fPHYSEQ_phyla_melt_unscaled_combined, "Fungi: Taxonomy (scaled)")
+fcol_taxa <- temp[[1]]
+fig_fun <- temp[[2]]
+
+#Oomycetes
+temp <- plot_abundance(oPHYSEQ_phyla_melt_unscaled_combined, "Oomycetes: Taxonomy (scaled)")
+ocol_taxa <- temp[[1]]
+fig_oom <- temp[[2]]
+
+rm(temp)
+
+#combine figures
+#combine the plots (library cowplot)
+plot <- plot_grid(fig_bac + labs(fill="Bacteria: Phylum"),
+               fig_fun + labs(fill="Fungi: Phylum"),
+               fig_oom + labs(fill="Oomycetes: Phylum"),
+               align = "hv",
+               rel_heights = c(18,15),
+               nrow=3)
+
+plot
+
+```
+
+\pagebreak
+
+## Taxonomy plot with unscaled relative abundances
+
+```{r}
+#| label: unscale data
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+#To rescale host ASV abundances in the count matrix COUNT based on a known dilution factor (e.g. 25×). This allows host and microbial sequences to be compared on their original proportions, which is critical when estimating microbial load.
+#function to unscale
+
+unscale_COUNT <- function(COUNT, TAXA, scaling_factor){
+  #unscale
+  hostOTUs <- rownames(TAXA)[TAXA$labels=="Host"]
+  COUNT[rownames(COUNT) %in% hostOTUs,] <- COUNT[rownames(COUNT) %in% hostOTUs,] * scaling_factor
+  #normalise to 100% per sample
+  #COUNT <- (COUNT/colSums(COUNT))*100
+  return(COUNT)
+}
+
+#unscale
+bCOUNTm_unscaled <- unscale_COUNT(bCOUNTm_norm, bTAXA_norm, 25)
+fCOUNTm_unscaled <- unscale_COUNT(fCOUNTm_norm, fTAXA_norm, 25)
+oCOUNTm_unscaled <- unscale_COUNT(oCOUNTm_norm, oTAXA_norm, 25)
+
+#get PHYSEQ
+temp <- get_PHYSEQ_objects(bDESIGN, bCOUNTm_unscaled, bTAXA_norm)
+bPHYSEQ_unscaled <- temp[[1]]
+bPHYSEQ_phyla_melt_unscaled <- temp[[2]]
+
+temp <- get_PHYSEQ_objects(fDESIGN, fCOUNTm_unscaled, fTAXA_norm)
+fPHYSEQ_unscaled <- temp[[1]]
+fPHYSEQ_phyla_melt_unscaled <- temp[[2]]
+
+temp <- get_PHYSEQ_objects(oDESIGN, oCOUNTm_unscaled, oTAXA_norm)
+oPHYSEQ_unscaled <- temp[[1]]
+oPHYSEQ_phyla_melt_unscaled <- temp[[2]]
+
+rm(temp)
+
+#add missing samples (for plot)
+bPHYSEQ_phyla_melt_unscaled_all <- add_missing_samples(bPHYSEQ_phyla_melt_unscaled, PHYSEQ_phyla_melt_unscaled_combined)
+fPHYSEQ_phyla_melt_unscaled_all <- add_missing_samples(fPHYSEQ_phyla_melt_unscaled, PHYSEQ_phyla_melt_unscaled_combined)
+oPHYSEQ_phyla_melt_unscaled_all <- add_missing_samples(oPHYSEQ_phyla_melt_unscaled, PHYSEQ_phyla_melt_unscaled_combined)
+
+```
+
+```{r}
+#| label: abundace plot unscaled
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+#Bacteria
+temp <- plot_abundance(bPHYSEQ_phyla_melt_unscaled_all, "Bacteria: Taxonomy (unscaled)")
+bcol_taxa <- temp[[1]]
+fig_bac <- temp[[2]]
+
+#Fungi
+temp <- plot_abundance(fPHYSEQ_phyla_melt_unscaled_all, "Fungi: Taxonomy (unscaled)")
+fcol_taxa <- temp[[1]]
+fig_fun <- temp[[2]]
+
+#Oomycetes
+temp <- plot_abundance(oPHYSEQ_phyla_melt_unscaled_all, "Oomycetes: Taxonomy (unscaled)")
+ocol_taxa <- temp[[1]]
+fig_oom <- temp[[2]]
+
+rm(temp)
+
+#combine figures
+#combine the plots (library cowplot)
+plot <- plot_grid(fig_bac + labs(fill="Bacteria: Phylum"),
+               fig_fun + labs(fill="Fungi: Phylum"),
+               fig_oom + labs(fill="Oomycetes: Phylum"),
+               align = "hv",
+               rel_heights = c(18,15),
+               nrow=3)
+
+plot
+
+```
+
+\pagebreak
+
+## Microbial load
+
+In a next step we calculate the microbial load (microbial sequences / host sequences) for each sample.
+
+### Taxonomy plot with microbial loads
+
+```{r}
+#| label: microbial load data
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+#function to compute microbial load
+microbial_load_COUNT <- function(COUNT, TAXA){
+  hostOTUs <- rownames(TAXA)[TAXA$labels=="Host"]
+  #get microbial load per sample
+  for(id in colnames(COUNT)){
+    
+    #calculate microbial load
+    host_abu <- sum(COUNT[rownames(COUNT)%in%hostOTUs, colnames(COUNT)==id])
+    COUNT[!(rownames(COUNT)%in%hostOTUs), colnames(COUNT)==id] <- COUNT[!(rownames(COUNT)%in%hostOTUs), colnames(COUNT)==id] / host_abu
+  }
+  #remove host (no longer needed)
+  COUNT <- COUNT[!(rownames(COUNT)%in%hostOTUs),]
+  return(COUNT)
+}
+
+#microbial load
+bCOUNTm_unscaled_ml <- microbial_load_COUNT(bCOUNTm_unscaled, bTAXA_norm)
+fCOUNTm_unscaled_ml <- microbial_load_COUNT(fCOUNTm_unscaled, fTAXA_norm)
+oCOUNTm_unscaled_ml <- microbial_load_COUNT(oCOUNTm_unscaled, oTAXA_norm)
+
+#TAXA without host
+bTAXA_norm_ml <- bTAXA_norm[bTAXA_norm$labels!="Host",]
+fTAXA_norm_ml <- fTAXA_norm[fTAXA_norm$labels!="Host",]
+oTAXA_norm_ml <- oTAXA_norm[oTAXA_norm$labels!="Host",]
+
+
+#get PHYSEQ
+temp <- get_PHYSEQ_objects(bDESIGN, bCOUNTm_unscaled_ml, bTAXA_norm_ml, microbial_load = T)
+bPHYSEQ_unscaled_ml <- temp[[1]]
+bPHYSEQ_phyla_melt_unscaled_ml <- temp[[2]]
+
+temp <- get_PHYSEQ_objects(fDESIGN, fCOUNTm_unscaled_ml, fTAXA_norm_ml, microbial_load = T)
+fPHYSEQ_unscaled_ml <- temp[[1]]
+fPHYSEQ_phyla_melt_unscaled_ml <- temp[[2]]
+
+temp <- get_PHYSEQ_objects(oDESIGN, oCOUNTm_unscaled_ml, oTAXA_norm_ml, microbial_load = T)
+oPHYSEQ_unscaled_ml <- temp[[1]]
+oPHYSEQ_phyla_melt_unscaled_ml <- temp[[2]]
+
+rm(temp)
+
+#add missing samples (for plot)
+bPHYSEQ_phyla_melt_unscaled_ml_all <- add_missing_samples(bPHYSEQ_phyla_melt_unscaled_ml, PHYSEQ_phyla_melt_unscaled_combined)
+fPHYSEQ_phyla_melt_unscaled_ml_all <- add_missing_samples(fPHYSEQ_phyla_melt_unscaled_ml, PHYSEQ_phyla_melt_unscaled_combined)
+oPHYSEQ_phyla_melt_unscaled_ml_all <- add_missing_samples(oPHYSEQ_phyla_melt_unscaled_ml, PHYSEQ_phyla_melt_unscaled_combined)
+
+```
+
+```{r}
+#| label: abundace plots unscaled load
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+#Bacteria
+temp <- plot_abundance(bPHYSEQ_phyla_melt_unscaled_ml_all, "Bacteria: Taxonomy (microbial load)", microbial_load = T)
+bcol_taxa <- temp[[1]]
+fig_bac <- temp[[2]]
+
+#Fungi
+temp <- plot_abundance(fPHYSEQ_phyla_melt_unscaled_ml_all, "Fungi: Taxonomy (microbial load)", microbial_load = T)
+fcol_taxa <- temp[[1]]
+fig_fun <- temp[[2]]
+
+#Oomycetes
+temp <- plot_abundance(oPHYSEQ_phyla_melt_unscaled_ml_all, "Oomycetes: Taxonomy (microbial load)", microbial_load = T)
+ocol_taxa <- temp[[1]]
+fig_oom <- temp[[2]]
+
+rm(temp)
+
+#combine figures
+#combine the plots (library cowplot)
+plot <- plot_grid(fig_bac + labs(fill="Bacteria: Phylum"),
+               fig_fun + labs(fill="Fungi: Phylum"),
+               fig_oom + labs(fill="Oomycetes: Phylum"),
+               align = "hv",
+               rel_heights = c(18,15),
+               nrow=3)
+
+plot
+
+```
+
+\pagebreak
+
+### Differences in microbial load between samples
+
+Next we test for differences in microbial load between samples using a two-way ANOVA with the model: *bacterial load \~ line \* condition*.
+
+```{r}
+#| label: anova output
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+#bacteria
+bDESIGN$microbial_load <- colSums(bCOUNTm_unscaled_ml)
+anova <- aov(microbial_load ~ line * condition, data=bDESIGN)
+summary(anova) %>% pander(caption="Bacteria: ANOVA")
+
+#fungi
+fDESIGN$microbial_load <- colSums(fCOUNTm_unscaled_ml)
+anova <- aov(microbial_load ~ line * condition, data=fDESIGN)
+summary(anova) %>% pander(caption="Fungi: ANOVA")
+
+#oomycetes
+oDESIGN$microbial_load <- colSums(oCOUNTm_unscaled_ml)
+anova <- aov(microbial_load ~ line * condition, data=oDESIGN)
+summary(anova) %>% pander(caption="Oomycetes: ANOVA")
+
+```
+
+```{r}
+#| label: plot microbial load
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-height: 3
+#| fig-width: 7
+#| paged-print: false
+
+library(ggplot2)
+library(ggbeeswarm)
+library(dplyr)
+library(ggpubr)
+
+# General plot function with dynamic y scale
+plot_microbial_load <- function(design_df, group_name) {
+  y_max <- max(design_df$microbial_load, na.rm = TRUE)
+  y_lim <- y_max * 1.6  # Extend the y-axis by 20%
+
+  p <- ggplot(
+    design_df,
+    aes(x = line, y = microbial_load, fill = condition, alpha = line)
+  ) +
+    geom_boxplot(outlier.shape = NA) +
+    geom_point(
+      position = position_dodge(width = 0.75),
+      size = 1.5,
+      color = "black",
+      aes(color = condition, shape = line)
+    ) +
+    theme_minimal() +
+    theme(
+      legend.position = "bottom",
+      panel.border = element_rect(color = "black", fill = NA, size = 0.5),
+      text = element_text(size = 7),
+      axis.title = element_text(size = 7),
+      axis.text = element_text(size = 7),
+      legend.title = element_text(size = 7),
+      legend.text = element_text(size = 7),
+      plot.title = element_text(size = 7),
+      plot.subtitle = element_text(size = 7)
+    ) +
+    labs(
+      title = paste("Microbial Load -", group_name),
+      x = "Condition",
+      y = "Microbial Load",
+      fill = "Condition",
+      color = "Condition",
+      alpha = "Line"
+    ) +
+    scale_fill_manual(values = c("seagreen", "gold2")) +
+    scale_color_manual(values = c("seagreen", "gold2")) +
+    scale_alpha_manual(values = c(0.9, 0.5)) +
+    coord_cartesian(ylim = c(0, y_lim)) +
+    stat_compare_means(
+      method = "kruskal.test",
+      label = "p",
+      label.y = y_lim * 0.95
+    )
+
+  return(p)
+}
+
+
+bDESIGN$microbial_load <- colSums(bCOUNTm_unscaled_ml)
+fDESIGN$microbial_load <- colSums(fCOUNTm_unscaled_ml)
+oDESIGN$microbial_load <- colSums(oCOUNTm_unscaled_ml)
+
+bLOAD_plot <- plot_microbial_load(bDESIGN, "Bacteria")
+fLOAD_plot <- plot_microbial_load(fDESIGN, "Fungi")
+oLOAD_plot <- plot_microbial_load(oDESIGN, "Oomycetes")
+
+# Combine them
+
+LOAD_plot <- plot_grid(
+  bLOAD_plot + theme(legend.position = "none"),
+  fLOAD_plot + theme(legend.position = "bottom"),
+  oLOAD_plot + theme(legend.position = "none"),
+  align = "hv",
+  nrow = 1
+)
+
+print(LOAD_plot)
+
+ggsave(plot = LOAD_plot, "Output/Figures/microbial_load.pdf", width = 18, height = 8, units = "cm")
+```
+
+**Conclusion:** We find differences in microbial loads for WT.
+
+\pagebreak
+
+## Export RDS files 2
+
+We export the design-files, normalized, unscaled count-tables with microbial load (without host ASVs), taxonomy-tables and PHYSEQ objects for the following analysis scripts.
+
+```{r}
+#| label: export RDA files 2
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+# Export
+
+# create directory
+dir.create("interim")
+dir.create("interim/02_Taxa_Analysis")
+
+## set output directory
+setwd("interim/02_Taxa_Analysis")
+
+#save objects needed in the following scripts
+
+#microbial load samples to be used for beta diversity
+saveRDS(bDESIGN, "bDESIGN.RDS")
+saveRDS(bCOUNTm_unscaled_ml, "bCOUNTm_microbial_load.RDS")
+saveRDS(bTAXA_norm_ml, "bTAXA_microbial_load.RDS")
+saveRDS(bPHYSEQ_unscaled_ml, "bPHYSEQ_microbial_load.RDS")
+
+saveRDS(fDESIGN, "fDESIGN.RDS")
+saveRDS(fCOUNTm_unscaled_ml, "fCOUNTm_microbial_load.RDS")
+saveRDS(fTAXA_norm_ml, "fTAXA_microbial_load.RDS")
+saveRDS(fPHYSEQ_unscaled_ml, "fPHYSEQ_microbial_load.RDS")
+
+saveRDS(oDESIGN, "oDESIGN.RDS")
+saveRDS(oCOUNTm_unscaled_ml, "oCOUNTm_microbial_load.RDS")
+saveRDS(oTAXA_norm_ml, "oTAXA_microbial_load.RDS")
+saveRDS(oPHYSEQ_unscaled_ml, "oPHYSEQ_microbial_load.RDS")
+
+```
+
+## Session info
+
+```{r}
+#| label: session info 2
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+sessionInfo()
+
+```

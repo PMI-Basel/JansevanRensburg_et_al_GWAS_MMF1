@@ -1,0 +1,433 @@
+# 04_Differential_abundance
+
+## Setup
+
+```{r}
+#| label: setup_4
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+##clear the object from memory
+rm(list=ls())
+
+#knitr settings
+knitr::opts_chunk$set(echo=TRUE, fig.align="center")
+options(tinytex.verbose = TRUE)
+
+#set seed
+set.seed(100)
+
+## set source to file location
+# Set source file location for running code interactively (for rendering it's set in the YAML)
+if (interactive()) {
+if (!require(rstudioapi)) { install.packages("rstudioapi") }
+library(rstudioapi)
+setwd(dirname(getActiveDocumentContext()$path))
+}
+
+#set CRAN mirror for downloading libraries
+options(repos = c(CRAN = "https://stat.ethz.ch/CRAN/")) #ETH Switzerland
+
+## load functions
+source("functions/functions.R")
+functions(path="functions/")
+
+## installs (if necessary) and loads libraries
+libraries()
+library(knitr)
+
+```
+
+## Load files
+
+We import the design-files, count-tables and taxonomy files from *01_Import_Normalization.qmd*.
+
+```{r}
+#| label: import_4
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+
+#Import RDS files
+bDESIGN <- readRDS("interim/01_Import_Normalization/bDESIGN.RDS")
+bTAXA <- readRDS("interim/01_Import_Normalization/bTAXA_norm.RDS")
+bCOUNTm <- readRDS("interim/01_Import_Normalization/bCOUNTm.RDS")
+fDESIGN <- readRDS("interim/01_Import_Normalization/fDESIGN.RDS")
+fTAXA <- readRDS("interim/01_Import_Normalization/fTAXA_norm.RDS")
+fCOUNTm <- readRDS("interim/01_Import_Normalization/fCOUNTm.RDS")
+oDESIGN <- readRDS("interim/01_Import_Normalization/oDESIGN.RDS")
+oTAXA <- readRDS("interim/01_Import_Normalization/oTAXA_norm.RDS")
+oCOUNTm <- readRDS("interim/01_Import_Normalization/oCOUNTm.RDS")
+
+```
+
+## Remove host ASVs
+
+Since we work with the raw read count table, "bCOUNTm" generated in the *01_Import_Normalization.qmd* file, we first need to remove the "Host" sequence
+
+```{r}
+#| label: remove Host ASVs
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# Bacteria
+host_asvs_b <- rownames(bTAXA)[bTAXA$labels == "Host"]
+bCOUNTm <- bCOUNTm[!(rownames(bCOUNTm) %in% host_asvs_b), ]
+bTAXA <- bTAXA[!(rownames(bTAXA) %in% host_asvs_b), ]
+
+# Fungi
+host_asvs_f <- rownames(fTAXA)[fTAXA$labels == "Host"]
+fCOUNTm <- fCOUNTm[!(rownames(fCOUNTm) %in% host_asvs_f), ]
+fTAXA <- fTAXA[!(rownames(fTAXA) %in% host_asvs_f), ]
+
+# Oomycetes
+host_asvs_o <- rownames(oTAXA)[oTAXA$labels == "Host"]
+oCOUNTm <- oCOUNTm[!(rownames(oCOUNTm) %in% host_asvs_o), ]
+oTAXA <- oTAXA[!(rownames(oTAXA) %in% host_asvs_o), ]
+
+```
+
+\pagebreak
+
+## Differential abundance analysis
+
+### Differential abundances
+
+We use the **Deseq** function from the **Deseq2** package to get differential abundant ASVs between plus and minus conditioned samples, between the lines and the interaction between coniditioning and line. This function performs an estimation of size factors and an estimation of dispersion, fits it to a negative biomial GLM model and peforms a Wald test an log2 fold changes.
+
+```{r}
+#| label: DESEq2 function
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+run_deseq_interaction_model <- function(counts, metadata, taxa_df,
+                                        sample_col = "sample_name",
+                                        condition_col = "condition",
+                                        line_col = "line",
+                                        ref_condition = "minus",
+                                        ref_line = "WT",
+                                        padj_cutoff = 0.05,
+                                        lfc_cutoff = 1) {
+
+  # --- Sanity checks ---
+  stopifnot(is.data.frame(counts), is.data.frame(metadata), is.data.frame(taxa_df))
+  stopifnot(sample_col %in% colnames(metadata))
+  stopifnot(all(colnames(counts) %in% metadata[[sample_col]]))
+
+  # --- Match metadata to counts ---
+  metadata <- metadata[metadata[[sample_col]] %in% colnames(counts), ]
+  metadata <- metadata[match(colnames(counts), metadata[[sample_col]]), ]
+  rownames(metadata) <- metadata[[sample_col]]
+
+  # --- Relevel factors for DESeq2 ---
+  metadata[[condition_col]] <- relevel(factor(metadata[[condition_col]]), ref = ref_condition)
+  metadata[[line_col]] <- relevel(factor(metadata[[line_col]]), ref = ref_line)
+
+  # --- Create DESeq2 object ---
+  dds <- DESeq2::DESeqDataSetFromMatrix(
+    countData = counts,
+    colData = metadata,
+    design = as.formula(paste("~", line_col, "*", condition_col))
+  )
+  dds <- DESeq2::DESeq(dds, quiet = TRUE)
+
+  # --- Helper: extract and annotate results ---
+  extract_annotated <- function(name, label) {
+  res <- DESeq2::results(dds, name = name)
+  
+  # Remove pre-existing ASV column from taxa_df before joining
+  taxa_clean <- taxa_df
+  if ("ASV" %in% colnames(taxa_clean)) {
+    taxa_clean <- taxa_clean %>% dplyr::select(-ASV)
+  }
+
+  res_df <- as.data.frame(res) %>%
+    tibble::rownames_to_column("ASV") %>%
+    dplyr::mutate(
+      test = label,
+      signif = ifelse(!is.na(padj) & padj < padj_cutoff & abs(log2FoldChange) >= lfc_cutoff, TRUE, FALSE),
+      direction = dplyr::case_when(
+        signif & log2FoldChange > 1  ~ "up",
+        signif & log2FoldChange < -1 ~ "down",
+        TRUE                         ~ "ns"
+      )
+    ) %>%
+    dplyr::left_join(taxa_clean %>% tibble::rownames_to_column("ASV"), by = "ASV") %>%
+    dplyr::select(ASV, baseMean, log2FoldChange, padj, signif, direction, everything())
+
+  return(res_df)
+}
+
+  # --- Extract results for each effect ---
+  res_condition <- extract_annotated(paste0(condition_col, "_plus_vs_minus"), "condition")
+  res_line <- extract_annotated(paste0(line_col, "_318_vs_WT"), "line")
+  res_interaction <- extract_annotated(paste0(line_col, "318.", condition_col, "plus"), "interaction")
+
+  return(list(
+    condition      = res_condition,
+    line           = res_line,
+    interaction    = res_interaction,
+    dds_object     = dds
+  ))
+}
+
+```
+
+```{r}
+#| label: Run DESEq
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+# Run model and extract results
+
+results_full_model <- run_deseq_interaction_model(
+  counts = bCOUNTm,
+  metadata = bDESIGN,
+  taxa_df = bTAXA,
+  sample_col = "sample_name"
+)
+
+```
+
+## Differential abundances heatmap
+
+We perform a variance stabilization transformation and plot a heatmap with the differentially abundant ASVs.
+
+```{r}
+#| label: Heatmpa - vst
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+# Prepare for Heatmap - variance stabalized counts
+
+#1 Get all significant ASVs
+sig_asvs <- dplyr::bind_rows(
+  results_full_model$condition %>% dplyr::filter(signif),
+  results_full_model$line %>% dplyr::filter(signif),
+  results_full_model$interaction %>% dplyr::filter(signif)
+) %>% dplyr::distinct(ASV, .keep_all = TRUE)
+
+#2 Transform counts with VST and subset to significant ASVs
+vsd <- DESeq2::varianceStabilizingTransformation(results_full_model$dds_object, blind = FALSE)
+vsd_mat <- SummarizedExperiment::assay(vsd)
+heatmap_data <- vsd_mat[rownames(vsd_mat) %in% sig_asvs$ASV, ]
+
+#3 Prepare sample annotation
+sample_annot <- bDESIGN %>%
+  dplyr::filter(sample_name %in% colnames(heatmap_data)) %>%
+  dplyr::select(sample_name, line, condition) %>%
+  tibble::column_to_rownames("sample_name")
+
+#4 Build binary ASV-level annotation
+asv_ids <- rownames(heatmap_data)
+
+asv_annotation <- data.frame(
+  line = factor(asv_ids %in% results_full_model$line$ASV[results_full_model$line$signif], levels = c(FALSE, TRUE)),
+  condition = factor(asv_ids %in% results_full_model$condition$ASV[results_full_model$condition$signif], levels = c(FALSE, TRUE)),
+  interaction = factor(asv_ids %in% results_full_model$interaction$ASV[results_full_model$interaction$signif], levels = c(FALSE, TRUE))
+)
+rownames(asv_annotation) <- asv_ids
+
+#5 Convert logical to "yes"/"no" factors
+asv_annotation <- asv_annotation %>%
+  dplyr::mutate(across(everything(), ~ factor(ifelse(as.logical(.x), "yes", "no"))))
+
+#6 Add genus names as row labels
+asv_labels <- bTAXA[match(rownames(heatmap_data), rownames(bTAXA)), "genus"]
+asv_labels[is.na(asv_labels)] <- "unassigned"
+names(asv_labels) <- rownames(heatmap_data)
+
+#7 Define annotation colors
+
+annotation_colors <- list(
+  line = c(yes = "#e3913e", no = "white"),
+  condition = c(yes = "gold2", no = "white"),
+  interaction = c(yes = "orchid", no = "white"),
+  line_col = c(WT = "#01686c", `318` = "#e3913e"),
+  condition_col = c(minus = "seagreen", plus = "gold2")
+)
+
+#8 Plot final heatmap
+
+pheatmap::pheatmap(
+  mat = heatmap_data,
+  cluster_rows = TRUE,
+  cluster_cols = TRUE,
+  annotation_col = sample_annot %>%
+    dplyr::rename(line_col = line, condition_col = condition),
+  annotation_row = asv_annotation,
+  annotation_colors = annotation_colors,
+  show_rownames = TRUE,
+  labels_row = asv_labels,
+  show_colnames = FALSE,
+  fontsize = 7,
+  color = colorRampPalette(c("navy", "white", "firebrick3"))(50),
+  main = "Differentially Abundant ASVs with DESeq2 Effects"
+)
+
+```
+
+\pagebreak
+
+## Abundance of differentially abundant ASVs
+
+We square-root-transform the abundance of all differential abundant ASVs and show their abundance.
+
+```{r}
+#| label: Import bCOUNTm_norm
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# Import the  normalised count table that was used during beta diversity analysis.
+bCOUNTm_norm <- readRDS("interim/02_Taxa_Analysis/bCOUNTm_microbial_load.RDS")
+
+```
+
+
+```{r}
+#| label: heatmap DF
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+# --- 1. Sample metadata to group replicates
+annot_df <- bDESIGN %>%
+  dplyr::select(sample_name, line, condition) %>%
+  dplyr::filter(sample_name %in% colnames(bCOUNTm_norm)) %>%
+  dplyr::mutate(group = paste(line, condition, sep = "_"))
+
+annot_df <- annot_df[match(colnames(bCOUNTm_norm), annot_df$sample_name), ]
+annot_df$group_readable <- gsub("318", "mmf1\\-2", annot_df$group)  # optional relabeling
+
+# --- 2. Group mean abundance per ASV
+group_means <- t(apply(bCOUNTm_norm, 1, function(x) {
+  tapply(x, annot_df$group_readable, mean, na.rm = TRUE)
+}))
+heatmap_data <- as.data.frame(group_means)
+
+# --- 3. Filter to significantly responsive ASVs
+sig_asvs <- dplyr::bind_rows(
+  results_full_model$condition %>% dplyr::filter(signif),
+  results_full_model$line %>% dplyr::filter(signif),
+  results_full_model$interaction %>% dplyr::filter(signif)
+) %>%
+  dplyr::distinct(ASV, .keep_all = TRUE)
+
+heatmap_data <- heatmap_data[rownames(heatmap_data) %in% sig_asvs$ASV, ]
+
+# --- 4. Build annotation flags
+asv_annotation <- data.frame(
+  condition = rownames(heatmap_data) %in% results_full_model$condition$ASV[results_full_model$condition$signif],
+  line = rownames(heatmap_data) %in% results_full_model$line$ASV[results_full_model$line$signif],
+  interaction = rownames(heatmap_data) %in% results_full_model$interaction$ASV[results_full_model$interaction$signif]
+) %>%
+  dplyr::mutate(across(everything(), ~ factor(ifelse(.x, "yes", "no"), levels = c("no", "yes"))))
+rownames(asv_annotation) <- rownames(heatmap_data)
+
+# --- 5. Genus labels for rows
+asv_genus <- bTAXA[rownames(heatmap_data), "genus"]
+asv_genus[is.na(asv_genus)] <- "unassigned"
+asv_labels <- paste0(asv_genus, " (", rownames(heatmap_data), ")")
+names(asv_labels) <- rownames(heatmap_data)
+
+# --- 6. Define colors for row annotations
+annotation_colors <- list(
+  condition = c("yes" = "#D5A6BD", "no" = "white"),
+  line = c("yes" = "#92C5DE", "no" = "white"),
+  interaction = c("yes" = "#01686C", "no" = "white")
+)
+```
+
+
+```{r}
+#| label: Heatmap rel abundant
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+# Load required libraries
+library(ComplexHeatmap)
+library(circlize)
+library(dplyr)
+library(tibble)
+
+# 1. Compute mean abundance across the heatmap matrix
+asv_mean_abund <- rowMeans(heatmap_data, na.rm = TRUE)
+
+# 2. Assign significance classes and sort
+asv_sorting_df <- asv_annotation %>%
+  dplyr::mutate(ASV = rownames(.)) %>%
+  dplyr::mutate(
+    significance_class = dplyr::case_when(
+      condition == "yes" & line == "no" & interaction == "no" ~ "1_condition_only",
+      line == "yes" & condition == "no" & interaction == "no" ~ "2_line_only",
+      interaction == "yes" & condition == "no" & line == "no" ~ "3_interaction_only",
+      (interaction == "yes" & (line == "yes" | condition == "yes")) |
+        (line == "yes" & condition == "yes") ~ "4_multi_category",
+      TRUE ~ "5_other"
+    ),
+    mean_abundance = asv_mean_abund[ASV]
+  ) %>%
+  dplyr::mutate(significance_class = factor(
+    significance_class,
+    levels = c("1_condition_only", "2_line_only", "3_interaction_only", "4_multi_category", "5_other")
+  )) %>%
+  dplyr::arrange(significance_class, desc(mean_abundance))
+
+# 3. Reorder ASV rows
+sorted_asvs <- asv_sorting_df$ASV
+heatmap_data <- heatmap_data[sorted_asvs, ]
+# Define the desired column order (sample groups)
+desired_order <- c("WT_minus", "WT_plus", "mmf1-2_minus", "mmf1-2_plus")
+
+# 4. Sqrt-transform and reorder columns
+sqrt_heatmap_data <- sqrt(heatmap_data)
+sqrt_heatmap_data <- sqrt_heatmap_data[, desired_order]
+
+# 5. Plot heatmap without gaps
+heatmap <- pheatmap::pheatmap(
+  mat = as.matrix(sqrt_heatmap_data),
+  cluster_rows = FALSE,
+  cluster_cols = FALSE,
+  annotation_row = asv_annotation[rownames(sqrt_heatmap_data), , drop = FALSE],
+  labels_row = asv_labels[rownames(sqrt_heatmap_data)],
+  show_rownames = TRUE,
+  show_colnames = TRUE,
+  fontsize = 6,
+  border_color = "grey30",
+  color = colorRampPalette(c("#FFF8DC", "firebrick3"))(1000),
+  annotation_colors = annotation_colors,
+  main = "Square-Root-Transf. Rel. Abundance of Differentially Abundant ASVs",
+  angle_col = 90
+)
+heatmap
+
+ggsave("Heatmap.pdf", plot = heatmap, width = 12, height = 12, units = "cm", path = "Output/Figures/")
+```
+
+
+\pagebreak
+
+## Session info
+
+```{r}
+#| label: session info 4
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+
+sessionInfo()
+
+```
+
