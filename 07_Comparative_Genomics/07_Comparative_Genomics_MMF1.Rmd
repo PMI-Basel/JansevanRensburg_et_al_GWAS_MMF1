@@ -34,7 +34,7 @@ theme_update(strip.background = element_rect(fill = "white"))
 # Genespace
 
 After input file preparation (`.bed` and `.pep` files according to `GENESPACE` documentation), `GENESPACE` runs.
-Please note that `DIAMOND` and `mcmscanx` need to be correctly installed and / or paths below need to be changed.
+Please note that `DIAMOND` and `mcscanx` need to be correctly installed and / or paths below need to be changed.
 
 ```{r}
 # Define accessions

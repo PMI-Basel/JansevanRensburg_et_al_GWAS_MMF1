@@ -38,7 +38,7 @@ theme_update(strip.background = element_rect(fill = "white"))
 
 After input file preparation (`.bed` and `.pep` files according to
 `GENESPACE` documentation), `GENESPACE` runs. Please note that `DIAMOND`
-and `mcmscanx` need to be correctly installed and / or paths below need
+and `mcscanx` need to be correctly installed and / or paths below need
 to be changed.
 
 ``` r
@@ -246,19 +246,19 @@ plotdat <- gs_to_gggenomes(
 )
 ```
 
-    ## # Obtained pangenes in 0.67 seconds
+    ## # Obtained pangenes in 0.72 seconds
 
     ## # Obtaining syntenic relationships
 
-    ## # Obtained syntenic relationships in 7.62 seconds
+    ## # Obtained syntenic relationships in 8.12 seconds
 
-    ## # Constructed features data in 0.04 seconds
+    ## # Constructed features data in 0.02 seconds
 
-    ## # Constructed syntenic genes in 0.05 seconds
+    ## # Constructed syntenic genes in 0.03 seconds
 
     ## # Subsetting annotations
 
-    ## # Finished subsetting annotations in 0.56 seconds
+    ## # Finished subsetting annotations in 0.48 seconds
 
     ## # Creating sequence table
 
@@ -266,17 +266,17 @@ plotdat <- gs_to_gggenomes(
 
     ## # Creating ranges
 
-    ## # Finished creating ranges in 0.03 seconds
+    ## # Finished creating ranges in 0.02 seconds
 
     ## # Collecting synteny for ranges
 
-    ## # Updated synteny in 6.13 seconds
+    ## # Updated synteny in 5.96 seconds
 
     ## # Converting synteny to links
 
     ## # Converted synteny to links in 0.37 seconds
 
-    ## # Finished. (Total time: 15.5 seconds)
+    ## # Finished. (Total time: 15.75 seconds)
 
 Add info to gene table.
 
