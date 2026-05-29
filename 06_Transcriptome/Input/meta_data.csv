@@ -1,21 +1,3 @@
-sample,genotype,conditioning
-mmf1m1,mmf1,minus
-mmf1m2,mmf1,minus
-mmf1m3,mmf1,minus
-mmf1m4,mmf1,minus
-mmf1m5,mmf1,minus
-mmf1p1,mmf1,plus
-mmf1p2,mmf1,plus
-mmf1p3,mmf1,plus
-mmf1p4,mmf1,plus
-mmf1p5,mmf1,plus
-WTm1,WT,minus
-WTm2,WT,minus
-WTm3,WT,minus
-WTm4,WT,minus
-WTm5,WT,minus
-WTp1,WT,plus
-WTp2,WT,plus
-WTp3,WT,plus
-WTp4,WT,plus
-WTp5,WT,plus
+version https://git-lfs.github.com/spec/v1
+oid sha256:26f52ca0b48242bf6120e0aeaff94c830411525fe8c207b2cbbbc2bf12b801e6
+size 358
