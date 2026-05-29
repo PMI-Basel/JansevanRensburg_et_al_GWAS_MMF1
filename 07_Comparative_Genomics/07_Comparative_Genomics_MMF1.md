@@ -1,3 +1,8 @@
+Comparative Genomics MMF1
+================
+Niklas Schandry
+May 2026
+
 # About
 
 This file documents the analysis of syntenic relationships of the NLRs
@@ -12,20 +17,22 @@ improve downstream handling of genespace outputs.
 
 # Session setup
 
-    library(tidyverse)
-    library(magrittr)
-    library(Biostrings)
-    library(GENESPACE)
-    library(future)
-    library(future.apply)
-    library(khroma)
-    library(gggenomes)
-    source("functions/genespace_2_gggenomes.R")
-    source("functions/themes_gggenespace.R")
-    source("functions/subset_pdat.R")
-    group_colors <- c("Other" = "grey80", "TNL" = "orange")
-    theme_set(theme_bw(base_size = 12))
-    theme_update(strip.background = element_rect(fill = "white"))
+``` r
+library(tidyverse)
+library(magrittr)
+library(Biostrings)
+library(GENESPACE)
+library(future)
+library(future.apply)
+library(khroma)
+library(gggenomes)
+source("functions/genespace_2_gggenomes.R")
+source("functions/themes_gggenespace.R")
+source("functions/subset_pdat.R")
+group_colors <- c("Other" = "grey80", "TNL" = "orange")
+theme_set(theme_bw(base_size = 12))
+theme_update(strip.background = element_rect(fill = "white"))
+```
 
 # Genespace
 
@@ -34,25 +41,27 @@ After input file preparation (`.bed` and `.pep` files according to
 and `mcmscanx` need to be correctly installed and / or paths below need
 to be changed.
 
-    # Define accessions
-    accessions <- c("IP_Hue_3", "Col_0", "Hadd_3")
+``` r
+# Define accessions
+accessions <- c("IP_Hue_3", "Col_0", "Hadd_3")
 
-    # Define paths
-    genespace_work <- "genespace"
-    mcscan_path <- "/opt/MCScanX/"
-    of_path <- "/opt/OrthoFinder/orthofinder"
-    diamond_path <- "/opt/OrthoFinder/bin/diamond"
+# Define paths
+genespace_work <- "genespace"
+mcscan_path <- "/opt/MCScanX/"
+of_path <- "/opt/OrthoFinder/orthofinder"
+diamond_path <- "/opt/OrthoFinder/bin/diamond"
 
-    # Initialize genespace
-    gs_acc <- init_genespace(
-      genomeIDs = accessions,
-      wd = genespace_work,
-      path2mcscanx = mcscan_path,
-      path2orthofinder = of_path,
-      path2diamond = diamond_path,
-      diamondUltraSens = FALSE,
-      nCores = 32
-    )
+# Initialize genespace
+gs_acc <- init_genespace(
+  genomeIDs = accessions,
+  wd = genespace_work,
+  path2mcscanx = mcscan_path,
+  path2orthofinder = of_path,
+  path2diamond = diamond_path,
+  diamondUltraSens = FALSE,
+  nCores = 32
+)
+```
 
     ## Checking Working Directory ... PASS: `genespace`
     ## Checking user-defined parameters ...
@@ -77,8 +86,10 @@ to be changed.
     ##  Found valid path to DIAMOND2 v2.013: `/opt/OrthoFinder/bin/diamond`
     ##  Found valid MCScanX_h executable: `/opt/MCScanX//MCScanX_h`
 
-    # Run genespace
-    gs_acc_out <- run_genespace(gs_acc)
+``` r
+# Run genespace
+gs_acc_out <- run_genespace(gs_acc)
+```
 
     ## 
     ## ############################
@@ -163,19 +174,25 @@ to be changed.
     ##         for details.
     ## ############################
 
-    gs_acc_out |> write_rds("genespace/genespace_out.rds")
+``` r
+gs_acc_out |> write_rds("genespace/genespace_out.rds")
+```
 
 # Formatting
 
-    # Read in the files
-    gs_acc_out <- read_rds("genespace/genespace_out.rds")
-    annotations <- read_rds("annotations/annotations.rds")
-    gene_info <- read_rds("annotations/gene_info.rds")
-    nlrs <- read_rds("annotations/nlrs.rds")
+``` r
+# Read in the files
+gs_acc_out <- read_rds("genespace/genespace_out.rds")
+annotations <- read_rds("annotations/annotations.rds")
+gene_info <- read_rds("annotations/gene_info.rds")
+nlrs <- read_rds("annotations/nlrs.rds")
+```
 
 Locate MMF1 in Col-0 annotations:
 
-    gene_info |> filter(str_detect(info, "AT3G44630"))
+``` r
+gene_info |> filter(str_detect(info, "AT3G44630"))
+```
 
     ## # A tibble: 4 × 5
     ##   bin_id   seq_id feat_id                      type  info                       
@@ -185,59 +202,63 @@ Locate MMF1 in Col-0 annotations:
     ## 3 Col_0    Chr3   Col_0_evm.TU.Chr3.3339       gene  "ID=evm.TU.Chr3_RagTag.333…
     ## 4 Col_0    Chr3   Col_0_evm.model.Chr3.3339    mRNA  "ID=evm.model.Chr3_RagTag.…
 
-    # Chr3.3339
+``` r
+# Chr3.3339
+```
 
 ## ROI from genespace
 
-    col_0_mmf1_flank_bed <- annotations |>
-      filter(bin_id == "Col-0") |>
-      filter(str_detect(feat_id, "Chr3.3339")) |>
-      slice_head(n = 1) %$%
-      data.frame(
-        genome = bin_id |> str_replace("-", "_"),
-        chr = seq_id,
-        start = start - 5000,
-        end = end + 30000
-      )
+``` r
+col_0_mmf1_flank_bed <- annotations |>
+  filter(bin_id == "Col-0") |>
+  filter(str_detect(feat_id, "Chr3.3339")) |>
+  slice_head(n = 1) %$%
+  data.frame(
+    genome = bin_id |> str_replace("-", "_"),
+    chr = seq_id,
+    start = start - 5000,
+    end = end + 30000
+  )
 
-    plotdat <- gs_to_gggenomes(
-      gs_acc_out,
-      bed = col_0_mmf1_flank_bed,
-      accessions,
-      pad = 0,
-      annotations = annotations |>
-        filter(type == "mRNA") |>
-        dplyr::select(
-          "feat_id",
-          "seq_id",
-          "start",
-          "end" ,
-          "strand",
-          "bin_id",
-          "type",
-          "introns"
-        ) |>
-        mutate(
-          bin_id = bin_id |> str_replace_all("-", "_"),
-          seq_id = glue::glue("{bin_id}_{seq_id}"),
-          feat_id = glue::glue("{bin_id}_{feat_id}"),
-          name = NA
-        )
+plotdat <- gs_to_gggenomes(
+  gs_acc_out,
+  bed = col_0_mmf1_flank_bed,
+  accessions,
+  pad = 0,
+  annotations = annotations |>
+    filter(type == "mRNA") |>
+    dplyr::select(
+      "feat_id",
+      "seq_id",
+      "start",
+      "end" ,
+      "strand",
+      "bin_id",
+      "type",
+      "introns"
+    ) |>
+    mutate(
+      bin_id = bin_id |> str_replace_all("-", "_"),
+      seq_id = glue::glue("{bin_id}_{seq_id}"),
+      feat_id = glue::glue("{bin_id}_{feat_id}"),
+      name = NA
     )
+)
+```
 
     ## # Obtained pangenes in 0.67 seconds
 
     ## # Obtaining syntenic relationships
 
-    ## # Obtained syntenic relationships in 6.54 seconds
+    ## # Obtained syntenic relationships in 7.62 seconds
 
-    ## # Constructed features data in 0.03 seconds
+    ## # Constructed features data in 0.04 seconds
 
     ## # Constructed syntenic genes in 0.05 seconds
 
     ## # Subsetting annotations
 
-    ## # Finished subsetting annotations in 0.53 seconds
+    ## # Finished subsetting annotations in 0.56 seconds
 
     ## # Creating sequence table
 
@@ -249,91 +270,101 @@ Locate MMF1 in Col-0 annotations:
 
     ## # Collecting synteny for ranges
 
-    ## # Updated synteny in 5.12 seconds
+    ## # Updated synteny in 6.13 seconds
 
     ## # Converting synteny to links
 
-    ## # Converted synteny to links in 0.23 seconds
+    ## # Converted synteny to links in 0.37 seconds
 
-    ## # Finished. (Total time: 13.23 seconds)
+    ## # Finished. (Total time: 15.5 seconds)
 
 Add info to gene table.
 
-    plotdat$genes <- plotdat$genes |>
-      dplyr::select(seq_id, start, end, feat_id, bin_id, strand, introns, og) %>%
-      mutate(gene_id = str_extract(feat_id, "Chr[0-5].*"))  |>
-      left_join(
-        nlrs |>  mutate(gene_id = str_extract(ID, "Chr[0-5].*")) |> dplyr::select(gene_id, Type, bin_id),
-        by = c("gene_id", "bin_id")
-      ) %>%
-      mutate(
-        group = case_when(!is.na(Type) ~ Type, TRUE ~ "Other") %>%
-          fct_relevel("Other"),
-        type = "CDS" # for gggenomes
-      )
+``` r
+plotdat$genes <- plotdat$genes |>
+  dplyr::select(seq_id, start, end, feat_id, bin_id, strand, introns, og) %>%
+  mutate(gene_id = str_extract(feat_id, "Chr[0-5].*"))  |>
+  left_join(
+    nlrs |>  mutate(gene_id = str_extract(ID, "Chr[0-5].*")) |> dplyr::select(gene_id, Type, bin_id),
+    by = c("gene_id", "bin_id")
+  ) %>%
+  mutate(
+    group = case_when(!is.na(Type) ~ Type, TRUE ~ "Other") %>%
+      fct_relevel("Other"),
+    type = "CDS" # for gggenomes
+  )
+```
 
 Add info to links.
 
-    plotdat$links <- plotdat$links %>%
-      left_join(plotdat$genes %>%
-                  dplyr::select(seq_id, start, end, og, group)) %>%
-      left_join(
-        plotdat$genes %>% dplyr::select(
-          seq_id2 = seq_id,
-          start2 = start,
-          end2 = end,
-          group2 = group
-        )
-      ) %>%
-      mutate(group = case_when(!is.na(group) ~ group, !is.na(group2) ~ group2, TRUE ~ group)) %>%
-      dplyr::select(-group2)
+``` r
+plotdat$links <- plotdat$links %>%
+  left_join(plotdat$genes %>%
+              dplyr::select(seq_id, start, end, og, group)) %>%
+  left_join(
+    plotdat$genes %>% dplyr::select(
+      seq_id2 = seq_id,
+      start2 = start,
+      end2 = end,
+      group2 = group
+    )
+  ) %>%
+  mutate(group = case_when(!is.na(group) ~ group, !is.na(group2) ~ group2, TRUE ~ group)) %>%
+  dplyr::select(-group2)
+```
 
     ## Joining with `by = join_by(seq_id, start, end)`
     ## Joining with `by = join_by(seq_id2, start2, end2)`
 
 Arrange sequences in order for plotting.
 
-    plotdat$seqs <- plotdat$seqs |>
-      mutate(genome = bin_id  |>
-               factor(levels = accessions, ordered = T)) |>
-      dplyr::arrange(genome) |>
-      mutate(seq_id = factor(seq_id, ordered = T)) |>
-      dplyr::select(-genome) 
+``` r
+plotdat$seqs <- plotdat$seqs |>
+  mutate(genome = bin_id  |>
+           factor(levels = accessions, ordered = T)) |>
+  dplyr::arrange(genome) |>
+  mutate(seq_id = factor(seq_id, ordered = T)) |>
+  dplyr::select(-genome) 
+```
 
 Compute nicer polygons for drawing syntenic relationships.
 
-    plotdat$polygons <- compute_polygons(plotdat, c("IP_Hue_3_Chr3","Col_0_Chr3","Hadd_3_Chr3"))
+``` r
+plotdat$polygons <- compute_polygons(plotdat, c("IP_Hue_3_Chr3","Col_0_Chr3","Hadd_3_Chr3"))
+```
 
 # Plot
 
 ## Without syntenic relationships
 
-    gggenomes::gggenomes(genes = plotdat$genes,
-                         seqs = plotdat$seqs,
-                         links = plotdat$links) +
-      geom_seq(color = "grey50", linewidth = 1) +
-      geom_gene(
-        aes(fill = group),
-        color = "black",
-        size = 6,
-        intron_types = NA
-      ) +
-      geom_bin_label(color = "black", size = 6) +
-      scale_fill_manual(
-        values = group_colors,
-        breaks = levels(plotdat$genes$group),
-        limits = levels(plotdat$genes$group)
-      ) +
-      scale_color_manual(
-        values = group_colors,
-        breaks = levels(plotdat$genes$group),
-        limits = levels(plotdat$genes$group)
-      ) +
-      ggtitle(expression(paste(
-        'Genetic architecture around ', italic('AtMMF1')
-      ))) +
-      theme_ggg_light(base_size = 20) +
-      theme(text = element_text(size = 20), axis.text.x = element_text(size = 16))
+``` r
+gggenomes::gggenomes(genes = plotdat$genes,
+                     seqs = plotdat$seqs,
+                     links = plotdat$links) +
+  geom_seq(color = "grey50", linewidth = 1) +
+  geom_gene(
+    aes(fill = group),
+    color = "black",
+    size = 6,
+    intron_types = NA
+  ) +
+  geom_bin_label(color = "black", size = 6) +
+  scale_fill_manual(
+    values = group_colors,
+    breaks = levels(plotdat$genes$group),
+    limits = levels(plotdat$genes$group)
+  ) +
+  scale_color_manual(
+    values = group_colors,
+    breaks = levels(plotdat$genes$group),
+    limits = levels(plotdat$genes$group)
+  ) +
+  ggtitle(expression(paste(
+    'Genetic architecture around ', italic('AtMMF1')
+  ))) +
+  theme_ggg_light(base_size = 20) +
+  theme(text = element_text(size = 20), axis.text.x = element_text(size = 16))
+```
 
     ## Warning: The `size` argument of `element_line()` is deprecated as of ggplot2 3.4.0.
     ## ℹ Please use the `linewidth` argument instead.
@@ -341,62 +372,66 @@ Compute nicer polygons for drawing syntenic relationships.
     ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
     ## generated.
 
-![](07_Comparative_Genomics_MMF1_files/figure-markdown_strict/unnamed-chunk-9-1.png)
+![](07_Comparative_Genomics_MMF1_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
 
 ## With syntenic relationships
 
-    gggenomes::gggenomes(genes = plotdat$genes,
-                         seqs = plotdat$seqs,
-                         links = plotdat$links) +
-      geom_polygon(
-        data = plotdat$polygons %>% filter(direct, group == "Other"),
-        aes(
-          x = x,
-          y = y,
-          fill = group,
-          group = link
-        ),
-        alpha = 0.6
-      ) +
-      geom_polygon(
-        data = plotdat$polygons %>% filter(direct, group != "Other"),
-        aes(
-          x = x,
-          y = y,
-          fill = group,
-          group = link
-        ),
-        alpha = 0.7
-      ) +
-      geom_seq(color = "grey50", linewidth = 1) +
-      geom_gene(
-        aes(fill = group),
-        color = "black",
-        size = 6,
-        intron_types = NA
-      ) +
-      geom_bin_label(color = "black", size = 6) +
-      scale_fill_manual(
-        values = group_colors,
-        breaks = levels(plotdat$genes$group),
-        limits = levels(plotdat$genes$group)
-      ) +
-      scale_color_manual(
-        values = group_colors,
-        breaks = levels(plotdat$genes$group),
-        limits = levels(plotdat$genes$group)
-      ) +
-      ggtitle(expression(paste(
-        'Genetic architecture around ', italic('AtMMF1')
-      ))) +
-      theme_ggg_light(base_size = 20) +
-      theme(text = element_text(size = 20), axis.text.x = element_text(size = 16))
+``` r
+gggenomes::gggenomes(genes = plotdat$genes,
+                     seqs = plotdat$seqs,
+                     links = plotdat$links) +
+  geom_polygon(
+    data = plotdat$polygons %>% filter(direct, group == "Other"),
+    aes(
+      x = x,
+      y = y,
+      fill = group,
+      group = link
+    ),
+    alpha = 0.6
+  ) +
+  geom_polygon(
+    data = plotdat$polygons %>% filter(direct, group != "Other"),
+    aes(
+      x = x,
+      y = y,
+      fill = group,
+      group = link
+    ),
+    alpha = 0.7
+  ) +
+  geom_seq(color = "grey50", linewidth = 1) +
+  geom_gene(
+    aes(fill = group),
+    color = "black",
+    size = 6,
+    intron_types = NA
+  ) +
+  geom_bin_label(color = "black", size = 6) +
+  scale_fill_manual(
+    values = group_colors,
+    breaks = levels(plotdat$genes$group),
+    limits = levels(plotdat$genes$group)
+  ) +
+  scale_color_manual(
+    values = group_colors,
+    breaks = levels(plotdat$genes$group),
+    limits = levels(plotdat$genes$group)
+  ) +
+  ggtitle(expression(paste(
+    'Genetic architecture around ', italic('AtMMF1')
+  ))) +
+  theme_ggg_light(base_size = 20) +
+  theme(text = element_text(size = 20), axis.text.x = element_text(size = 16))
+```
 
-![](07_Comparative_Genomics_MMF1_files/figure-markdown_strict/unnamed-chunk-10-1.png)
+![](07_Comparative_Genomics_MMF1_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
 
 # Sessioninfo
 
-    sessionInfo()
+``` r
+sessionInfo()
+```
 
     ## R version 4.5.3 (2026-03-11)
     ## Platform: x86_64-pc-linux-gnu

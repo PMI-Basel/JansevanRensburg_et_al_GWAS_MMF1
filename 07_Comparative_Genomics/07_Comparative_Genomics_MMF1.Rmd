@@ -2,7 +2,7 @@
 title: "Comparative Genomics MMF1"
 author: "Niklas Schandry"
 date: "`r format(Sys.time(), '%B %Y')`"
-output: md_document
+output: github_document
 ---
 
 # About
