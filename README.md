@@ -18,4 +18,6 @@ The repository is structured according to the different sections of the manuscri
 
   7. [Comparative genomic analysis between Col-0, IP-Hue-3 and Hadd-3](07_Comparative_Genomics/07_Comparative_Genomics_MMF1.md)
 
+  8. Alignments of MMF1 and other TNL genes/proteins and their expression in roots and shoots.
+
 Each folder contains the neccessary "Input" files, and the annotated R code to reproduce the graphs in the manuscript.
