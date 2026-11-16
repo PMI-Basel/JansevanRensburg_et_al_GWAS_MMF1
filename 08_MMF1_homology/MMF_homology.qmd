@@ -1,0 +1,1590 @@
+---
+title: "MMF1 Protein Alignment Analysis"
+
+author: "Henry"
+
+format:
+
+  pdf:
+
+    toc: true
+
+    number-sections: true
+
+    fig-width: 14
+
+    fig-height: 8
+
+execute:
+
+  echo: false
+
+  warning: false
+
+  message: true
+---
+
+# Pairwise protein alignment of MMF1 and RPP1
+
+Reads MMF1 and RPP1 from FASTA
+
+Cleans sequences using Biostrings-native chartr()
+
+Uses Needleman-Wunsch global pairwise alignment via pwalign::pairwiseAlignment
+
+Produces wrapped alignment plot with domain annotations
+
+```{r}
+#| label: Setup
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+for (pkg in c("BiocManager", "ggplot2", "patchwork")) {
+  if (!requireNamespace(pkg, quietly = TRUE)) install.packages(pkg)
+}
+
+for (pkg in c("Biostrings", "pwalign")) {
+  if (!requireNamespace(pkg, quietly = TRUE)) BiocManager::install(pkg)
+}
+
+library(Biostrings)
+library(pwalign)
+library(ggplot2)
+library(patchwork)
+```
+
+```{r}
+#| label: Import
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+fasta_path <- "Input/Dataset7.fa"
+
+raw <- readAAStringSet(fasta_path)
+
+ids <- c(
+  MMF1 = "Col-0_AT3G44630",
+  RPP1 = "Col-0_AT3G44480"
+)
+
+missing_ids <- ids[!ids %in% names(raw)]
+
+if (length(missing_ids) > 0) {
+  stop(
+    "Sequence(s) not found in FASTA: ",
+    paste(missing_ids, collapse = ", "),
+    call. = FALSE
+  )
+}
+
+seqs <- raw[ids]
+names(seqs) <- names(ids)
+```
+
+```{r}
+#| label: Clean sequence
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+clean_AAStringSet <- function(x, trim_terminal_X = TRUE) {
+  x <- as.character(x)
+  
+  # Remove CLC alignment gaps and stop codons
+  x <- gsub("[-*]", "", x)
+  
+  # Remove all whitespace, just in case
+  x <- gsub("[[:space:]]+", "", x)
+  
+  # Uppercase
+  x <- toupper(x)
+  
+  # Optional: remove only terminal X characters
+  # Avoid removing internal X, because that shifts residue/domain coordinates.
+  if (trim_terminal_X) {
+    x <- gsub("^X+|X+$", "", x)
+  }
+  
+  # Return to Biostrings object
+  AAStringSet(x)
+}
+
+seqs_clean <- clean_AAStringSet(seqs, trim_terminal_X = TRUE)
+names(seqs_clean) <- names(ids)
+
+# Validate amino-acid alphabet
+allowed <- strsplit("ACDEFGHIKLMNPQRSTVWYBXZJUO", "")[[1]]
+
+bad_letters <- lapply(as.character(seqs_clean), function(s) {
+  chars <- unique(strsplit(s, "")[[1]])
+  setdiff(chars, allowed)
+})
+
+bad_letters <- bad_letters[lengths(bad_letters) > 0]
+
+if (length(bad_letters) > 0) {
+  stop(
+    "Invalid amino-acid character(s) detected: ",
+    paste(
+      sprintf(
+        "%s: %s",
+        names(bad_letters),
+        vapply(bad_letters, paste, collapse = ", ", FUN.VALUE = character(1))
+      ),
+      collapse = "; "
+    ),
+    call. = FALSE
+  )
+}
+
+cat(sprintf("MMF1 length: %d aa\n", length(seqs_clean[["MMF1"]])))
+cat(sprintf("RPP1 length: %d aa\n", length(seqs_clean[["RPP1"]])))
+```
+
+```{r}
+#| label: Domains
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Supports: Suppl. Fig. S1
+#   Domain coordinates and amino-acid property definitions
+# ------------------------------------------------------------
+domains <- data.frame(
+  sequence   = c("MMF1",    "MMF1",    "MMF1"),
+  domain     = c("TIR",     "NBS",     "LRR"),
+  start      = c(87,        288,       666),
+  end        = c(233,       426,       1046),
+  fill_color = c("#8dd3c7", "#fb8072", "#80b1d3"),
+  stringsAsFactors = FALSE
+)
+```
+
+```{r}
+#| label: Functions
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+build_position_map <- function(aln_seq) {
+  chars <- strsplit(aln_seq, "")[[1]]
+  
+  ungap <- cumsum(chars != "-")
+  ungap[chars == "-"] <- NA_integer_
+  
+  data.frame(
+    alignment_pos = seq_along(chars),
+    residue_pos   = ungap
+  )
+}
+
+domain_to_alignment <- function(aln_seq, start, end) {
+  pm <- build_position_map(aln_seq)
+  
+  aln_start <- min(
+    pm$alignment_pos[!is.na(pm$residue_pos) & pm$residue_pos == start],
+    na.rm = TRUE
+  )
+  
+  aln_end <- max(
+    pm$alignment_pos[!is.na(pm$residue_pos) & pm$residue_pos == end],
+    na.rm = TRUE
+  )
+  
+  if (!is.finite(aln_start) || !is.finite(aln_end)) {
+    stop(
+      "Domain coordinates could not be mapped to alignment. ",
+      "Check whether the domain coordinates still match the cleaned MMF1 sequence.",
+      call. = FALSE
+    )
+  }
+  
+  c(aln_start = aln_start, aln_end = aln_end)
+}
+
+map_domains_to_alignment <- function(domains, aln_seqs, names_vec, width = 100) {
+  out <- vector("list", nrow(domains))
+  
+  for (i in seq_len(nrow(domains))) {
+    idx <- match(domains$sequence[i], names_vec)
+    
+    if (is.na(idx)) {
+      stop("Unknown sequence in domains: ", domains$sequence[i], call. = FALSE)
+    }
+    
+    mapped <- domain_to_alignment(
+      aln_seq = aln_seqs[[idx]],
+      start   = domains$start[i],
+      end     = domains$end[i]
+    )
+    
+    as_start <- unname(mapped["aln_start"])
+    as_end   <- unname(mapped["aln_end"])
+    
+    sb <- ((as_start - 1) %/% width) + 1
+    eb <- ((as_end   - 1) %/% width) + 1
+    
+    rows <- vector("list", eb - sb + 1)
+    
+    for (b in sb:eb) {
+      bk_start <- (b - 1) * width + 1
+      
+      rows[[b - sb + 1]] <- data.frame(
+        sequence   = domains$sequence[i],
+        domain     = domains$domain[i],
+        fill_color = domains$fill_color[i],
+        block      = b,
+        x_min      = max(as_start, bk_start) - bk_start + 1,
+        x_max      = min(as_end, bk_start + width - 1) - bk_start + 1,
+        stringsAsFactors = FALSE
+      )
+    }
+    
+    out[[i]] <- do.call(rbind, rows)
+  }
+  
+  do.call(rbind, out)
+}
+```
+
+```{r}
+#| label: Amino acid properties
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# Physicochemical classes for exact matches
+aa_physico_class <- c(
+  A = "hydrophobic", V = "hydrophobic", I = "hydrophobic", L = "hydrophobic",
+  M = "hydrophobic", F = "hydrophobic", W = "hydrophobic", P = "hydrophobic",
+  G = "hydrophobic",
+  S = "polar",       T = "polar",       N = "polar",       Q = "polar",
+  Y = "polar",       C = "polar",
+  D = "charged_neg", E = "charged_neg",
+  K = "charged_pos", R = "charged_pos", H = "charged_pos"
+)
+
+physico_colors <- c(
+  hydrophobic = "#aec6e8",
+  polar       = "#b2dfb0",
+  charged_neg = "#c9b8d8",
+  charged_pos = "#80cdc1"
+)
+
+# Grantham matrix for mismatch severity
+grantham_score <- function(aa1, aa2) {
+  aas <- c(
+    "A","R","N","D","C","Q","E","G","H","I",
+    "L","K","M","F","P","S","T","W","Y","V"
+  )
+  
+  gmat <- matrix(c(
+    0,112,111,126,195, 91,107, 60, 86, 94,102,106, 95,113, 27, 99, 58,148,112, 64,
+    112,  0, 86, 96,180, 43, 54,125, 29, 97,102, 26, 91, 97,103,110, 71,101, 77, 96,
+    111, 86,  0, 23,139, 46, 42, 80, 68,149,153, 94,142,158, 91, 46, 65,174,143,133,
+    126, 96, 23,  0,154, 61, 45, 94, 81,168,172,101,160,177,108, 65, 85,181,160,152,
+    195,180,139,154,  0,154,170,159,174,198,198,202,196,205,169,112,149,215,194,192,
+    91, 43, 46, 61,154,  0, 29, 87, 24,109,113, 53,101,116, 76, 68, 42,130, 99, 96,
+    107, 54, 42, 45,170, 29,  0, 98, 40,134,138, 56,126,140, 93, 80, 65,152,122,121,
+    60,125, 80, 94,159, 87, 98,  0, 98,135,138,127,127,153, 42, 56, 59,184,147,109,
+    86, 29, 68, 81,174, 24, 40, 98,  0, 94, 99, 32, 87,100, 77, 89, 47,115, 83, 84,
+    94, 97,149,168,198,109,134,135, 94,  0,  5,102, 10, 21, 95,142, 89, 61, 33, 29,
+    102,102,153,172,198,113,138,138, 99,  5,  0,107, 15, 22, 98,145, 92, 61, 36, 32,
+    106, 26, 94,101,202, 53, 56,127, 32,102,107,  0, 95,102,103,121, 78,110, 85, 97,
+    95, 91,142,160,196,101,126,127, 87, 10, 15, 95,  0, 28, 87,135, 81, 67, 36, 21,
+    113, 97,158,177,205,116,140,153,100, 21, 22,102, 28,  0,114,155,103, 40, 22, 50,
+    27,103, 91,108,169, 76, 93, 42, 77, 95, 98,103, 87,114,  0, 74, 38,147,114, 68,
+    99,110, 46, 65,112, 68, 80, 56, 89,142,145,121,135,155, 74,  0, 58,177,144,124,
+    58, 71, 65, 85,149, 42, 65, 59, 47, 89, 92, 78, 81,103, 38, 58,  0,128, 92, 69,
+    148,101,174,181,215,130,152,184,115, 61, 61,110, 67, 40,147,177,128,  0, 37, 88,
+    112, 77,143,160,194, 99,122,147, 83, 33, 36, 85, 36, 22,114,144, 92, 37,  0, 55,
+    64, 96,133,152,192, 96,121,109, 84, 29, 32, 97, 21, 50, 68,124, 69, 88, 55,  0
+  ), nrow = 20, byrow = TRUE, dimnames = list(aas, aas))
+  
+  if (!(aa1 %in% aas) || !(aa2 %in% aas)) return(NA_real_)
+  
+  gmat[aa1, aa2]
+}
+
+grantham_class <- function(score) {
+  if (is.na(score)) return("mismatch_other")
+  if (score <= 50)  return("mismatch_conservative")
+  if (score <= 100) return("mismatch_moderate")
+  "mismatch_radical"
+}
+
+mismatch_colors <- c(
+  mismatch_conservative = "#ffd966",
+  mismatch_moderate     = "#f4a030",
+  mismatch_radical      = "#cc2b2b",
+  mismatch_other        = "#999999"
+)
+```
+
+```{r}
+#| label: Convert alignment to data frame
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+alignment_to_df <- function(aln_seqs, names_vec, width = 100, row_gap = 0.42) {
+  seq_chars <- lapply(aln_seqs, function(x) strsplit(x, "")[[1]])
+  
+  aln_len <- length(seq_chars[[1]])
+  n_seqs  <- length(seq_chars)
+  
+  if (n_seqs != 2) {
+    stop("This plotting function expects exactly two aligned sequences.", call. = FALSE)
+  }
+  
+  if (!all(vapply(seq_chars, length, integer(1)) == aln_len)) {
+    stop("Aligned sequences are not the same length.", call. = FALSE)
+  }
+  
+  r <- seq_chars[[1]]
+  q <- seq_chars[[2]]
+  
+  fill_per_pos <- vapply(seq_len(aln_len), function(j) {
+    aa1 <- r[j]
+    aa2 <- q[j]
+    
+    if (aa1 == "-" || aa2 == "-") {
+      return("#d6d6d6")
+    }
+    
+    if (aa1 == aa2) {
+      cls <- aa_physico_class[aa1]
+      
+      if (is.na(cls)) {
+        return("#ffffff")
+      }
+      
+      return(unname(physico_colors[cls]))
+    }
+    
+    g <- grantham_score(aa1, aa2)
+    cls <- grantham_class(g)
+    
+    unname(mismatch_colors[cls])
+  }, character(1))
+  
+  status <- ifelse(
+    r == q,
+    "match",
+    ifelse(r == "-" | q == "-", "gap", "mismatch")
+  )
+  
+  df_list <- vector("list", n_seqs)
+  
+  for (i in seq_along(seq_chars)) {
+    pos <- seq_len(aln_len)
+    
+    df_list[[i]] <- data.frame(
+      sequence   = names_vec[i],
+      y          = (n_seqs - i) * row_gap + 1,
+      position   = pos,
+      residue    = seq_chars[[i]],
+      block      = ((pos - 1) %/% width) + 1,
+      x          = ((pos - 1) %% width) + 1,
+      status     = status,
+      fill_color = fill_per_pos,
+      stringsAsFactors = FALSE
+    )
+  }
+  
+  do.call(rbind, df_list)
+}
+
+alignment_block_labels <- function(aln_seq, width = 100, by = 10) {
+  chars <- strsplit(aln_seq, "")[[1]]
+  
+  res_pos <- cumsum(chars != "-")
+  res_pos[chars == "-"] <- NA_integer_
+  
+  pos <- seq_along(chars)
+  
+  block      <- ((pos - 1) %/% width) + 1
+  x_in_block <- ((pos - 1) %% width) + 1
+  
+  df <- data.frame(
+    block   = block,
+    x       = x_in_block,
+    res_pos = res_pos
+  )
+  
+  do.call(rbind, lapply(split(df, df$block), function(d) {
+    tick_x <- seq(1, width, by = by)
+    
+    out <- data.frame(
+      block = unique(d$block),
+      x     = tick_x,
+      label = NA_character_,
+      stringsAsFactors = FALSE
+    )
+    
+    for (j in seq_along(tick_x)) {
+      hits <- d$res_pos[d$x == tick_x[j]]
+      hits <- hits[!is.na(hits)]
+      
+      if (length(hits)) {
+        out$label[j] <- as.character(hits[1])
+      }
+    }
+    
+    out[!is.na(out$label), , drop = FALSE]
+  }))
+}
+```
+
+```{r}
+#| label: Main plotting function
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Supports: Suppl. Fig. S1
+#   Alignment plotting function
+# ------------------------------------------------------------
+plot_alignment_wrapped <- function(
+    aln_seqs,
+    names_vec,
+    width             = 100,
+    display_names     = names_vec,
+    domain_df         = NULL,
+    x_number_sequence = names_vec[2],
+    x_break_by        = 10,
+    filename          = NULL,
+    row_gap           = 0.42
+) {
+  stopifnot(length(display_names) == length(names_vec))
+  
+  df <- alignment_to_df(
+    aln_seqs  = aln_seqs,
+    names_vec = names_vec,
+    width     = width,
+    row_gap   = row_gap
+  )
+  
+  n_seqs   <- length(names_vec)
+  n_blocks <- max(df$block)
+  
+  y_vals <- (n_seqs - seq_len(n_seqs)) * row_gap + 1
+  y_top  <- max(y_vals)
+  y_bot  <- min(y_vals)
+  
+  ref_idx <- match(x_number_sequence, names_vec)
+  
+  if (is.na(ref_idx)) {
+    stop("`x_number_sequence` not found in names_vec.", call. = FALSE)
+  }
+  
+  tick_df <- alignment_block_labels(
+    aln_seq = aln_seqs[[ref_idx]],
+    width   = width,
+    by      = x_break_by
+  )
+  
+  tile_h       <- 0.38
+  domain_bar_h <- 0.22
+  domain_gap   <- 0.12
+  label_pad    <- 0.05
+  
+  y_lo     <- y_bot - tile_h / 2 - 0.45
+  number_y <- y_bot - tile_h / 2 - 0.10
+  
+  domain_ymin   <- y_top + tile_h / 2 + domain_gap
+  domain_ymax   <- domain_ymin + domain_bar_h
+  domain_text_y <- domain_ymax + label_pad
+  y_hi          <- domain_text_y + 0.22
+  
+  sub_df <- df[df$sequence == names_vec[1], ]
+  
+  n_match <- sum(sub_df$status == "match", na.rm = TRUE)
+  n_gap   <- sum(sub_df$status == "gap", na.rm = TRUE)
+  n_total <- nrow(sub_df)
+  
+  pct_id <- round(100 * n_match / (n_total - n_gap), 1)
+  
+  subtitle <- sprintf(
+    "%s vs %s  |  Alignment length: %d  |  Identity: %.1f%%  |  Gaps: %d",
+    display_names[1], display_names[2], n_total, pct_id, n_gap
+  )
+  
+  p <- ggplot(df, aes(x = x, y = y)) +
+    geom_tile(
+      aes(fill = fill_color),
+      color = "white",
+      linewidth = 0.10,
+      height = 0.38
+    ) +
+    geom_text(
+      aes(label = residue),
+      family = "mono",
+      size = 1.5,
+      color = "#1a1a1a"
+    ) +
+    geom_text(
+      data = tick_df,
+      inherit.aes = FALSE,
+      aes(x = x, y = number_y, label = label),
+      size = 3.0,
+      vjust = 1,
+      color = "#555555"
+    ) +
+    facet_wrap(~block, ncol = 1, strip.position = "left") +
+    scale_fill_identity() +
+    scale_y_continuous(
+      breaks = y_vals,
+      labels = display_names,
+      expand = c(0, 0)
+    ) +
+    scale_x_continuous(
+      breaks = seq(1, width, by = x_break_by),
+      labels = NULL,
+      expand = c(0, 0)
+    ) +
+    coord_cartesian(ylim = c(y_lo, y_hi), clip = "off") +
+    labs(
+      title = "Pairwise protein sequence alignment",
+      subtitle = sprintf(
+        "Needleman-Wunsch global alignment + BLOSUM62  |  %s vs %s  |  Alignment length: %d  |  Identity: %.1f%%  |  Gaps: %d",
+        display_names[1],
+        display_names[2],
+        n_total,
+        pct_id,
+        n_gap
+      ),
+      x = paste0("Residue position (", x_number_sequence, ")"),
+      y = NULL
+    ) +
+    theme_minimal(base_size = 11) +
+    theme(
+      panel.grid       = element_blank(),
+      strip.text       = element_blank(),
+      strip.background = element_blank(),
+      axis.text.y      = element_text(face = "bold", size = 11, color = "#222222"),
+      axis.title.x     = element_text(size = 9, color = "#555555", margin = margin(t = 8)),
+      axis.ticks       = element_blank(),
+      axis.text.x      = element_blank(),
+      legend.position  = "none",
+      plot.title       = element_text(face = "bold", size = 13),
+      plot.subtitle    = element_text(size = 9, color = "#555555"),
+      plot.margin      = margin(6, 8, 4, 4),
+      panel.spacing.y  = unit(-8, "pt")
+    )
+  
+  if (!is.null(domain_df)) {
+    p <- p +
+      geom_rect(
+        data = domain_df,
+        inherit.aes = FALSE,
+        aes(
+          xmin = x_min - 0.5,
+          xmax = x_max + 0.5,
+          ymin = domain_ymin,
+          ymax = domain_ymax,
+          fill = fill_color
+        ),
+        color = "#333333",
+        linewidth = 0.3,
+        alpha = 0.85
+      ) +
+      geom_text(
+        data = domain_df,
+        inherit.aes = FALSE,
+        aes(
+          x     = (x_min + x_max) / 2,
+          y     = domain_text_y,
+          label = domain
+        ),
+        size = 2.4,
+        fontface = "bold",
+        vjust = 0,
+        color = "#333333"
+      )
+  }
+  
+  legend_data <- data.frame(
+    x = c(1, 2.5, 4, 5.5, 1, 2.5, 4),
+    label = c(
+      "Hydrophobic", "Polar", "Charged\u2212", "Charged+",
+      "Conservative", "Moderate", "Radical"
+    ),
+    col = c(
+      unname(physico_colors["hydrophobic"]),
+      unname(physico_colors["polar"]),
+      unname(physico_colors["charged_neg"]),
+      unname(physico_colors["charged_pos"]),
+      unname(mismatch_colors["mismatch_conservative"]),
+      unname(mismatch_colors["mismatch_moderate"]),
+      unname(mismatch_colors["mismatch_radical"])
+    ),
+    group = factor(
+      c(
+        rep("Matches (physicochemical class)", 4),
+        rep("Mismatches (Grantham severity)", 3)
+      ),
+      levels = c(
+        "Mismatches (Grantham severity)",
+        "Matches (physicochemical class)"
+      )
+    ),
+    stringsAsFactors = FALSE
+  )
+  
+  p_legend <- ggplot(legend_data, aes(x = x, y = group)) +
+    geom_point(
+      aes(fill = col),
+      shape = 22,
+      size = 6,
+      color = "#444444",
+      stroke = 0.4
+    ) +
+    geom_text(
+      aes(label = label),
+      hjust = -0.25,
+      size = 3.2,
+      color = "#333333"
+    ) +
+    scale_fill_identity() +
+    scale_x_continuous(limits = c(0.5, 12), expand = c(0, 0)) +
+    scale_y_discrete() +
+    labs(y = " ") +
+    theme_void() +
+    theme(
+      axis.text.y = element_text(
+        face = "italic",
+        size = 9,
+        color = "#555555",
+        hjust = 1,
+        margin = margin(r = 8)
+      ),
+      axis.title.y = element_text(size = 11, color = "transparent"),
+      plot.margin  = margin(4, 8, 4, 4)
+    )
+  
+  combined <- p / p_legend +
+    plot_layout(heights = c(n_blocks, 1), axes = "collect")
+  
+  print(combined)
+  
+  if (!is.null(filename)) {
+    ggsave(
+      filename = filename,
+      plot     = combined,
+      width    = 14,
+      height   = max(4, n_blocks * 1.10) + 1.2,
+      dpi      = 300
+    )
+    
+    message("Saved to: ", filename)
+  }
+  
+  invisible(combined)
+}
+```
+
+\newpage
+
+```{r}
+#| label: Needleman-Wunsch alignment
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+#| fig.width: 14
+#| fig.height: 22
+#| fig-cap: |
+#|   Supplementary Figure S1 | Pairwise sequence alignment of MMF1 and RPP1. Full-length protein
+#|   sequences of Mediator of Microbiome Feedback 1 (MMF1) and Recognition of Peronospora parasitica
+#|   1 (RPP1) were aligned using Needleman-Wunsch global pairwise alignment with the BLOSUM62
+#|   substitution matrix (pwalign R package). Protein sequences were obtained from the assembled
+#|   genomes (Fig. 7b). Residues are coloured according to biochemical properties at matched
+#|   positions (hydrophobic, blue; polar, green; negatively charged, lavender; positively charged,
+#|   teal) or by the degree of physicochemical divergence at mismatched positions based on Grantham
+#|   scores (conservative ≤50, yellow; moderate 51--100, amber; radical >100, red). Gap positions are
+#|   shown in grey. Annotated functional domains based on the sequence of RPP1 are indicated by
+#|   coloured bars above the corresponding alignment blocks: the Toll/interleukin-1 receptor (TIR)
+#|   domain, nucleotide-binding site (NBS) domain, and leucine-rich repeat (LRR) domain. Residue
+#|   positions along the x-axis reflect that of RPP1. Overall sequence identity is 85.2% across an
+#|   alignment length of 1,273 residues (66 gap positions).
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Produces: Suppl. Fig. S1
+#   Pairwise protein alignment of MMF1 and RPP1 with domains
+#   -> Output/Figures/pairwise_protein_alignment_with_domains.pdf
+# ------------------------------------------------------------
+message("Running Needleman-Wunsch global pairwise alignment with BLOSUM62 ...")
+
+aln <- pwalign::pairwiseAlignment(
+  pattern            = seqs_clean[["MMF1"]],
+  subject            = seqs_clean[["RPP1"]],
+  type               = "global",
+  substitutionMatrix = "BLOSUM62",
+  gapOpening         = 10,
+  gapExtension       = 0.5
+)
+
+message(sprintf("Alignment score:   %.1f", score(aln)))
+message(sprintf("Sequence identity: %.1f%%", 100 * pid(aln, type = "PID1")))
+
+aln_seqs <- list(
+  as.character(pattern(aln)),
+  as.character(subject(aln))
+)
+
+names_vec <- c("MMF1", "RPP1")
+
+domain_plot_df <- map_domains_to_alignment(
+  domains   = domains,
+  aln_seqs  = aln_seqs,
+  names_vec = names_vec,
+  width     = 100
+)
+
+plot_alignment_wrapped(
+  aln_seqs          = aln_seqs,
+  names_vec         = names_vec,
+  width             = 100,
+  display_names     = c("MMF1", "RPP1"),
+  domain_df         = domain_plot_df,
+  x_number_sequence = "RPP1",
+  x_break_by        = 10,
+  filename          = "pairwise_protein_alignment_with_domains.pdf"
+)
+
+```
+
+\newpage
+
+# Multiple alignments of TNL protein in extreme accessions
+
+CLC multiple sequence alignment + conservation heatmap
+
+Uses the existing alignment exported from CLC Workbench
+
+Matches = dark blue
+
+Changes = Grantham severity
+
+Gaps in sequence = white
+
+Insertion vs reference = grey
+
+Sequences clustered by BLOSUM62 similarity for display only
+
+```{r}
+#| label: Setup2
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+for (pkg in c("BiocManager", "ggplot2", "patchwork", "scales")) {
+  if (!requireNamespace(pkg, quietly = TRUE)) install.packages(pkg)
+}
+
+for (pkg in c("Biostrings")) {
+  if (!requireNamespace(pkg, quietly = TRUE)) BiocManager::install(pkg)
+}
+
+if (!requireNamespace("ggrastr", quietly = TRUE)) {
+  install.packages("ggrastr")
+}
+
+library(Biostrings)
+library(ggplot2)
+library(patchwork)
+library(ggrastr)
+library(scales)
+```
+
+```{r}
+#| label: Load alignment
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Supports: Fig. 7b
+#   Load pre-aligned FASTA
+# ------------------------------------------------------------
+fasta_path <- "Input/Dataset7.fa"
+
+raw <- readAAStringSet(fasta_path)
+
+# IMPORTANT:
+# This script assumes the FASTA is already aligned by CLC Workbench.
+# Therefore, we keep gaps "-" and do not realign.
+
+aln_mat <- as.matrix(raw)
+
+seq_names <- rownames(aln_mat)
+aln_len   <- ncol(aln_mat)
+
+cat(sprintf(
+  "Loaded CLC alignment: %d sequences, %d alignment columns\n",
+  nrow(aln_mat),
+  aln_len
+))
+
+# Optional: remove sequences that are entirely gaps or empty
+non_empty <- rowSums(aln_mat != "-") > 0
+aln_mat <- aln_mat[non_empty, , drop = FALSE]
+
+seq_names <- rownames(aln_mat)
+aln_len   <- ncol(aln_mat)
+
+cat(sprintf(
+  "After removing empty/all-gap sequences: %d sequences, %d alignment columns\n",
+  nrow(aln_mat),
+  aln_len
+))
+
+# Optional validation
+allowed <- strsplit("ACDEFGHIKLMNPQRSTVWYBXZJUO-*", "")[[1]]
+
+bad_letters <- lapply(seq_len(nrow(aln_mat)), function(i) {
+  chars <- unique(aln_mat[i, ])
+  setdiff(chars, allowed)
+})
+
+names(bad_letters) <- rownames(aln_mat)
+bad_letters <- bad_letters[lengths(bad_letters) > 0]
+
+if (length(bad_letters) > 0) {
+  stop(
+    "Invalid character(s) detected in alignment: ",
+    paste(
+      sprintf(
+        "%s: %s",
+        names(bad_letters),
+        vapply(bad_letters, paste, collapse = ", ", FUN.VALUE = character(1))
+      ),
+      collapse = "; "
+    ),
+    call. = FALSE
+  )
+}
+
+```
+
+```{r}
+#| label: Color definitions
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+match_color     <- "#08306b"   # dark blue - identical to reference
+insertion_color <- "#d6d6d6"   # grey - residue where reference has a gap
+blank_gap_color <- "white"     # white - gap in this sequence
+
+mismatch_colors <- c(
+  mismatch_conservative = "#ffd966",
+  mismatch_moderate     = "#f4a030",
+  mismatch_radical      = "#cc2b2b",
+  mismatch_other        = "#999999"
+)
+
+```
+
+```{r}
+#| label: Grantham matrix
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+grantham_score <- function(aa1, aa2) {
+  aas <- c(
+    "A","R","N","D","C","Q","E","G","H","I",
+    "L","K","M","F","P","S","T","W","Y","V"
+  )
+  
+  gmat <- matrix(c(
+    0,112,111,126,195, 91,107, 60, 86, 94,102,106, 95,113, 27, 99, 58,148,112, 64,
+    112,  0, 86, 96,180, 43, 54,125, 29, 97,102, 26, 91, 97,103,110, 71,101, 77, 96,
+    111, 86,  0, 23,139, 46, 42, 80, 68,149,153, 94,142,158, 91, 46, 65,174,143,133,
+    126, 96, 23,  0,154, 61, 45, 94, 81,168,172,101,160,177,108, 65, 85,181,160,152,
+    195,180,139,154,  0,154,170,159,174,198,198,202,196,205,169,112,149,215,194,192,
+    91, 43, 46, 61,154,  0, 29, 87, 24,109,113, 53,101,116, 76, 68, 42,130, 99, 96,
+    107, 54, 42, 45,170, 29,  0, 98, 40,134,138, 56,126,140, 93, 80, 65,152,122,121,
+    60,125, 80, 94,159, 87, 98,  0, 98,135,138,127,127,153, 42, 56, 59,184,147,109,
+    86, 29, 68, 81,174, 24, 40, 98,  0, 94, 99, 32, 87,100, 77, 89, 47,115, 83, 84,
+    94, 97,149,168,198,109,134,135, 94,  0,  5,102, 10, 21, 95,142, 89, 61, 33, 29,
+    102,102,153,172,198,113,138,138, 99,  5,  0,107, 15, 22, 98,145, 92, 61, 36, 32,
+    106, 26, 94,101,202, 53, 56,127, 32,102,107,  0, 95,102,103,121, 78,110, 85, 97,
+    95, 91,142,160,196,101,126,127, 87, 10, 15, 95,  0, 28, 87,135, 81, 67, 36, 21,
+    113, 97,158,177,205,116,140,153,100, 21, 22,102, 28,  0,114,155,103, 40, 22, 50,
+    27,103, 91,108,169, 76, 93, 42, 77, 95, 98,103, 87,114,  0, 74, 38,147,114, 68,
+    99,110, 46, 65,112, 68, 80, 56, 89,142,145,121,135,155, 74,  0, 58,177,144,124,
+    58, 71, 65, 85,149, 42, 65, 59, 47, 89, 92, 78, 81,103, 38, 58,  0,128, 92, 69,
+    148,101,174,181,215,130,152,184,115, 61, 61,110, 67, 40,147,177,128,  0, 37, 88,
+    112, 77,143,160,194, 99,122,147, 83, 33, 36, 85, 36, 22,114,144, 92, 37,  0, 55,
+    64, 96,133,152,192, 96,121,109, 84, 29, 32, 97, 21, 50, 68,124, 69, 88, 55,  0
+  ), nrow = 20, byrow = TRUE, dimnames = list(aas, aas))
+  
+  if (!(aa1 %in% aas) || !(aa2 %in% aas)) {
+    return(NA_real_)
+  }
+  
+  gmat[aa1, aa2]
+}
+
+grantham_class <- function(score) {
+  if (is.na(score)) return("mismatch_other")
+  if (score <= 50)  return("mismatch_conservative")
+  if (score <= 100) return("mismatch_moderate")
+  "mismatch_radical"
+}
+```
+
+```{r}
+#| label: Build tidy data frame
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+
+ref_name <- "Col-0_AT3G44630"
+
+if (!ref_name %in% rownames(aln_mat)) {
+  stop("Reference sequence '", ref_name, "' not found.", call. = FALSE)
+}
+
+ref_row <- aln_mat[ref_name, ]
+
+cat("Building data frame ...\n")
+
+rows <- vector("list", nrow(aln_mat))
+
+for (i in seq_len(nrow(aln_mat))) {
+  seq_aa  <- aln_mat[i, ]
+  fills   <- character(aln_len)
+  classes <- character(aln_len)
+  
+  for (j in seq_len(aln_len)) {
+    aa  <- seq_aa[j]
+    ref <- ref_row[j]
+    
+    if (aa == "-") {
+      fills[j]   <- blank_gap_color
+      classes[j] <- "gap_blank"
+      next
+    }
+    
+    if (ref == "-") {
+      fills[j]   <- insertion_color
+      classes[j] <- "insertion_vs_reference"
+      next
+    }
+    
+    if (aa == ref) {
+      fills[j]   <- match_color
+      classes[j] <- "match"
+      next
+    }
+    
+    cls <- grantham_class(grantham_score(aa, ref))
+    fills[j]   <- unname(mismatch_colors[cls])
+    classes[j] <- cls
+  }
+  
+  rows[[i]] <- data.frame(
+    sequence = rownames(aln_mat)[i],
+    position = seq_len(aln_len),
+    aa       = seq_aa,
+    fill     = fills,
+    cls      = classes,
+    stringsAsFactors = FALSE
+  )
+}
+
+df <- do.call(rbind, rows)
+```
+
+```{r}
+#| label: Sequence ordering by similarity
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+data(BLOSUM62)
+
+blosum_dist <- function(m) {
+  n <- nrow(m)
+  
+  d <- matrix(
+    0,
+    n,
+    n,
+    dimnames = list(rownames(m), rownames(m))
+  )
+  
+  for (i in seq_len(n - 1)) {
+    for (j in (i + 1):n) {
+      # Compare only columns where both sequences have amino acids
+      cols <- which(m[i, ] != "-" & m[j, ] != "-")
+      
+      if (!length(cols)) {
+        d[i, j] <- d[j, i] <- 1
+        next
+      }
+      
+      sc <- mapply(function(a, b) {
+        if (a %in% rownames(BLOSUM62) && b %in% colnames(BLOSUM62)) {
+          BLOSUM62[a, b]
+        } else {
+          0L
+        }
+      }, m[i, cols], m[j, cols])
+      
+      si <- sapply(m[i, cols], function(a) {
+        if (a %in% rownames(BLOSUM62)) BLOSUM62[a, a] else 0L
+      })
+      
+      sj <- sapply(m[j, cols], function(b) {
+        if (b %in% rownames(BLOSUM62)) BLOSUM62[b, b] else 0L
+      })
+      
+      ms <- (sum(si) + sum(sj)) / 2
+      
+      d[i, j] <- d[j, i] <- if (ms > 0) {
+        max(0, 1 - sum(sc) / ms)
+      } else {
+        1
+      }
+    }
+  }
+  
+  as.dist(d)
+}
+
+cat("Clustering sequences ...\n")
+
+dist_mat <- blosum_dist(aln_mat)
+hc <- hclust(dist_mat, method = "average")
+
+seq_order <- rownames(aln_mat)[hc$order]
+
+# Keep reference at bottom
+seq_order <- c(setdiff(seq_order, ref_name), ref_name)
+
+df$sequence <- factor(df$sequence, levels = seq_order)
+```
+
+```{r}
+#| label: Calculate conservation
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+conservation_df <- do.call(rbind, lapply(split(df, df$position), function(d) {
+  non_gap <- d[d$aa != "-", ]
+  
+  data.frame(
+    position = d$position[1],
+    conservation = if (nrow(non_gap) == 0) {
+      0
+    } else {
+      max(table(non_gap$aa)) / nrow(d)
+    }
+  )
+}))
+```
+
+```{r}
+#| label: Labels
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+label_map <- c(
+  "Col-0_AT3G44630" = "Col-0_AT3G44630 (MMF1)",
+  "Col-0_AT3G44480" = "Col-0_AT3G44480 (RPP1)"
+)
+
+y_labels <- function(x) {
+  ifelse(x %in% names(label_map), label_map[x], as.character(x))
+}
+```
+
+```{r}
+#| label: Legend
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Supports: Fig. 7b
+#   Shared legend
+# ------------------------------------------------------------
+legend_data <- data.frame(
+  x = c(1, 2.5, 4, 5.5, 1, 2.5, 4, 5.5),
+  label = c(
+    "Match", "Conservative", "Moderate", "Radical",
+    "Ambiguous", "Insertion vs ref", "Gap", ""
+  ),
+  col = c(
+    match_color,
+    unname(mismatch_colors["mismatch_conservative"]),
+    unname(mismatch_colors["mismatch_moderate"]),
+    unname(mismatch_colors["mismatch_radical"]),
+    unname(mismatch_colors["mismatch_other"]),
+    insertion_color,
+    blank_gap_color,
+    NA_character_
+  ),
+  group = factor(
+    c(
+      rep("Matches & changes vs Col-0_AT3G44630", 4),
+      rep("Gaps & ambiguous", 4)
+    ),
+    levels = c(
+      "Gaps & ambiguous",
+      "Matches & changes vs Col-0_AT3G44630"
+    )
+  ),
+  stringsAsFactors = FALSE
+)
+
+legend_data <- legend_data[!is.na(legend_data$col), ]
+
+p_legend <- ggplot(legend_data, aes(x = x, y = group)) +
+  geom_point(
+    aes(fill = col),
+    shape = 22,
+    size = 6,
+    color = "#444444",
+    stroke = 0.4
+  ) +
+  geom_text(
+    aes(label = label),
+    hjust = -0.25,
+    size = 3.2,
+    color = "#333333"
+  ) +
+  scale_fill_identity() +
+  scale_x_continuous(
+    limits = c(0.5, 12),
+    expand = c(0, 0)
+  ) +
+  scale_y_discrete() +
+  labs(y = " ") +
+  theme_void() +
+  theme(
+    axis.text.y = element_text(
+      face = "italic",
+      size = 9,
+      color = "#555555",
+      hjust = 1,
+      margin = margin(r = 8)
+    ),
+    axis.title.y = element_text(
+      size = 11,
+      color = "transparent"
+    ),
+    plot.margin = margin(4, 8, 4, 4)
+  )
+```
+
+```{r}
+#| label: Heatmep
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Supports: Fig. 7b
+#   Alignment heatmap panel
+# ------------------------------------------------------------
+cat("Plotting ...\n")
+
+p_align <- ggplot(df, aes(x = position, y = sequence, fill = fill)) +
+  rasterize(
+    geom_tile(color = NA, linewidth = 0),
+    dpi = 300
+  ) +
+  scale_fill_identity() +
+  scale_x_continuous(
+    expand = c(0, 0),
+    limits = c(0.5, aln_len + 0.5),
+    breaks = seq(0, aln_len, by = 250)
+  ) +
+  scale_y_discrete(labels = y_labels) +
+  theme_minimal(base_size = 13) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.title.x = element_blank(),
+    axis.text.y = element_text(size = 10),
+    panel.grid = element_blank(),
+    legend.position = "none",
+    plot.margin = margin(t = 5, r = 5, b = 0, l = 5),
+    plot.title = element_text(face = "bold", size = 13),
+    plot.subtitle = element_text(size = 9, color = "#555555")
+  ) +
+  labs(
+    title = "CLC multiple sequence alignment - TNL NLR proteins",
+    subtitle = sprintf(
+      "Existing CLC alignment | %d sequences | Alignment length: %d | Coloured relative to %s",
+      length(seq_names),
+      aln_len,
+      ref_name
+    ),
+    y = "Protein"
+  )
+```
+
+```{r}
+#| label: Conservation barplot
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Supports: Fig. 7b
+#   Per-position conservation barplot
+# ------------------------------------------------------------
+p_con <- ggplot(conservation_df, aes(x = position, y = conservation)) +
+  geom_col(
+    fill = "grey30",
+    width = 1
+  ) +
+  scale_x_continuous(
+    expand = c(0, 0),
+    limits = c(0.5, aln_len + 0.5),
+    breaks = seq(0, aln_len, by = 250)
+  ) +
+  scale_y_continuous(
+    labels = percent_format(accuracy = 1)
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid = element_blank(),
+    axis.text.x = element_text(angle = 90, vjust = 0.5),
+    plot.margin = margin(t = 0, r = 5, b = 5, l = 5)
+  ) +
+  labs(
+    x = "CLC alignment position",
+    y = "Conservation"
+  )
+```
+
+```{r}
+#| label: Combine and save
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+#| fig-cap: |
+#|   Figure 7b | (a) Comparison of the genomic region surrounding MMF1 (AT3G44630) in Col-0 and two
+#|   accessions representing phenotypic extremes in growth response to the BXplus microbiome
+#|   (IP-Hue-3, positive feedback; Hadd-3, negative feedback). TNL genes are highlighted in orange;
+#|   other genes in light blue. Numbers above each TNL indicate percentage protein sequence
+#|   similarity to MMF1. The shaded region marks a structurally variable interval in which IP-Hue-3
+#|   and Hadd-3 harbour additional TNL copies absent in Col-0; anchor genes conserved across all
+#|   three accessions are connected by blue lines. (b) Amino acid sequence alignment of MMF1
+#|   (AT3G44630), RPP1 (AT3G44480), and the TNLs from the variable interval in the two extreme
+#|   accessions. Sequences are ordered by BLOSUM62-based hierarchical clustering (UPGMA), with MMF1
+#|   as the reference at the top. Residues are coloured by physicochemical relationship to MMF1:
+#|   matches in blue, conservative substitutions in yellow, moderate in orange, and radical in red;
+#|   positions where MMF1 carries a gap are also shown in grey. White indicates unaligned positions.
+#|   The bar plot shows per-position conservation across all sequences, defined as the proportion of
+#|   sequences carrying the most frequent residue at each alignment position.
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Produces: Fig. 7b
+#   Multiple-alignment heatmap of TNL proteins with conservation barplot
+#   -> Output/Figures/clc_msa_alignment_heatmap.pdf
+# ------------------------------------------------------------
+final_plot <- p_align / p_con / p_legend +
+  plot_layout(heights = c(5, 1, 0.5))
+
+out_file <- "clc_msa_alignment_heatmap.pdf"
+
+ggsave(
+  filename = out_file,
+  plot = final_plot,
+  width = 22,
+  height = 9,
+  dpi = 300
+)
+
+cat("Saved to:", out_file, "\n")
+print(final_plot)
+```
+
+# TNL expression in roots and shoots {#sec-root-shoot}
+
+Section imported from the standalone report `MMF1_absolute_root_shoot.qmd`:
+absolute expression of the RPP1-locus cluster and well-known TNL references in
+root and shoot, built from the raw STAR counts of the in-house RNA-seq
+(`Input/ReadsPerGene_root_shoot.txt`) so that all libraries are normalised
+together and the organ contrast is tested within plant.
+
+```{r}
+#| label: rootshoot-setup
+#| echo: false
+#| message: false
+#| warning: false
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Supports: Suppl. Fig. S3
+#   TNL expression in roots and shoots (Stengele et al. 2026)
+#   -> Output/Figures/MMF1_absolute_root_shoot.pdf
+# ------------------------------------------------------------
+
+suppressPackageStartupMessages({
+  library(DESeq2); library(dplyr); library(tidyr); library(readr)
+  library(ggplot2); library(knitr); library(ggtext)
+})
+
+## dplyr/tidyr verbs are masked in this document: clusterProfiler, AnnotationDbi
+## and the Bioconductor stack are attached by earlier chunks, after dplyr, so a
+## bare select() dispatches to the S4 generic. Bind the tidyverse versions for
+## this section.
+select <- dplyr::select; filter <- dplyr::filter; rename <- dplyr::rename
+count  <- dplyr::count;  slice_min <- dplyr::slice_min; desc <- dplyr::desc
+first  <- dplyr::first;  last <- dplyr::last; collapse <- dplyr::collapse
+
+## ---- the only input: raw STAR read counts, 20 libraries ---------------------
+COUNTS <- "Input/ReadsPerGene_root_shoot.txt"
+stopifnot(file.exists(COUNTS))
+cts <- as.matrix(read.table(COUNTS, header = TRUE, row.names = 1,
+                            sep = "\t", check.names = FALSE))
+
+## Sample names encode organ, soil and plant: R_BXm17 = root, BX- soil, plant 17.
+cd <- data.frame(sample = colnames(cts)) |>
+  mutate(organ = factor(ifelse(startsWith(sample, "R_"), "root", "shoot"),
+                        c("shoot", "root")),          # so the coef is root vs shoot
+         soil  = factor(ifelse(grepl("BXm", sample), "BX-", "BX+")),
+         plant = factor(sub("^._BX[mp]", "", sample)))
+rownames(cd) <- cd$sample
+
+## Root and shoot libraries carry the same plant identifiers, so the two organs
+## are paired within plant; each plant sits in exactly one soil, so `plant`
+## already absorbs the soil factor. Both are asserted rather than assumed.
+stopifnot(all(table(cd$plant, cd$organ) == 1),
+          all(rowSums(table(cd$plant, cd$soil) > 0) == 1))
+
+dds <- DESeqDataSetFromMatrix(cts, cd, design = ~ plant + organ)
+dds <- dds[rowSums(counts(dds)) > 0, ]
+dds <- DESeq(dds, quiet = TRUE)
+res <- lfcShrink(dds, coef = "organ_root_vs_shoot", type = "apeglm", quiet = TRUE)
+
+nc  <- counts(dds, normalized = TRUE)          # one size factor per library
+is_r <- cd$organ == "root"
+gm   <- tibble(agi = rownames(nc),
+               root = rowMeans(nc[, is_r]), shoot = rowMeans(nc[, !is_r]))
+MED  <- median(c(gm$root, gm$shoot))           # typical gene, for scale context
+SF   <- range(sizeFactors(dds))
+
+fmt_p <- function(p) ifelse(is.na(p), "NA",
+                     ifelse(p < 1e-3, sprintf("%.1e", p), sprintf("%.3f", p)))
+
+ord <- function(n) {                     # 94 -> "94th", 92 -> "92nd"
+  n <- round(n)
+  sfx <- if (n %% 100 %in% 11:13) "th"
+         else switch(as.character(n %% 10), "1" = "st", "2" = "nd", "3" = "rd", "th")
+  paste0(n, sfx)
+}
+
+## ---- the focus set, as in the reviewer response ----------------------------
+focus <- tribble(
+  ~agi,        ~sym,    ~grp,
+  "AT3G44630", "MMF1",  "RPP1-locus TNLs",
+  "AT3G44670", NA,      "RPP1-locus TNLs",
+  "AT3G44480", "RPP1",  "RPP1-locus TNLs",
+  "AT3G44400", NA,      "RPP1-locus TNLs",
+  "AT1G56510", "WRR4",  "Well-known TNLs",
+  "AT4G16860", "RPP4",  "Well-known TNLs",
+  "AT4G16890", "SNC1",  "Well-known TNLs",
+  "AT5G46470", "RPS6",  "Well-known TNLs",
+  "AT4G19510", "RPP2B", "Well-known TNLs",
+  "AT4G19500", "RPP2A", "Well-known TNLs",
+  "AT5G45250", "RPS4",  "Well-known TNLs",
+  "AT5G45260", "RRS1",  "Well-known TNLs") |>
+  mutate(glab = ifelse(is.na(sym), agi, paste0(sym, " (", agi, ")")),
+         grp  = factor(grp, c("RPP1-locus TNLs", "Well-known TNLs")))
+
+rs <- as.data.frame(res[focus$agi, c("log2FoldChange", "lfcSE", "padj")]) |>
+  tibble::rownames_to_column("agi") |>
+  rename(lfc_model = log2FoldChange, se_model = lfcSE)
+
+fo <- focus |>
+  left_join(gm, by = "agi") |> left_join(rs, by = "agi") |>
+  mutate(lfc_obs = log2(root / shoot),                  # ratio of drawn means
+         fold    = 2^abs(lfc_obs),
+         higher  = ifelse(lfc_obs < 0, "shoot", "root"),
+         sig     = !is.na(padj) & padj < 0.05,
+         note    = sprintf("%.1f\u00d7 %s%s", fold, higher, ifelse(sig, "", " (ns)")),
+         note_txt = sprintf("%.1f-fold, %s%s", fold, higher, ifelse(sig, "", " (ns)")))
+stopifnot(nrow(fo) == 12, !any(is.na(fo$root)))
+
+## ---- per-sample values, exported so the points can be checked --------------
+long <- as.data.frame(nc[focus$agi, ]) |>
+  tibble::rownames_to_column("agi") |>
+  pivot_longer(-agi, names_to = "sample", values_to = "norm_count") |>
+  left_join(cd, by = "sample") |> left_join(focus |> select(agi, glab, grp), by = "agi")
+
+mmf1   <- fo |> filter(agi == "AT3G44630")
+rank_r <- mean(gm$root  <= mmf1$root)  * 100
+rank_s <- mean(gm$shoot <= mmf1$shoot) * 100
+n_gw   <- nrow(gm)
+n_ns   <- sum(!fo$sig)
+```
+
+*MMF1* is expressed at `r sprintf("%.0f", mmf1$shoot)` normalised counts in
+shoot against `r sprintf("%.0f", mmf1$root)` in root, a
+`r sprintf("%.1f", mmf1$fold)`-fold shoot bias
+(`r sprintf("%+.2f", mmf1$lfc_model)` log~2~ from the paired model, FDR
+`r fmt_p(mmf1$padj)`).
+
+```{r}
+#| label: fig-abs
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-width: 6.7
+#| fig-height: 3.9
+#| fig-cap: |
+#|   Supplementary Figure S3 | MMF1 and RPP1-locus TNLs are higher expressed in shoots than roots.
+#|   Expression levels of MMF1, the other DANGEROUS MIX (DM) 2-locus TNLs, and other
+#|   well-characterised TNLs in root and shoot (Transcriptome data from Stengele et al., 2026). Small
+#|   points show individual replicates (10 root, 10 shoot; 10 plants); large points show organ means,
+#|   connected by grey lines. Counts are DESeq2-normalised, derived from a single model across all 20
+#|   samples (design ~ plant + organ), so root and shoot values share one scale. The dashed line
+#|   marks the median normalised count across all expressed genes. Numbers at the right give the fold
+#|   difference between organ means; ns indicates a paired, within-plant contrast (apeglm-shrunken
+#|   log2 fold change) that did not reach FDR < 0.05. Genes are ordered by fold difference within
+#|   each group; the x axis is logarithmic.
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Produces: Suppl. Fig. S3
+#   TNL expression in roots and shoots (Stengele et al. 2026)
+#   -> Output/Figures/MMF1_absolute_root_shoot.pdf
+# ------------------------------------------------------------
+
+ROOT <- "#8C510A"; SHOOT <- "#01665E"; COL_MMF1 <- "#B2182B"
+base_sz <- 8
+theme_set(
+  theme_minimal(base_size = base_sz) +
+    theme(panel.grid.minor = element_blank(),
+          panel.grid.major.y = element_blank(),
+          plot.title    = element_text(face = "bold", size = base_sz + 1),
+          plot.subtitle = element_text(colour = "grey35", size = base_sz - 1),
+          plot.title.position = "plot",
+          strip.text.y.left = element_text(angle = 90, colour = "grey25"),
+          legend.key.size = grid::unit(8, "pt")))
+
+lev <- fo |> arrange(grp, lfc_obs) |> pull(glab)
+d   <- fo   |> mutate(glab = factor(glab, lev))
+lp  <- long |> mutate(glab = factor(glab, lev))
+mp  <- d |> select(glab, grp, root, shoot) |>
+  pivot_longer(c(root, shoot), names_to = "organ", values_to = "expr") |>
+  mutate(organ = factor(organ, c("shoot", "root")))
+xmax <- max(lp$norm_count)
+
+## the per-sample points are jittered; fix the seed so the panel is reproducible
+set.seed(1)
+
+ggplot(d, aes(y = glab)) +
+  geom_vline(xintercept = MED, linetype = "dashed",
+             colour = "grey60", linewidth = 0.3) +
+  geom_segment(aes(x = root, xend = shoot, yend = glab),
+               colour = "grey72", linewidth = 0.9) +
+  geom_point(data = lp, aes(x = norm_count, colour = organ),
+             size = 0.55, alpha = 0.55,
+             position = position_nudge(y = 0.22)) +
+  geom_point(data = mp, aes(x = expr, colour = organ), size = 2.1) +
+  geom_text(aes(x = xmax * 3.4, label = note), hjust = 0,
+            size = 2.1, colour = "grey35") +
+  scale_x_log10(breaks = c(3, 10, 30, 100, 300, 1000, 3000, 10000),
+                labels = c("3", "10", "30", "100", "300", "1000", "3000", "10000"),
+                expand = expansion(mult = c(0.06, 0.34))) +
+  scale_colour_manual(values = c(shoot = SHOOT, root = ROOT), name = NULL) +
+  scale_y_discrete(labels = function(x)
+    ifelse(x == mmf1$glab,
+           paste0("<span style='color:", COL_MMF1, "'>**", x, "**</span>"), x)) +
+  coord_cartesian(clip = "off") +
+  facet_grid(grp ~ ., scales = "free_y", space = "free_y", switch = "y") +
+  labs(title = "Expression of well-known TNLs in roots and shoots",
+              x = "log2(normalised counts)", y = NULL) +
+  ## facet_grid(switch = "y") draws the left axis text, and axis.text.y does
+  ## not reach it, so the markdown element must be set on that slot
+  theme(axis.text.y.left = element_markdown(colour = "grey15"),
+        legend.position = "bottom", legend.justification = "left",
+        legend.margin = margin(t = -4),
+        plot.margin = margin(5.5, 30, 5.5, 5.5))
+ggsave("Output/Figures/MMF1_absolute_root_shoot.pdf", width = 20, height = 8, units = "cm", dpi = 300)
+```
+
+```{r}
+#| label: tbl-abs
+#| echo: false
+#| message: false
+#| warning: false
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Supports: Suppl. Fig. S3
+#   TNL expression in roots and shoots (Stengele et al. 2026)
+#   -> Output/Tables/MMF1_absolute_root_shoot.csv
+# ------------------------------------------------------------
+
+tb <- d |> arrange(grp, lfc_obs) |>
+  transmute(Gene = as.character(glab),
+            Group = ifelse(grp == "RPP1-locus cluster", "cluster", "reference"),
+            root  = sprintf("%.0f", root),
+            shoot = sprintf("%.0f", shoot),
+            fold  = sprintf("%.1f%s", fold, ifelse(sig, "", " (ns)")),
+            `log2 (model)` = sprintf("%+.2f", lfc_model),
+            SE = sprintf("%.2f", se_model),
+            FDR = fmt_p(padj))
+kable(tb, align = "llrrrrrr",
+      caption = "Organ means of normalised counts, the ratio between them, and the paired model's estimate of the same contrast with its FDR. Every gene is shoot-biased, so the fold column gives the ratio without repeating the direction; (ns) marks FDR >= 0.05. Group: cluster = RPP1-locus, reference = well-known TNL. Written alongside this document as MMF1_absolute_root_shoot.csv; the individual library values behind each mean are in MMF1_absolute_root_shoot_per_sample.csv.")
+
+write_csv(d |> arrange(grp, lfc_obs) |>
+            select(agi, gene = glab, group = grp,
+                   root_mean_norm_count = root, shoot_mean_norm_count = shoot,
+                   log2_root_shoot_observed = lfc_obs, fold = fold,
+                   higher_in = higher,
+                   log2_root_shoot_model = lfc_model, lfcSE_model = se_model,
+                   padj = padj) |>
+            mutate(across(where(is.factor), as.character)),
+          "Output/Tables/MMF1_absolute_root_shoot.csv")
+
+write_csv(long |> select(agi, gene = glab, group = grp, sample,
+                         organ, soil, plant, norm_count) |>
+            mutate(across(where(is.factor), as.character)) |>
+            arrange(gene, organ, sample),
+          "Output/Tables/MMF1_absolute_root_shoot_per_sample.csv")
+```
+
+# Session information
+
+**Purpose**: Print the session information, including details about the R version, loaded packages, and the system environment. This is useful for reproducibility, as it documents the computational environment in which the analysis was performed.
+
+```{r}
+#| label: Session info
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+# Get session information
+SI <- sessionInfo()
+
+# Extract the attached packages and their versions
+attached_packages <- SI$otherPkgs
+
+# Print the R version
+cat("R version:", SI$R.version$version.string, "\n\n")
+
+# Print the attached packages and their versions
+cat("Attached packages:\n")
+invisible(lapply(attached_packages, function(pkg) {
+  cat(pkg$Package, "-", pkg$Version, "\n")
+}))
+
+```
+
+```{r create package library, echo = FALSE}
+knitr::write_bib(file = 'packages.bib')
+```
+
