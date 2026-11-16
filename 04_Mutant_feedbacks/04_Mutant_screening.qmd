@@ -1,0 +1,2506 @@
+---
+title: "04_Mutants"
+author: "Henry Janse van Rensburg"
+date: "`r Sys.Date()`"
+format:
+  pdf:
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    keep-tex: true
+    documentclass: article
+    fig-width: 6
+    fig-height: 4
+    fig-dpi: 300
+    highlight-style: tango
+    fontsize: 10pt
+    mainfont: "Arial"
+    geometry: a4paper
+  html:
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    highlight-style: tango
+    code-overflow: wrap
+    code-fold: true
+    mainfont: "Arial"
+execute:
+  echo: true
+  warning: false
+  message: false
+editor_options:
+  chunk_output_type: inline
+---
+
+# Background
+
+This document analyses mutant feedback experiments testing plant growth responses to BXplus- and BXminus-conditioned soil microbiomes.
+
+For the \*mmf1\* mutant screen, three experiments are shown individually in detail:
+
+\- E-III: \*mmf1\* repetition 1
+
+\- E-IV: \*mmf1\* repetition 2
+
+\- E-V: \*mmf1\* repetition 3
+
+A final combined \*mmf1\* analysis is then performed using pre-combined tabs in \`Dataset4\`, which include five experiments in total.
+
+For the ETI mutant screen, one experiment is shown individually in detail:
+
+\- E-VI: ETI mutants
+
+A final combined ETI analysis is then performed using pre-combined tabs in \`Dataset4\`, which include four experiments in total.
+
+The \*mmf1\* complementation lines are analysed separately as:
+
+\- E-X: \*mmf1\* complementation lines
+
+# Experiment overview
+
+| Experiment | Description | Soil batch | Notes |
+|------------------|------------------|------------------|------------------|
+| E-III | *mmf1* repetition 1 | BS04 | Growth |
+| E-IV | *mmf1* repetition 2 | BS04 | Growth, microbiota, transcriptome |
+| E-V | *mmf1* repetition 3 | BS09 | Growth |
+| E-VI | ETI mutants | BS07 | Growth |
+| E-VII | ETI mutants | BS07 | Growth |
+| E-VIII | ETI mutants | BS11 | Growth, transcriptome |
+| E-IX | ETI mutants | BS10 | Growth |
+| E-X | *mmf1* complementation lines | BS10 | Growth |
+
+# Setup
+
+```{r}
+#| label: setup
+#| echo: false
+
+library(tidyverse)
+library(readxl)
+library(knitr)
+library(openxlsx)
+library(writexl)
+library(ggbeeswarm)
+library(ggpubr)
+library(cowplot)
+library(ggtext)
+library(lme4)
+library(lmerTest)
+library(emmeans)
+
+theme_set(theme_bw(base_size = 8))
+
+data_file <- "Input/Dataset4.xlsx"
+
+exp_levels <- c("E-III", "E-IV", "E-V", "E-VI", "E-VII", "E-VIII", "E-IX", "E-X")
+bx_levels  <- c("minus", "plus")
+
+all_sheets <- excel_sheets(data_file)
+all_sheets
+```
+
+## Helper function
+
+```{r}
+#| label: helper-functions
+#| echo: false
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Supports: Fig. 4b
+#   Shared plotting and statistics helpers
+# ------------------------------------------------------------
+
+# Pick the first existing sheet from a list of candidates.
+pick_sheet <- function(candidates, available = all_sheets) {
+  hit <- candidates[candidates %in% available][1]
+  if (is.na(hit)) {
+    stop(
+      "None of these candidate sheet names were found:\n",
+      paste(candidates, collapse = ", ")
+    )
+  }
+  hit
+}
+
+# Standardize BX and line factors.
+standardise_groups <- function(df, line_levels = NULL) {
+  df <- df %>%
+    mutate(
+      BX = factor(BX, levels = bx_levels)
+    )
+
+  if (!is.null(line_levels)) {
+    df <- df %>%
+      mutate(line = factor(line, levels = line_levels))
+  }
+
+  df
+}
+
+# Calculate simple per-line means and delta = plus - minus.
+delta_means <- function(data, response) {
+  data %>%
+    group_by(line, BX) %>%
+    summarise(mean_value = mean(.data[[response]], na.rm = TRUE), .groups = "drop") %>%
+    pivot_wider(names_from = BX, values_from = mean_value) %>%
+    mutate(delta_plus_minus = plus - minus)
+}
+
+# One-way ANOVA within each genotype/line for BX effect + FDR correction across lines.
+bx_tests_by_line <- function(data, response) {
+  data %>%
+    filter(!is.na(.data[[response]]), !is.na(line), !is.na(BX)) %>%
+    group_by(line) %>%
+    summarise(
+      p_value = summary(aov(stats::as.formula(paste(response, "~ BX")), data = cur_data()))[[1]][["Pr(>F)"]][1],
+      .groups = "drop"
+    ) %>%
+    mutate(
+      p_adj = p.adjust(p_value, method = "fdr"),
+      significance = cut(
+        p_adj,
+        breaks = c(0, 1e-04, 0.001, 0.01, 0.05, 1),
+        labels = c("****", "***", "**", "*", "ns"),
+        include.lowest = TRUE
+      )
+    )
+}
+
+# Z-score within experiment for combined plots.
+zscore_within_experiment <- function(data, response, experiment_var = "experiment", new_name) {
+  data %>%
+    group_by(.data[[experiment_var]]) %>%
+    mutate("{new_name}" := as.numeric(scale(.data[[response]]))) %>%
+    ungroup()
+}
+
+# Standard single-experiment boxplot.
+make_single_plot <- function(data,
+                             y_var,
+                             y_lab,
+                             plot_title,
+                             x_labels,
+                             y_limits,
+                             label_y = NULL) {
+  p <- ggplot(data, aes(x = line, y = .data[[y_var]], fill = BX)) +
+    geom_boxplot(
+      position = position_dodge(width = 0.85),
+      alpha = 0.6,
+      color = "grey35",
+      outlier.colour = NA,
+      size = 0.5
+    ) +
+    ggbeeswarm::geom_quasirandom(
+      dodge.width = 0.85,
+      size = 1,
+      shape = 21,
+      color = "black",
+      width = 0.1,
+      alpha = 0.4,
+      show.legend = FALSE
+    ) +
+    stat_summary(
+      fun.data = mean_se,
+      geom = "errorbar",
+      linewidth = 0.5,
+      width = 0.4,
+      position = position_dodge(width = 0.85)
+    ) +
+    theme_bw() +
+    scale_fill_manual(name = "Conditioning", values = c("seagreen", "gold2")) +
+    coord_cartesian(ylim = y_limits) +
+    ggtitle(plot_title) +
+    ylab(y_lab) +
+    scale_x_discrete(labels = x_labels) +
+    theme(
+      plot.title = element_text(size = 7, hjust = 0),
+      axis.title.x = element_blank(),
+      axis.title.y = element_text(size = 7),
+      axis.text.x = element_text(size = 7),
+      axis.text.y = element_text(size = 7),
+      legend.title = element_text(size = 7),
+      legend.text = element_text(size = 7),
+      strip.text = element_text(size = 7),
+      legend.position = "bottom"
+    )
+
+  if (!is.null(label_y)) {
+    p <- p +
+      stat_compare_means(
+        method = "t.test",
+        paired = FALSE,
+        size = 2,
+        label.y = label_y,
+        label.x = 1
+      )
+  }
+
+  p
+}
+
+# Combined plot for z-scored data with experiment shapes + ΔEMM labels.
+make_combined_plot <- function(data,
+                               y_var,
+                               y_lab,
+                               plot_title,
+                               x_labels,
+                               shape_var,
+                               y_limits,
+                               p_table,
+                               text_y,
+                               shape_values = c(21, 22, 23, 24, 25)) {
+  ggplot(data, aes(x = line, y = .data[[y_var]], fill = BX)) +
+    geom_boxplot(
+      position = position_dodge(width = 0.85),
+      alpha = 0.6,
+      color = "grey35",
+      outlier.colour = NA,
+      size = 0.5
+    ) +
+    ggbeeswarm::geom_quasirandom(
+      aes(shape = .data[[shape_var]], group = interaction(line, BX)),
+      dodge.width = 0.85,
+      size = 1,
+      color = "black",
+      width = 0.1,
+      alpha = 0.4,
+      show.legend = TRUE
+    ) +
+    geom_hline(yintercept = 0, linetype = "dashed", linewidth = 0.3) +
+    geom_text(
+      data = p_table,
+      aes(x = line, y = text_y, label = label),
+      inherit.aes = FALSE,
+      size = 3,
+      lineheight = 0.9
+    ) +
+    theme_bw() +
+    scale_fill_manual(name = "Conditioning", values = c("seagreen", "gold2")) +
+    scale_shape_manual(name = "Experiment", values = shape_values) +
+    coord_cartesian(ylim = y_limits) +
+    ggtitle(plot_title) +
+    ylab(y_lab) +
+    scale_x_discrete(labels = x_labels) +
+    theme(
+      plot.title = element_text(size = 8, hjust = 0),
+      axis.title.x = element_text(size = 8),
+      axis.title.y = element_text(size = 8),
+      axis.text.x = element_text(size = 8),
+      axis.text.y = element_text(size = 8),
+      legend.title = element_text(size = 8),
+      legend.text = element_text(size = 8),
+      strip.text = element_text(size = 8),
+      legend.position = "bottom"
+    )
+}
+
+# LMM + EMM workflow for combined analyses.
+run_lmm_emm <- function(data, response, experiment_var) {
+  formula_lmm <- stats::as.formula(
+    paste(response, "~ BX * line + (1 |", experiment_var, ")")
+  )
+
+  model <- lmer(formula_lmm, data = data)
+
+  emm_BX_by_line <- emmeans(model, ~ BX | line)
+
+  effects_by_line <- pairs(emm_BX_by_line, reverse = TRUE) %>%
+    summary(infer = TRUE, adjust = "none") %>%
+    as.data.frame() %>%
+    rename(
+      effect_plus_minus = estimate,
+      t = t.ratio,
+      p = p.value
+    ) %>%
+    mutate(
+      effect_plus_minus = round(effect_plus_minus, 3),
+      SE = round(SE, 3),
+      lower.CL = round(lower.CL, 3),
+      upper.CL = round(upper.CL, 3),
+      p = signif(p, 3)
+    )
+
+  emm_line_x_BX <- emmeans(model, ~ BX * line)
+
+  diff_in_diff_vs_WT <- contrast(
+    emm_line_x_BX,
+    interaction = c("revpairwise", "trt.vs.ctrl")
+  ) %>%
+    summary(infer = TRUE, adjust = "holm") %>%
+    as.data.frame() %>%
+    rename(
+      diff_vs_WT = estimate,
+      t = t.ratio,
+      p_adj = p.value
+    ) %>%
+    mutate(
+      diff_vs_WT = round(diff_vs_WT, 3),
+      SE = round(SE, 3),
+      lower.CL = round(lower.CL, 3),
+      upper.CL = round(upper.CL, 3),
+      p_adj = signif(p_adj, 3)
+    )
+
+  list(
+    model = model,
+    effects_by_line = effects_by_line,
+    diff_in_diff_vs_WT = diff_in_diff_vs_WT
+  )
+}
+```
+\newpage
+# **Data import**
+
+**Individual mmf1 experiments shown in detail**
+
+```{r}
+#| label: import-data
+#| echo: false
+
+# -----------------------------
+# Individual mmf1 experiments
+# -----------------------------
+weight_EIII <- read_excel(data_file, sheet = "ExpIII_mmf1_weight") %>%
+  mutate(experiment = "E-III")
+
+area_EIII <- read_excel(data_file, sheet = "ExpIII_mmf1_area") %>%
+  mutate(experiment = "E-III")
+
+weight_EIV <- read_excel(data_file, sheet = "ExpIV_mmf1_weight") %>%
+  mutate(experiment = "E-IV")
+
+area_EIV <- read_excel(data_file, sheet = "ExpIV_mmf1_area") %>%
+  mutate(experiment = "E-IV")
+
+weight_EV <- read_excel(data_file, sheet = "ExpV_mmf1_weight") %>%
+  mutate(experiment = "E-V")
+
+area_EV <- read_excel(data_file, sheet = "ExpV_mmf1_area") %>%
+  mutate(experiment = "E-V")
+
+# -----------------------------
+# Individual ETI experiment
+# -----------------------------
+weight_EVI <- read_excel(data_file, sheet = "ExpVI_ETI_weight") %>%
+  mutate(experiment = "E-VI")
+
+area_EVI <- read_excel(data_file, sheet = "ExpVI_ETI_area") %>%
+  mutate(experiment = "E-VI")
+
+# -----------------------------
+# mmf1 complementation lines
+# NOTE: biologically E-X, but keep sheet name as-is
+# -----------------------------
+compl_lines_EX <- read_excel(data_file, sheet = "ExpVII_complimentation") %>%
+  mutate(experiment = "E-X")
+
+# -----------------------------
+# Pre-combined tabs
+# -----------------------------
+plant_weight_comb_mmf1 <- read_excel(data_file, sheet = "mmf1_combined_weight")
+
+area_types_mmf1 <- c(
+  rep("text", 5),
+  rep("numeric", 78),
+  "text"
+)
+
+rosette_area_comb_mmf1 <- read_excel(
+  data_file,
+  sheet = "mmf1_combined_area",
+  col_types = area_types_mmf1
+)
+
+plant_weight_comb_ETI <- read_excel(
+  data_file,
+  sheet = "ExpVII_ETI_combined_weight",
+  col_types = c("text", "text", "numeric", "numeric", "numeric", "text")
+)
+
+plant_area_comb_ETI <- read_excel(
+  data_file,
+  sheet = "ExpVII_ETI_combined_area",
+  col_types = c("text", "text", "numeric", "numeric", "text")
+)
+```
+
+## Factoring and cleaning data
+
+```{r}
+#| label: factor-and-cleaning
+#| echo: false
+
+bx_levels <- c("minus", "plus")
+
+# mmf1 individual
+weight_EIII <- weight_EIII %>%
+  mutate(
+    line = factor(line, levels = c("WT", "mmf1-1")),
+    BX = factor(BX, levels = bx_levels)
+  ) %>%
+  filter(!is.na(fresh_weight))
+
+area_EIII <- area_EIII %>%
+  mutate(
+    line = factor(line, levels = c("WT", "mmf1-1")),
+    BX = factor(BX, levels = bx_levels)
+  ) %>%
+  filter(!is.na(plant_region_area))
+
+weight_EIV <- weight_EIV %>%
+  mutate(
+    line = factor(line, levels = c("WT", "mmf1-1", "mmf1-2")),
+    BX = factor(BX, levels = bx_levels)
+  ) %>%
+  filter(!is.na(fresh_weight))
+
+area_EIV <- area_EIV %>%
+  mutate(
+    line = factor(line, levels = c("WT", "mmf1-1", "mmf1-2")),
+    BX = factor(BX, levels = bx_levels)
+  ) %>%
+  filter(!is.na(plant_region_area))
+
+weight_EV <- weight_EV %>%
+  mutate(
+    line = factor(line, levels = c("WT", "mmf1-1", "mmf1-2")),
+    BX = factor(BX, levels = bx_levels)
+  ) %>%
+  filter(!is.na(fresh_weight))
+
+area_EV <- area_EV %>%
+  mutate(
+    line = factor(line, levels = c("WT", "mmf1-1", "mmf1-2")),
+    BX = factor(BX, levels = bx_levels)
+  ) %>%
+  filter(!is.na(plant_region_area))
+
+# ETI individual
+weight_EVI <- weight_EVI %>%
+  mutate(
+    line = factor(line, levels = c("WT", "eds1", "pad4", "sag101")),
+    BX = factor(BX, levels = bx_levels)
+  )
+
+area_EVI <- area_EVI %>%
+  mutate(
+    line = factor(line, levels = c("WT", "eds1", "pad4", "sag101")),
+    BX = factor(BX, levels = bx_levels)
+  )
+
+# complementation
+compl_lines_EX <- compl_lines_EX %>%
+  mutate(
+    line = factor(line, levels = c("WT", "mmf1-2", "mmf1-2*Nos4-4", "mmf1-2*Nos5-1")),
+    BX = factor(BX, levels = bx_levels)
+  )
+
+# combined mmf1
+plant_weight_comb_mmf1 <- plant_weight_comb_mmf1 %>%
+  mutate(
+    line = factor(line, levels = c("WT", "mmf1-1", "mmf1-2")),
+    BX = factor(BX, levels = bx_levels),
+    experiment = factor(exp)
+  ) %>%
+  filter(!is.na(fresh_weight))
+
+rosette_area_comb_mmf1 <- rosette_area_comb_mmf1 %>%
+  mutate(
+    line = factor(line, levels = c("WT", "mmf1-1", "mmf1-2")),
+    BX = factor(BX, levels = bx_levels),
+    experiment = factor(experiment)
+  ) %>%
+  filter(!is.na(plant_region_area))
+
+# combined ETI
+plant_weight_comb_ETI <- plant_weight_comb_ETI %>%
+  filter(line != "mmf1-2") %>%
+  mutate(
+    line = factor(line, levels = c("WT", "eds1", "pad4", "sag101")),
+    BX = factor(BX, levels = bx_levels),
+    experiment = factor(experiment)
+  ) %>%
+  filter(!is.na(fresh_weight))
+
+plant_area_comb_ETI <- plant_area_comb_ETI %>%
+  filter(line != "mmf1-2") %>%
+  mutate(
+    line = factor(line, levels = c("WT", "eds1", "pad4", "sag101")),
+    BX = factor(BX, levels = bx_levels),
+    experiment = factor(experiment)
+  ) %>%
+  filter(!is.na(plant_region_area))
+```
+
+\newpage
+# **mmf1 mutant screen**
+
+## **Experiment III: mmf1-1 on BS04**
+
+### **Replicates**
+
+```{r}
+#| label: repl-EIII
+#| echo: false
+
+kable(table(weight_EIII$BX, weight_EIII$line), caption = "Number of replicates for fresh weight (E-III)")
+kable(table(area_EIII$BX, area_EIII$line), caption = "Number of replicates for rosette area (E-III)")
+```
+
+### **Fresh weight**
+
+```{r}
+#| label: means-EIII-fw
+#| echo: false
+
+kable(
+  delta_means(weight_EIII, "fresh_weight"),
+  caption = "Mean fresh weight and Δ(plus-minus) by genotype (E-III)"
+)
+```
+
+```{r}
+#| label: fig-mmf1-fw-EIII
+#| fig-cap: Fresh weight of WT and mmf1-1 in E-III.
+#| fig-height: 4
+#| fig-width: 4
+#| echo: false
+
+plot_EIII_fw <- make_single_plot(
+  data = weight_EIII,
+  y_var = "fresh_weight",
+  y_lab = "Fresh weight",
+  plot_title = "E-III - Fresh weight",
+  x_labels = c("WT", expression(italic("mmf1-1"))),
+  y_limits = c(0, 0.10),
+  label_y = 0.09
+)
+
+plot_EIII_fw
+```
+
+### Rosette area
+
+```{r}
+#| label: means-EIII-area
+#| echo: false
+
+kable(
+  delta_means(area_EIII, "plant_region_area"),
+  caption = "Mean rosette area and Δ(plus-minus) by genotype (E-III)"
+)
+```
+
+```{r}
+#| label: fig-mmf1-area-EIII
+#| fig-cap: Rosette area of WT and mmf1-1 in E-III.
+#| fig-height: 4
+#| fig-width: 4
+#| echo: false
+
+plot_EIII_area <- make_single_plot(
+  data = area_EIII,
+  y_var = "plant_region_area",
+  y_lab = "Plant area",
+  plot_title = "E-III - Plant area",
+  x_labels = c("WT", expression(italic("mmf1-1"))),
+  y_limits = c(0, 1000000),
+  label_y = 900000
+)
+
+plot_EIII_area
+```
+
+### Statistics
+
+```{r}
+#| label: stats-EIII
+#| echo: false
+
+anova_fw_EIII <- summary(aov(fresh_weight ~ line * BX, data = weight_EIII))[[1]]
+anova_area_EIII <- summary(aov(plant_region_area ~ line * BX, data = area_EIII))[[1]]
+
+kable(anova_fw_EIII, caption = "ANOVA table for fresh weight (E-III)")
+kable(anova_area_EIII, caption = "ANOVA table for rosette area (E-III)")
+
+kable(
+  bx_tests_by_line(weight_EIII, "fresh_weight"),
+  caption = "Per-line BX effect with FDR correction for fresh weight (E-III)"
+)
+
+kable(
+  bx_tests_by_line(area_EIII, "plant_region_area"),
+  caption = "Per-line BX effect with FDR correction for rosette area (E-III)"
+)
+
+```
+\newpage
+
+## **Experiment IV: mmf1-1 and mmf1-2 on BS04**
+
+This experiment was also used for microbiota and transcriptome analyses.
+
+### **Replicates**
+
+```{r}
+#| label: repl-EIV
+#| echo: false
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Supports: Fig. 4b
+#   Replicate counts (experiment IV)
+# ------------------------------------------------------------
+
+kable(table(weight_EIV$BX, weight_EIV$line), caption = "Number of replicates for fresh weight (E-IV)")
+kable(table(area_EIV$BX, area_EIV$line), caption = "Number of replicates for rosette area (E-IV)")
+```
+
+### Fresh weight
+
+```{r}
+#| label: means-EIV-fw
+#| echo: false
+
+kable(
+  delta_means(weight_EIV, "fresh_weight"),
+  caption = "Mean fresh weight and Δ(plus-minus) by genotype (E-IV)"
+)
+```
+
+```{r}
+#| label: fig-mmf1-fw-EIV
+#| fig-height: 4
+#| fig-width: 5
+#| echo: false
+#| fig-cap: |
+#|   Figure 4b (fresh weight) | MMF1 is involved in growth feedback responses to the BXplus
+#|   microbiome. (a) Representative rosettes of 6-week-old Col-0 (WT) and two independent mmf1 T-DNA
+#|   insertion mutants (AT3G44630) grown on BXminus and BXplus soil microbiomes (experiment IV, Table
+#|   S1). Scale bar, 2 cm. (b) Fresh weight (left) and rosette area (right; in pixels) after 6 weeks
+#|   of growth for the genotypes in (a). Boxplots show the median (centre line) and the 25th and 75th
+#|   percentiles (box bounds); whiskers extend to the most extreme value within 1.5 × the
+#|   interquartile range of the nearest box bound; points represent individual plants grown one per
+#|   pot, i.e. biological replicates (sample sizes (n) are given below each boxplot).  Text above
+#|   each genotype indicates the observed difference in means between conditions, expressed as Δmean
+#|   = BXplus − BXminus. Statistical significance was assessed within each genotype by one-way ANOVA
+#|   of BXplus versus BXminus (with two groups, equivalent to a two-sided t-test with pooled
+#|   variance); P values were Benjamini--Hochberg-adjusted across the three genotypes and the
+#|   adjusted P values are shown. The findings were reproduced in five additional experiments (E-III,
+#|   E-V, E-VIII, E-IX and E-X) on four separately conditioned soil batches (see Extended Data Fig.
+#|   5). Dataset 4.
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Produces: Fig. 4b
+#   Fresh weight, WT vs two mmf1 mutants (experiment IV)
+#   -> (rendered inline, not written to file)
+# ------------------------------------------------------------
+
+plot_EIV_fw <- make_single_plot(
+  data = weight_EIV,
+  y_var = "fresh_weight",
+  y_lab = "Fresh weight",
+  plot_title = "E-IV - Fresh weight analysis",
+  x_labels = c("WT", expression(italic("mmf1-1")), expression(italic("mmf1-2"))),
+  y_limits = c(0, 0.40),
+  label_y = 0.35
+)
+
+plot_EIV_fw
+```
+
+### Rosette area
+
+```{r}
+#| label: means-EIV-area
+#| echo: false
+
+kable(
+  delta_means(area_EIV, "plant_region_area"),
+  caption = "Mean rosette area and Δ(plus-minus) by genotype (E-IV)"
+)
+```
+
+```{r}
+#| label: fig-mmf1-area-EIV
+#| fig-height: 4
+#| fig-width: 5
+#| echo: false
+#| fig-cap: |
+#|   Figure 4b (rosette area) | MMF1 is involved in growth feedback responses to the BXplus
+#|   microbiome. (a) Representative rosettes of 6-week-old Col-0 (WT) and two independent mmf1 T-DNA
+#|   insertion mutants (AT3G44630) grown on BXminus and BXplus soil microbiomes (experiment IV, Table
+#|   S1). Scale bar, 2 cm. (b) Fresh weight (left) and rosette area (right; in pixels) after 6 weeks
+#|   of growth for the genotypes in (a). Boxplots show the median (centre line) and the 25th and 75th
+#|   percentiles (box bounds); whiskers extend to the most extreme value within 1.5 × the
+#|   interquartile range of the nearest box bound; points represent individual plants grown one per
+#|   pot, i.e. biological replicates (sample sizes (n) are given below each boxplot).  Text above
+#|   each genotype indicates the observed difference in means between conditions, expressed as Δmean
+#|   = BXplus − BXminus. Statistical significance was assessed within each genotype by one-way ANOVA
+#|   of BXplus versus BXminus (with two groups, equivalent to a two-sided t-test with pooled
+#|   variance); P values were Benjamini--Hochberg-adjusted across the three genotypes and the
+#|   adjusted P values are shown. The findings were reproduced in five additional experiments (E-III,
+#|   E-V, E-VIII, E-IX and E-X) on four separately conditioned soil batches (see Extended Data Fig.
+#|   5). Dataset 4.
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Produces: Fig. 4b
+#   Rosette area, WT vs two mmf1 mutants (experiment IV)
+#   -> (rendered inline, not written to file)
+# ------------------------------------------------------------
+
+plot_EIV_area <- make_single_plot(
+  data = area_EIV,
+  y_var = "plant_region_area",
+  y_lab = "Plant area",
+  plot_title = "E-IV - Plant area",
+  x_labels = c("WT", expression(italic("mmf1-1")), expression(italic("mmf1-2"))),
+  y_limits = c(0, 900000),
+  label_y = 800000
+)
+
+plot_EIV_area
+```
+
+\newpage
+### Statistics
+
+```{r}
+#| label: stats-EIV
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Statistics reported in: Fig. 4b
+#   Two-way ANOVA (line x microbiome) with BH correction
+# ------------------------------------------------------------
+
+anova_fw_EIV <- summary(aov(fresh_weight ~ line * BX, data = weight_EIV))[[1]]
+anova_area_EIV <- summary(aov(plant_region_area ~ line * BX, data = area_EIV))[[1]]
+
+kable(anova_fw_EIV, caption = "ANOVA table for fresh weight (E-IV)")
+kable(anova_area_EIV, caption = "ANOVA table for rosette area (E-IV)")
+
+kable(
+  bx_tests_by_line(weight_EIV, "fresh_weight"),
+  caption = "Per-line BX effect with FDR correction for fresh weight (E-IV)"
+)
+
+kable(
+  bx_tests_by_line(area_EIV, "plant_region_area"),
+  caption = "Per-line BX effect with FDR correction for rosette area (E-IV)"
+)
+
+emm_fw_EIV <- emmeans(
+  aov(fresh_weight ~ line * BX, data = weight_EIV),
+  ~ line * BX
+)
+
+pairs_fw_EIV <- pairs(
+  emm_fw_EIV,
+  adjust = "sidak"
+) %>%
+  as.data.frame()
+
+kable(
+  pairs_fw_EIV,
+  caption = "Pairwise Sidak-adjusted comparisons for fresh weight in E-IV"
+)
+
+letters_fw_EIV <- multcomp::cld(
+  emm_fw_EIV,
+  adjust = "sidak",
+  Letters = letters
+)
+
+kable(
+  as.data.frame(letters_fw_EIV),
+  caption = "Multiple comparison groupings (Sidak-adjusted) for fresh weight in E-IV"
+)
+
+emm_area_EIV <- emmeans(
+  aov(plant_region_area ~ line * BX, data = area_EIV),
+  ~ line * BX
+)
+
+pairs_area_EIV <- pairs(
+  emm_area_EIV,
+  adjust = "sidak"
+) %>%
+  as.data.frame()
+
+kable(
+  pairs_area_EIV,
+  caption = "Pairwise Sidak-adjusted comparisons for rosette area in E-IV"
+)
+
+letters_area_EIV <- multcomp::cld(
+  emm_area_EIV,
+  adjust = "sidak",
+  Letters = letters
+)
+
+kable(
+  as.data.frame(letters_area_EIV),
+  caption = "Multiple comparison groupings (Sidak-adjusted) for rosette area in E-IV"
+)
+```
+
+\newpage
+
+## **Experiment V: mmf1-1 and mmf1-2 on BS09**
+
+### **Replicates**
+
+```{r}
+#| label: repl-EV
+#| echo: false
+
+kable(table(weight_EV$BX, weight_EV$line), caption = "Number of replicates for fresh weight (E-V)")
+kable(table(area_EV$BX, area_EV$line), caption = "Number of replicates for rosette area (E-V)")
+```
+
+### Fresh weight
+
+```{r}
+#| label: means-EV-fw
+#| echo: false
+
+kable(
+  delta_means(weight_EV, "fresh_weight"),
+  caption = "Mean fresh weight and Δ(plus-minus) by genotype (E-V)"
+)
+```
+
+```{r}
+#| label: fig-mmf1-fw-EV
+#| fig-cap: Fresh weight of WT, mmf1-1 and mmf1-2 in E-V.
+#| fig-height: 4
+#| fig-width: 5
+#| echo: false
+
+plot_EV_fw <- make_single_plot(
+  data = weight_EV,
+  y_var = "fresh_weight",
+  y_lab = "Fresh weight",
+  plot_title = "E-V - Fresh weight analysis",
+  x_labels = c("WT", expression(italic("mmf1-1")), expression(italic("mmf1-2"))),
+  y_limits = c(0, 0.40),
+  label_y = 0.38
+)
+
+plot_EV_fw
+```
+
+### Rosette area
+
+```{r}
+#| label: means-EV-area
+#| echo: false
+
+kable(
+  delta_means(area_EV, "plant_region_area"),
+  caption = "Mean rosette area and Δ(plus-minus) by genotype (E-V)"
+)
+```
+
+```{r}
+#| label: fig-mmf1-area-EV
+#| fig-cap: Rosette area of WT, mmf1-1 and mmf1-2 in E-V.
+#| fig-height: 4
+#| fig-width: 5
+#| echo: false
+
+plot_EV_area <- make_single_plot(
+  data = area_EV,
+  y_var = "plant_region_area",
+  y_lab = "Plant area",
+  plot_title = "E-V - Plant area",
+  x_labels = c("WT", expression(italic("mmf1-1")), expression(italic("mmf1-2"))),
+  y_limits = c(0, 3000000),
+  label_y = 2800000
+)
+
+plot_EV_area
+```
+
+### Statistics
+
+```{r}
+#| label: stats-EV
+#| echo: false
+
+anova_fw_EV <- summary(aov(fresh_weight ~ line * BX, data = weight_EV))[[1]]
+anova_area_EV <- summary(aov(plant_region_area ~ line * BX, data = area_EV))[[1]]
+
+kable(anova_fw_EV, caption = "ANOVA table for fresh weight (E-V)")
+kable(anova_area_EV, caption = "ANOVA table for rosette area (E-V)")
+
+kable(
+  bx_tests_by_line(weight_EV, "fresh_weight"),
+  caption = "Per-line BX effect with FDR correction for fresh weight (E-V)"
+)
+
+kable(
+  bx_tests_by_line(area_EV, "plant_region_area"),
+  caption = "Per-line BX effect with FDR correction for rosette area (E-V)"
+)
+```
+\newpage
+## **mmf1 complementation lines (E-X)**
+
+### **Replicates**
+
+```{r}
+#| label: repl-EX
+#| echo: false
+
+kable(
+  table(compl_lines_EX$BX, compl_lines_EX$line),
+  caption = "Number of replicates for complementation lines (E-X)"
+)
+```
+
+### Statistics
+
+```{r}
+#| label: stats-EX
+#| echo: false
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Statistics reported in: Suppl. Fig. S4a-b
+#   Two-way ANOVA for the complementation experiment
+# ------------------------------------------------------------
+
+anova_fw_EX   <- summary(aov(fresh_weight ~ line * BX, data = compl_lines_EX))[[1]]
+anova_area_EX <- summary(aov(plant_region_area ~ line * BX, data = compl_lines_EX))[[1]]
+anova_dry_EX  <- summary(aov(dry_weight ~ line * BX, data = compl_lines_EX))[[1]]
+
+kable(anova_fw_EX, caption = "ANOVA table for fresh weight (E-X)")
+kable(anova_area_EX, caption = "ANOVA table for rosette area (E-X)")
+kable(anova_dry_EX, caption = "ANOVA table for dry weight (E-X)")
+
+kable(
+  bx_tests_by_line(compl_lines_EX, "fresh_weight"),
+  caption = "Per-line BX effect with FDR correction for fresh weight (E-X)"
+)
+
+kable(
+  bx_tests_by_line(compl_lines_EX, "plant_region_area"),
+  caption = "Per-line BX effect with FDR correction for rosette area (E-X)"
+)
+
+kable(
+  bx_tests_by_line(compl_lines_EX, "dry_weight"),
+  caption = "Per-line BX effect with FDR correction for dry weight (E-X)"
+)
+```
+
+### Fresh weight
+
+```{r}
+#| label: fig-compl-fw-EX
+#| fig-cap: Fresh weight of mmf1 complementation lines in E-X.
+#| fig-height: 4
+#| fig-width: 5
+#| echo: false
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Supports: Suppl. Fig. S4a
+#   Fresh weight of mmf1 complementation lines
+# ------------------------------------------------------------
+
+plot_EX_fw <- make_single_plot(
+  data = compl_lines_EX,
+  y_var = "fresh_weight",
+  y_lab = "Weight (g)",
+  plot_title = "E-X - Fresh weight",
+  x_labels = c(
+    "WT",
+    expression(italic("mmf1-2")),
+    expression(italic("mmf1-2::pNos4-4")),
+    expression(italic("mmf1-2::pNos5-1"))
+  ),
+  y_limits = c(0, 1.0),
+  label_y = 0.9
+)
+
+plot_EX_fw
+```
+
+### Dry weight
+
+```{r}
+#| label: fig-compl-dw-EX
+#| fig-cap: Dry weight of mmf1 complementation lines in E-X.
+#| fig-height: 4
+#| fig-width: 5
+#| echo: false
+
+plot_EX_dw <- make_single_plot(
+  data = compl_lines_EX,
+  y_var = "dry_weight",
+  y_lab = "Weight (mg)",
+  plot_title = "E-X - Dry weight",
+  x_labels = c(
+    "WT",
+    expression(italic("mmf1-2")),
+    expression(italic("mmf1-2::pNos4-4")),
+    expression(italic("mmf1-2::pNos5-1"))
+  ),
+  y_limits = c(0, 150),
+  label_y = 140
+)
+
+plot_EX_dw
+```
+
+### Rosette area
+
+```{r}
+#| label: fig-compl-area-EX
+#| fig-cap: Rosette area of mmf1 complementation lines in E-X.
+#| fig-height: 4
+#| fig-width: 5
+#| echo: false
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Supports: Suppl. Fig. S4b
+#   Rosette area of mmf1 complementation lines
+# ------------------------------------------------------------
+
+plot_EX_area <- make_single_plot(
+  data = compl_lines_EX,
+  y_var = "plant_region_area",
+  y_lab = "Rosette area",
+  plot_title = "E-X - Rosette area",
+  x_labels = c(
+    "WT",
+    expression(italic("mmf1-2")),
+    expression(italic("mmf1-2::pNos4-4")),
+    expression(italic("mmf1-2::pNos5-1"))
+  ),
+  y_limits = c(0, 2000000),
+  label_y = 1800000
+)
+
+plot_EX_area
+```
+
+```{r}
+#| label: fig-compl-combined-EX
+#| include: false
+#| echo: false
+#| fig-cap: |
+#|   Supplementary Figure S4a-b | Growth feedback in a BXplus microbiome is restored mmf1
+#|   complementation lines. (a) Fresh weight and (b) rosette area (right; in pixels) of mmf1-2 mutant
+#|   lines complimented with MMF1 under control of the nopaline synthase promotor grown for 6 weeks
+#|   on the two microbiomes. (c) Relative expression levels of MMF1 determined by qRT-PCR of the two
+#|   mmf1-2 lines complemented with MMF1 under control of the Nopaline Synthase Promotor (pNOS).
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Produces: Suppl. Fig. S4a-b
+#   Complementation composite (fresh weight and rosette area)
+#   -> Output/figures/mmf1_mutants_compl_feedback.pdf
+# ------------------------------------------------------------
+
+mmf1_compl_feedbacks <- ggarrange(
+  plot_EX_fw,
+  plot_EX_area,
+  nrow = 1,
+  ncol = 2,
+  common.legend = TRUE,
+  legend = "bottom",
+  widths = c(1, 1.04)
+)
+
+ggsave(
+  filename = "mmf1_mutants_compl_feedback.pdf",
+  plot = mmf1_compl_feedbacks,
+  width = 17.5,
+  height = 9,
+  units = "cm",
+  path = "Output/figures/"
+)
+```
+
+\newpage
+
+# **ETI mutant screen**
+
+## **Experiment VI: ETI mutants on BS07**
+
+### **Replicates**
+
+```{r}
+#| label: repl-EVI
+#| echo: false
+
+kable(table(weight_EVI$BX, weight_EVI$line), caption = "Number of replicates - weight (E-VI)")
+kable(table(area_EVI$BX, area_EVI$line), caption = "Number of replicates - plant area (E-VI)")
+```
+
+### Statistics
+
+```{r}
+#| label: stats-EVI
+#| echo: false
+
+anova_fw_EVI   <- summary(aov(fresh_weight ~ line * BX, data = weight_EVI))[[1]]
+anova_dry_EVI  <- summary(aov(dry_weight ~ line * BX, data = weight_EVI))[[1]]
+anova_area_EVI <- summary(aov(plant_region_area ~ line * BX, data = area_EVI))[[1]]
+
+kable(anova_fw_EVI, caption = "ANOVA table for fresh weight (E-VI)")
+kable(anova_dry_EVI, caption = "ANOVA table for dry weight (E-VI)")
+kable(anova_area_EVI, caption = "ANOVA table for rosette area (E-VI)")
+
+kable(
+  bx_tests_by_line(weight_EVI, "fresh_weight"),
+  caption = "Per-line BX effect with FDR correction for fresh weight (E-VI)"
+)
+
+kable(
+  bx_tests_by_line(weight_EVI, "dry_weight"),
+  caption = "Per-line BX effect with FDR correction for dry weight (E-VI)"
+)
+
+kable(
+  bx_tests_by_line(area_EVI, "plant_region_area"),
+  caption = "Per-line BX effect with FDR correction for rosette area (E-VI)"
+)
+```
+
+### Dry weight
+
+```{r}
+#| label: fig-eti-dw-EVI
+#| fig-cap: Dry weight of ETI mutants in E-VI.
+#| fig-height: 4
+#| fig-width: 5
+#| echo: false
+
+plot_EVI_dw <- make_single_plot(
+  data = weight_EVI,
+  y_var = "dry_weight",
+  y_lab = "Dry weight (mg)",
+  plot_title = "ETI - Dry weight E-VI",
+  x_labels = c(
+    "WT",
+    expression(italic("eds1-12")),
+    expression(italic("pad4-1")),
+    expression(italic("sag101-3"))
+  ),
+  y_limits = c(0, 50),
+  label_y = 48
+)
+
+plot_EVI_dw
+```
+
+### Fresh weight
+
+```{r}
+#| label: fig-eti-fw-EVI
+#| fig-cap: Fresh weight of ETI mutants in E-VI.
+#| fig-height: 4
+#| fig-width: 5
+#| echo: false
+
+plot_EVI_fw <- make_single_plot(
+  data = weight_EVI,
+  y_var = "fresh_weight",
+  y_lab = "Fresh weight (mg)",
+  plot_title = "ETI - Fresh weight E-VI",
+  x_labels = c(
+    "WT",
+    expression(italic("eds1-12")),
+    expression(italic("pad4-1")),
+    expression(italic("sag101-3"))
+  ),
+  y_limits = c(0, 500),
+  label_y = 500
+)
+
+plot_EVI_fw
+```
+
+### Rosette area
+
+```{r}
+#| label: fig-eti-area-EVI
+#| fig-cap: Rosette area of ETI mutants in E-VI.
+#| fig-height: 4
+#| fig-width: 5
+#| echo: false
+
+plot_EVI_area <- make_single_plot(
+  data = area_EVI,
+  y_var = "plant_region_area",
+  y_lab = "Plant region area",
+  plot_title = "ETI - Rosette area E-VI",
+  x_labels = c(
+    "WT",
+    expression(italic("eds1-12")),
+    expression(italic("pad4-1")),
+    expression(italic("sag101-3"))
+  ),
+  y_limits = c(0, 5000000),
+  label_y = 4800000
+)
+
+plot_EVI_area
+```
+\newpage
+## **Combined ETI analysis across E-VI to E-IX**
+
+### **Replicates**
+
+```{r}
+#| label: repl-ETI-combined
+#| echo: false
+
+kable(
+  table(plant_weight_comb_ETI$BX, plant_weight_comb_ETI$line),
+  caption = "Number of replicates - weight (ETI combined, E-VI to E-IX)"
+)
+
+kable(
+  table(plant_area_comb_ETI$BX, plant_area_comb_ETI$line),
+  caption = "Number of replicates - plant area (ETI combined, E-VI to E-IX)"
+)
+```
+
+### LMM and EMM: fresh weight
+
+```{r}
+#| label: lmm-eti-fw
+#| echo: false
+#| fig-cap: |
+#|   Extended Data Figure 6c (fresh weight) | Growth feedback in a BXplus microbiome remains intact
+#|   in effector-triggered immunity signalling mutants. (a) Phenotypes of 6-week-old WT, and mutants
+#|   (eds1-12, pad4-1 and sag101-3) affected in effector-triggered immunity signalling pathways grown
+#|   on the BXminus and BXplus soils. Scale bar, 2 cm. (b) Z-score--transformed fresh weight and
+#|   rosette area of WT, eds1-12, pad4-1, and sag101-3 plants across four independent experiments
+#|   illustrate the positive growth feedback on the BXplus soil microbiome. Values were
+#|   z-score--transformed within experiment to account for between-experiment variation. Each point
+#|   is an individual plant grown in its own pot, i.e. a biological replicate; number of replicates
+#|   is given below each plot. Boxplots show the median (centre line) and the 25th and 75th
+#|   percentiles (box bounds); whiskers extend to the most extreme value within 1.5 × the
+#|   interquartile range of the nearest box bound, and all plants are plotted as points. The
+#|   statistics above the plots are estimated marginal mean (EMM) contrasts of the BX effect within
+#|   each genotype (ΔEMM = BXplus − BXminus), computed from a linear mixed-effects model with
+#|   experiment as a random intercept to account for variation between experiments. Each ΔEMM is a
+#|   two-sided t-test on the estimated marginal means (emmeans). ΔEMM is therefore expressed in the
+#|   units of the measurement, not in z-score units. (c) Summary of the same linear mixed-effects
+#|   model in (b). For each genotype, the BX effect is reported as the EMM contrast Δ(BXplus −
+#|   BXminus) with unadjusted two-sided P values. The table also reports interaction contrasts
+#|   relative to WT (ΔΔ vs WT = Δ_mutant − Δ_WT), which test whether the BX response of each mutant
+#|   differs from that of WT; these three comparisons form one family per measure and are two-sided
+#|   t-tests with Holm adjusted P values. Data are from Dataset 4.
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Produces: Extended Data Fig. 6c
+#   LMM summary, ETI mutants fresh weight
+#   -> (table printed in the document)
+# ------------------------------------------------------------
+
+plant_weight_comb_ETI <- plant_weight_comb_ETI %>%
+  mutate(
+    BX = factor(BX, levels = c("minus", "plus")),
+    line = factor(line, levels = c("WT", "eds1", "pad4", "sag101")),
+    experiment = factor(experiment)
+  ) %>%
+  filter(!is.na(fresh_weight))
+
+# Fit model first
+eti_fw_lmm <- run_lmm_emm(
+  data = plant_weight_comb_ETI,
+  response = "fresh_weight",
+  experiment_var = "experiment"
+)
+
+# Inspect model
+summary(eti_fw_lmm$model)
+
+# Within-line BX effect
+kable(
+  eti_fw_lmm$effects_by_line,
+  caption = "Within-line ΔEMM = BXplus - BXminus for ETI fresh weight"
+)
+
+# Difference-in-differences vs WT
+kable(
+  eti_fw_lmm$diff_in_diff_vs_WT,
+  caption = "Difference-in-differences relative to WT for ETI fresh weight"
+)
+
+# Mutant vs WT within each BX condition
+emm_line_by_BX <- emmeans(eti_fw_lmm$model, ~ line | BX)
+
+line_vs_WT_by_BX <- contrast(
+  emm_line_by_BX,
+  method = "trt.vs.ctrl",
+  ref = "WT",
+  adjust = "holm"
+) %>%
+  summary(infer = TRUE) %>%
+  as.data.frame() %>%
+  mutate(
+    estimate = round(estimate, 3),
+    SE = round(SE, 3),
+    lower.CL = round(lower.CL, 3),
+    upper.CL = round(upper.CL, 3),
+    p.value = signif(p.value, 3)
+  )
+
+kable(
+  line_vs_WT_by_BX,
+  caption = "Mutant vs WT contrasts within each BX condition for ETI fresh weight (Holm-adjusted)"
+)
+```
+
+### Plot combined ETI fresh weight
+
+```{r}
+#| label: fig-eti-fw-combined
+#| fig-height: 4
+#| fig-width: 5
+#| echo: false
+#| fig-cap: |
+#|   Extended Data Figure 6b (fresh weight) | Growth feedback in a BXplus microbiome remains intact
+#|   in effector-triggered immunity signalling mutants. (a) Phenotypes of 6-week-old WT, and mutants
+#|   (eds1-12, pad4-1 and sag101-3) affected in effector-triggered immunity signalling pathways grown
+#|   on the BXminus and BXplus soils. Scale bar, 2 cm. (b) Z-score--transformed fresh weight and
+#|   rosette area of WT, eds1-12, pad4-1, and sag101-3 plants across four independent experiments
+#|   illustrate the positive growth feedback on the BXplus soil microbiome. Values were
+#|   z-score--transformed within experiment to account for between-experiment variation. Each point
+#|   is an individual plant grown in its own pot, i.e. a biological replicate; number of replicates
+#|   is given below each plot. Boxplots show the median (centre line) and the 25th and 75th
+#|   percentiles (box bounds); whiskers extend to the most extreme value within 1.5 × the
+#|   interquartile range of the nearest box bound, and all plants are plotted as points. The
+#|   statistics above the plots are estimated marginal mean (EMM) contrasts of the BX effect within
+#|   each genotype (ΔEMM = BXplus − BXminus), computed from a linear mixed-effects model with
+#|   experiment as a random intercept to account for variation between experiments. Each ΔEMM is a
+#|   two-sided t-test on the estimated marginal means (emmeans). ΔEMM is therefore expressed in the
+#|   units of the measurement, not in z-score units. (c) Summary of the same linear mixed-effects
+#|   model in (b). For each genotype, the BX effect is reported as the EMM contrast Δ(BXplus −
+#|   BXminus) with unadjusted two-sided P values. The table also reports interaction contrasts
+#|   relative to WT (ΔΔ vs WT = Δ_mutant − Δ_WT), which test whether the BX response of each mutant
+#|   differs from that of WT; these three comparisons form one family per measure and are two-sided
+#|   t-tests with Holm adjusted P values. Data are from Dataset 4.
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Produces: Extended Data Fig. 6b
+#   Z-scored fresh weight, ETI mutants across experiments
+#   -> Output/figures/ETI_mutants_FW_comb_zscore.pdf
+# ------------------------------------------------------------
+
+plant_weight_comb_ETI_z <- zscore_within_experiment(
+  plant_weight_comb_ETI,
+  response = "fresh_weight",
+  experiment_var = "experiment",
+  new_name = "fresh_weight_z"
+)
+
+p_table_eti_fw <- eti_fw_lmm$effects_by_line %>%
+  mutate(
+    line = factor(line, levels = c("WT", "eds1", "pad4", "sag101")),
+    label = paste0("ΔEMM = ", effect_plus_minus, "\n", "p = ", p)
+  )
+
+plot_ETI_fw_combined <- make_combined_plot(
+  data = plant_weight_comb_ETI_z,
+  y_var = "fresh_weight_z",
+  y_lab = "Fresh weight (z-score transformed)",
+  plot_title = "ETI - Fresh weight (z-scored within experiment, E-VI to E-IX)",
+  x_labels = c(
+    "WT",
+    expression(italic("eds1-12")),
+    expression(italic("pad4-1")),
+    expression(italic("sag101-3"))
+  ),
+  shape_var = "experiment",
+  y_limits = c(-3, 4),
+  p_table = p_table_eti_fw,
+  text_y = 3.8,
+  shape_values = c(21, 22, 24, 25)
+)
+
+plot_ETI_fw_combined
+
+ggsave(
+  filename = "ETI_mutants_FW_comb_zscore.pdf", 
+  plot = plot_ETI_fw_combined, 
+  width = 10, 
+  height = 10, 
+  units = "cm", 
+  path = "Output/figures/"
+)
+```
+
+### LMM and EMM: rosette area
+
+```{r}
+#| label: lmm-eti-area
+#| echo: false
+#| fig-cap: |
+#|   Extended Data Figure 6c (rosette area) | Growth feedback in a BXplus microbiome remains intact
+#|   in effector-triggered immunity signalling mutants. (a) Phenotypes of 6-week-old WT, and mutants
+#|   (eds1-12, pad4-1 and sag101-3) affected in effector-triggered immunity signalling pathways grown
+#|   on the BXminus and BXplus soils. Scale bar, 2 cm. (b) Z-score--transformed fresh weight and
+#|   rosette area of WT, eds1-12, pad4-1, and sag101-3 plants across four independent experiments
+#|   illustrate the positive growth feedback on the BXplus soil microbiome. Values were
+#|   z-score--transformed within experiment to account for between-experiment variation. Each point
+#|   is an individual plant grown in its own pot, i.e. a biological replicate; number of replicates
+#|   is given below each plot. Boxplots show the median (centre line) and the 25th and 75th
+#|   percentiles (box bounds); whiskers extend to the most extreme value within 1.5 × the
+#|   interquartile range of the nearest box bound, and all plants are plotted as points. The
+#|   statistics above the plots are estimated marginal mean (EMM) contrasts of the BX effect within
+#|   each genotype (ΔEMM = BXplus − BXminus), computed from a linear mixed-effects model with
+#|   experiment as a random intercept to account for variation between experiments. Each ΔEMM is a
+#|   two-sided t-test on the estimated marginal means (emmeans). ΔEMM is therefore expressed in the
+#|   units of the measurement, not in z-score units. (c) Summary of the same linear mixed-effects
+#|   model in (b). For each genotype, the BX effect is reported as the EMM contrast Δ(BXplus −
+#|   BXminus) with unadjusted two-sided P values. The table also reports interaction contrasts
+#|   relative to WT (ΔΔ vs WT = Δ_mutant − Δ_WT), which test whether the BX response of each mutant
+#|   differs from that of WT; these three comparisons form one family per measure and are two-sided
+#|   t-tests with Holm adjusted P values. Data are from Dataset 4.
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Produces: Extended Data Fig. 6c
+#   LMM summary, ETI mutants rosette area
+#   -> (table printed in the document)
+# ------------------------------------------------------------
+
+plant_area_comb_ETI <- plant_area_comb_ETI %>%
+  mutate(
+    BX = factor(BX, levels = c("minus", "plus")),
+    line = factor(line, levels = c("WT", "eds1", "pad4", "sag101")),
+    experiment = factor(experiment)
+  ) %>%
+  filter(!is.na(plant_region_area))
+
+# -----------------------------
+# Fit mixed model first
+# -----------------------------
+eti_area_lmm <- run_lmm_emm(
+  data = plant_area_comb_ETI,
+  response = "plant_region_area",
+  experiment_var = "experiment"
+)
+
+# Inspect model
+summary(eti_area_lmm$model)
+
+# -----------------------------
+# Within-line BX effect
+# -----------------------------
+kable(
+  eti_area_lmm$effects_by_line,
+  caption = "Within-line ΔEMM = BXplus - BXminus for ETI rosette area"
+)
+
+# -----------------------------
+# Difference-in-differences vs WT
+# -----------------------------
+kable(
+  eti_area_lmm$diff_in_diff_vs_WT,
+  caption = "Difference-in-differences relative to WT for ETI rosette area"
+)
+
+# -----------------------------
+# Mutant vs WT within each BX condition
+# -----------------------------
+emm_line_by_BX_area <- emmeans(eti_area_lmm$model, ~ line | BX)
+
+line_vs_WT_by_BX_area <- contrast(
+  emm_line_by_BX_area,
+  method = "trt.vs.ctrl",
+  ref = "WT",
+  adjust = "holm"
+) %>%
+  summary(infer = TRUE) %>%
+  as.data.frame() %>%
+  mutate(
+    estimate = round(estimate, 3),
+    SE = round(SE, 3),
+    lower.CL = round(lower.CL, 3),
+    upper.CL = round(upper.CL, 3),
+    p.value = signif(p.value, 3)
+  )
+
+kable(
+  line_vs_WT_by_BX_area,
+  caption = "Mutant vs WT contrasts within each BX condition for ETI rosette area (Holm-adjusted)"
+)
+```
+
+### Plot combined ETI rosette area
+
+```{r}
+#| label: fig-eti-area-combined
+#| fig-height: 4
+#| fig-width: 5
+#| echo: false
+#| fig-cap: |
+#|   Extended Data Figure 6b (rosette area) | Growth feedback in a BXplus microbiome remains intact
+#|   in effector-triggered immunity signalling mutants. (a) Phenotypes of 6-week-old WT, and mutants
+#|   (eds1-12, pad4-1 and sag101-3) affected in effector-triggered immunity signalling pathways grown
+#|   on the BXminus and BXplus soils. Scale bar, 2 cm. (b) Z-score--transformed fresh weight and
+#|   rosette area of WT, eds1-12, pad4-1, and sag101-3 plants across four independent experiments
+#|   illustrate the positive growth feedback on the BXplus soil microbiome. Values were
+#|   z-score--transformed within experiment to account for between-experiment variation. Each point
+#|   is an individual plant grown in its own pot, i.e. a biological replicate; number of replicates
+#|   is given below each plot. Boxplots show the median (centre line) and the 25th and 75th
+#|   percentiles (box bounds); whiskers extend to the most extreme value within 1.5 × the
+#|   interquartile range of the nearest box bound, and all plants are plotted as points. The
+#|   statistics above the plots are estimated marginal mean (EMM) contrasts of the BX effect within
+#|   each genotype (ΔEMM = BXplus − BXminus), computed from a linear mixed-effects model with
+#|   experiment as a random intercept to account for variation between experiments. Each ΔEMM is a
+#|   two-sided t-test on the estimated marginal means (emmeans). ΔEMM is therefore expressed in the
+#|   units of the measurement, not in z-score units. (c) Summary of the same linear mixed-effects
+#|   model in (b). For each genotype, the BX effect is reported as the EMM contrast Δ(BXplus −
+#|   BXminus) with unadjusted two-sided P values. The table also reports interaction contrasts
+#|   relative to WT (ΔΔ vs WT = Δ_mutant − Δ_WT), which test whether the BX response of each mutant
+#|   differs from that of WT; these three comparisons form one family per measure and are two-sided
+#|   t-tests with Holm adjusted P values. Data are from Dataset 4.
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Produces: Extended Data Fig. 6b
+#   Z-scored rosette area, ETI mutants across experiments
+#   -> Output/figures/ETI_mutants_rosette_area_comb_zscore.pdf
+# ------------------------------------------------------------
+
+plant_area_comb_ETI_z <- zscore_within_experiment(
+  plant_area_comb_ETI,
+  response = "plant_region_area",
+  experiment_var = "experiment",
+  new_name = "rosette_area_z"
+)
+
+p_table_eti_area <- eti_area_lmm$effects_by_line %>%
+  mutate(
+    line = factor(line, levels = c("WT", "eds1", "pad4", "sag101")),
+    label = paste0("ΔEMM = ", effect_plus_minus, "\n", "p = ", p)
+  )
+
+plot_ETI_area_combined <- make_combined_plot(
+  data = plant_area_comb_ETI_z,
+  y_var = "rosette_area_z",
+  y_lab = "Rosette area (z-score transformed)",
+  plot_title = "ETI - Rosette area (z-scored within experiment, E-VI to E-IX)",
+  x_labels = c(
+    "WT",
+    expression(italic("eds1-12")),
+    expression(italic("pad4-1")),
+    expression(italic("sag101-3"))
+  ),
+  shape_var = "experiment",
+  y_limits = c(-3, 4),
+  p_table = p_table_eti_area,
+  text_y = 3.8,
+  shape_values = c(21, 22, 24, 25)
+)
+
+plot_ETI_area_combined
+
+ggsave(
+  filename = "ETI_mutants_rosette_area_comb_zscore.pdf", 
+  plot = plot_ETI_area_combined, 
+  width = 10, 
+  height = 10, 
+  units = "cm", 
+  path = "Output/figures/"
+)
+```
+
+\newpage
+
+# **Combined mmf1 analysis across E-III, E-IV, E-V, E-VIII and E-IX**
+
+### **LMM and EMM: fresh weight**
+
+```{r}
+#| label: lmm-mmf1-fw
+#| echo: false
+#| fig-cap: |
+#|   Extended Data Figure 5b (fresh weight) | Growth feedback in a BXplus microbiome is consistently
+#|   lost in mmf1 mutants. (a and b) Repeated growth feedbacks (Experiment III - V, VIII, IX and X)
+#|   of Col-0 wild type (WT) and two mmf1 T-DNA insertion mutants (At3g44630) grown on the BXminus
+#|   and BXplus soil microbiomes. Feedback experiments were performed on greenhouse-conditioned soil
+#|   batches BS04 (Experiment III and IV), BS09 (V and X), BS10 (IX) and BS11 (VIII). (a)
+#|   Z-score--transformed fresh weight and rosette area of WT and mmf1 mutants across six independent
+#|   experiments. WT was present in all six experiments, mmf1-1 in three and mmf1-2 in five. Values
+#|   were z-score--transformed within experiment to account for between-experiment variation. Each
+#|   point is an individual plant grown in its own pot, i.e. a biological replicate; number of
+#|   replicates is given below each plot. Boxplots show the median (centre line) and the 25th and
+#|   75th percentiles (box bounds); whiskers extend to the most extreme value within 1.5 × the
+#|   interquartile range of the nearest box bound, and all plants are plotted as points. The
+#|   statistics above the plots are estimated marginal mean (EMM) contrasts of the BX effect within
+#|   each genotype (ΔEMM = BXplus − BXminus), computed from a linear mixed-effects model with
+#|   experiment as a random intercept to account for variation between experiments. Each ΔEMM is a
+#|   two-sided t-test on the estimated marginal means (emmeans). ΔEMM is therefore expressed in the
+#|   units of the measurement, not in z-score units. (b) Summary of the same linear mixed-effects
+#|   model in (a). For each genotype, the BX effect is reported as the EMM contrast Δ(BXplus −
+#|   BXminus) with unadjusted two-sided P values. The table also reports interaction contrasts
+#|   relative to WT (ΔΔ vs WT = Δ_mutant − Δ_WT), which test whether the BX response of each mutant
+#|   differs from that of WT; these two comparisons form one family per measure and are two-sided
+#|   t-tests with Holm adjusted P values. Data are from Dataset 4.
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Produces: Extended Data Fig. 5b
+#   LMM summary, fresh weight (experiment as random intercept)
+#   -> (table printed in the document)
+# ------------------------------------------------------------
+
+# -----------------------------
+# mmf1 pooled fresh weight analysis
+# keeps plant_weight_comb_mmf1 for downstream plotting
+# -----------------------------
+
+# 1) Prepare data once
+plant_weight_comb_mmf1 <- plant_weight_comb_mmf1 %>%
+  mutate(
+    BX = factor(BX, levels = c("minus", "plus")),
+    line = factor(line, levels = c("WT", "mmf1-1", "mmf1-2")),
+    experiment = factor(exp)
+  ) %>%
+  filter(!is.na(fresh_weight))
+
+# 2) Fit one mixed model
+mmf1_fw_lmm <- run_lmm_emm(
+  data = plant_weight_comb_mmf1,
+  response = "fresh_weight",
+  experiment_var = "experiment"
+)
+
+# 3) Inspect model
+summary(mmf1_fw_lmm$model)
+
+# -----------------------------
+# A. Within-line BX effect
+#    ΔEMM = BXplus - BXminus
+# -----------------------------
+kable(
+  mmf1_fw_lmm$effects_by_line,
+  caption = "Within-line ΔEMM = BXplus - BXminus for mmf1 fresh weight"
+)
+
+# -----------------------------
+# B. Difference-in-differences vs WT
+# -----------------------------
+kable(
+  mmf1_fw_lmm$diff_in_diff_vs_WT,
+  caption = "Difference-in-differences relative to WT for mmf1 fresh weight"
+)
+
+# -----------------------------
+# C. Mutant vs WT within each BX condition
+# -----------------------------
+emm_line_by_BX_mmf1 <- emmeans(mmf1_fw_lmm$model, ~ line | BX)
+
+line_vs_WT_by_BX_mmf1 <- contrast(
+  emm_line_by_BX_mmf1,
+  method = "trt.vs.ctrl",
+  ref = "WT",
+  adjust = "holm"
+) %>%
+  summary(infer = TRUE) %>%
+  as.data.frame() %>%
+  mutate(
+    estimate = round(estimate, 3),
+    SE = round(SE, 3),
+    lower.CL = round(lower.CL, 3),
+    upper.CL = round(upper.CL, 3),
+    p.value = signif(p.value, 3)
+  )
+
+kable(
+  line_vs_WT_by_BX_mmf1,
+  caption = "Mutant vs WT contrasts within each BX condition for mmf1 fresh weight (Holm-adjusted)"
+)
+
+# -----------------------------
+# D. Estimated marginal means for line
+#    averaged across BX conditions
+# -----------------------------
+emm_line_mmf1_fw <- emmeans(mmf1_fw_lmm$model, ~ line)
+
+emm_line_mmf1_fw_table <- summary(emm_line_mmf1_fw) %>%
+  as.data.frame() %>%
+  mutate(
+    emmean = round(emmean, 3),
+    SE = round(SE, 3),
+    lower.CL = round(lower.CL, 3),
+    upper.CL = round(upper.CL, 3)
+  )
+
+kable(
+  emm_line_mmf1_fw_table,
+  caption = "Estimated marginal means for mmf1 fresh weight by line, averaged across BX conditions (experiment included as a random intercept)"
+)
+
+# -----------------------------
+# E. Mutant vs WT averaged across BX conditions
+# -----------------------------
+line_vs_WT_mmf1_fw <- contrast(
+  emm_line_mmf1_fw,
+  method = "trt.vs.ctrl",
+  ref = "WT",
+  adjust = "holm"
+) %>%
+  summary(infer = TRUE) %>%
+  as.data.frame() %>%
+  rename(
+    diff_EMM = estimate,
+    t = t.ratio,
+    p = p.value
+  ) %>%
+  mutate(
+    diff_EMM = round(diff_EMM, 3),
+    SE = round(SE, 3),
+    lower.CL = round(lower.CL, 3),
+    upper.CL = round(upper.CL, 3),
+    p = signif(p, 3)
+  )
+
+kable(
+  line_vs_WT_mmf1_fw,
+  caption = "Mutant vs WT contrasts for mmf1 fresh weight, averaged across BX conditions and corrected for experiment (Holm-adjusted)"
+)
+
+# -----------------------------
+# F. All line × BX combinations relative to WT in BXminus
+#    Uses the same mixed model, so experiment is still accounted for
+# -----------------------------
+emm_line_BX_mmf1_fw <- emmeans(mmf1_fw_lmm$model, ~ line * BX)
+
+emm_line_BX_mmf1_fw_table <- summary(emm_line_BX_mmf1_fw) %>%
+  as.data.frame() %>%
+  mutate(
+    emmean = round(emmean, 3),
+    SE = round(SE, 3),
+    lower.CL = round(lower.CL, 3),
+    upper.CL = round(upper.CL, 3)
+  )
+
+kable(
+  emm_line_BX_mmf1_fw_table,
+  caption = "Estimated marginal means for mmf1 fresh weight by line and BX condition (experiment included as a random intercept)"
+)
+
+# Check that row 1 is WT in BXminus
+emm_line_BX_mmf1_fw_table
+
+vs_WTminus_mmf1_fw <- contrast(
+  emm_line_BX_mmf1_fw,
+  method = "trt.vs.ctrl",
+  ref = 1,
+  adjust = "holm"
+) %>%
+  summary(infer = TRUE) %>%
+  as.data.frame() %>%
+  rename(
+    diff_vs_WTminus = estimate,
+    t = t.ratio,
+    p = p.value
+  ) %>%
+  mutate(
+    diff_vs_WTminus = round(diff_vs_WTminus, 3),
+    SE = round(SE, 3),
+    lower.CL = round(lower.CL, 3),
+    upper.CL = round(upper.CL, 3),
+    p = signif(p, 3)
+  )
+
+kable(
+  vs_WTminus_mmf1_fw,
+  caption = "Fresh weight contrasts relative to WT in BXminus soil for mmf1 lines (experiment included as a random intercept; Holm-adjusted)"
+)
+```
+
+### **Plot combined mmf1 fresh weight**
+
+```{r}
+#| label: fig-mmf1-fw-combined
+#| fig-height: 4
+#| fig-width: 5
+#| echo: false
+#| fig-cap: |
+#|   Extended Data Figure 5a (fresh weight) | Growth feedback in a BXplus microbiome is consistently
+#|   lost in mmf1 mutants. (a and b) Repeated growth feedbacks (Experiment III - V, VIII, IX and X)
+#|   of Col-0 wild type (WT) and two mmf1 T-DNA insertion mutants (At3g44630) grown on the BXminus
+#|   and BXplus soil microbiomes. Feedback experiments were performed on greenhouse-conditioned soil
+#|   batches BS04 (Experiment III and IV), BS09 (V and X), BS10 (IX) and BS11 (VIII). (a)
+#|   Z-score--transformed fresh weight and rosette area of WT and mmf1 mutants across six independent
+#|   experiments. WT was present in all six experiments, mmf1-1 in three and mmf1-2 in five. Values
+#|   were z-score--transformed within experiment to account for between-experiment variation. Each
+#|   point is an individual plant grown in its own pot, i.e. a biological replicate; number of
+#|   replicates is given below each plot. Boxplots show the median (centre line) and the 25th and
+#|   75th percentiles (box bounds); whiskers extend to the most extreme value within 1.5 × the
+#|   interquartile range of the nearest box bound, and all plants are plotted as points. The
+#|   statistics above the plots are estimated marginal mean (EMM) contrasts of the BX effect within
+#|   each genotype (ΔEMM = BXplus − BXminus), computed from a linear mixed-effects model with
+#|   experiment as a random intercept to account for variation between experiments. Each ΔEMM is a
+#|   two-sided t-test on the estimated marginal means (emmeans). ΔEMM is therefore expressed in the
+#|   units of the measurement, not in z-score units. (b) Summary of the same linear mixed-effects
+#|   model in (a). For each genotype, the BX effect is reported as the EMM contrast Δ(BXplus −
+#|   BXminus) with unadjusted two-sided P values. The table also reports interaction contrasts
+#|   relative to WT (ΔΔ vs WT = Δ_mutant − Δ_WT), which test whether the BX response of each mutant
+#|   differs from that of WT; these two comparisons form one family per measure and are two-sided
+#|   t-tests with Holm adjusted P values. Data are from Dataset 4.
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Produces: Extended Data Fig. 5a
+#   Z-scored fresh weight, WT vs mmf1 across experiments
+#   -> Output/figures/mmf1_mutants_FW_combined_zscore.pdf
+# ------------------------------------------------------------
+
+plant_weight_comb_mmf1_z <- zscore_within_experiment(
+  plant_weight_comb_mmf1,
+  response = "fresh_weight",
+  experiment_var = "experiment",
+  new_name = "fresh_weight_z"
+)
+
+p_table_mmf1_fw <- mmf1_fw_lmm$effects_by_line %>%
+  mutate(
+    line = factor(line, levels = c("WT", "mmf1-1", "mmf1-2")),
+    label = paste0("ΔEMM = ", effect_plus_minus, "\n", "p = ", p)
+  )
+
+plot_mmf1_fw_combined <- make_combined_plot(
+  data = plant_weight_comb_mmf1_z,
+  y_var = "fresh_weight_z",
+  y_lab = "Fresh weight (z-score per experiment)",
+  plot_title = "mmf1 - Fresh weight",
+  x_labels = c("WT", expression(italic("mmf1-1")), expression(italic("mmf1-2"))),
+  shape_var = "experiment",
+  y_limits = c(-3, 4),
+  p_table = p_table_mmf1_fw,
+  text_y = 4,
+  shape_values = c(21, 22, 23, 24, 25, 8)
+)
+
+plot_mmf1_fw_combined
+
+ggsave(
+  filename = "mmf1_mutants_FW_combined_zscore.pdf", 
+  plot = plot_mmf1_fw_combined, 
+  width = 10, 
+  height = 11, 
+  units = "cm", 
+  path = "Output/figures/"
+)
+```
+
+### LMM and EMM:rosette area
+
+```{r}
+#| label: lmm-mmf1-area
+#| echo: false
+#| fig-cap: |
+#|   Extended Data Figure 5b (rosette area) | Growth feedback in a BXplus microbiome is consistently
+#|   lost in mmf1 mutants. (a and b) Repeated growth feedbacks (Experiment III - V, VIII, IX and X)
+#|   of Col-0 wild type (WT) and two mmf1 T-DNA insertion mutants (At3g44630) grown on the BXminus
+#|   and BXplus soil microbiomes. Feedback experiments were performed on greenhouse-conditioned soil
+#|   batches BS04 (Experiment III and IV), BS09 (V and X), BS10 (IX) and BS11 (VIII). (a)
+#|   Z-score--transformed fresh weight and rosette area of WT and mmf1 mutants across six independent
+#|   experiments. WT was present in all six experiments, mmf1-1 in three and mmf1-2 in five. Values
+#|   were z-score--transformed within experiment to account for between-experiment variation. Each
+#|   point is an individual plant grown in its own pot, i.e. a biological replicate; number of
+#|   replicates is given below each plot. Boxplots show the median (centre line) and the 25th and
+#|   75th percentiles (box bounds); whiskers extend to the most extreme value within 1.5 × the
+#|   interquartile range of the nearest box bound, and all plants are plotted as points. The
+#|   statistics above the plots are estimated marginal mean (EMM) contrasts of the BX effect within
+#|   each genotype (ΔEMM = BXplus − BXminus), computed from a linear mixed-effects model with
+#|   experiment as a random intercept to account for variation between experiments. Each ΔEMM is a
+#|   two-sided t-test on the estimated marginal means (emmeans). ΔEMM is therefore expressed in the
+#|   units of the measurement, not in z-score units. (b) Summary of the same linear mixed-effects
+#|   model in (a). For each genotype, the BX effect is reported as the EMM contrast Δ(BXplus −
+#|   BXminus) with unadjusted two-sided P values. The table also reports interaction contrasts
+#|   relative to WT (ΔΔ vs WT = Δ_mutant − Δ_WT), which test whether the BX response of each mutant
+#|   differs from that of WT; these two comparisons form one family per measure and are two-sided
+#|   t-tests with Holm adjusted P values. Data are from Dataset 4.
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Produces: Extended Data Fig. 5b
+#   LMM summary, rosette area
+#   -> (table printed in the document)
+# ------------------------------------------------------------
+
+# -----------------------------
+# mmf1 pooled rosette area analysis
+# -----------------------------
+
+# 1) Prepare data 
+rosette_area_comb_mmf1 <- rosette_area_comb_mmf1 %>%
+  mutate(
+    BX = factor(BX, levels = c("minus", "plus")),
+    line = factor(line, levels = c("WT", "mmf1-1", "mmf1-2")),
+    experiment = factor(experiment)
+  ) %>%
+  filter(!is.na(plant_region_area))
+
+# 2) Fit one mixed model
+mmf1_area_lmm <- run_lmm_emm(
+  data = rosette_area_comb_mmf1,
+  response = "plant_region_area",
+  experiment_var = "experiment"
+)
+
+# 3) Inspect model
+summary(mmf1_area_lmm$model)
+
+# -----------------------------
+# A. Within-line BX effect
+#    ΔEMM = BXplus - BXminus
+# -----------------------------
+kable(
+  mmf1_area_lmm$effects_by_line,
+  caption = "Within-line ΔEMM = BXplus - BXminus for mmf1 rosette area"
+)
+
+# -----------------------------
+# B. Difference-in-differences vs WT
+# -----------------------------
+kable(
+  mmf1_area_lmm$diff_in_diff_vs_WT,
+  caption = "Difference-in-differences relative to WT for mmf1 rosette area"
+)
+
+# -----------------------------
+# C. Mutant vs WT within each BX condition
+# -----------------------------
+emm_line_by_BX_mmf1_area <- emmeans(mmf1_area_lmm$model, ~ line | BX)
+
+line_vs_WT_by_BX_mmf1_area <- contrast(
+  emm_line_by_BX_mmf1_area,
+  method = "trt.vs.ctrl",
+  ref = "WT",
+  adjust = "holm"
+) %>%
+  summary(infer = TRUE) %>%
+  as.data.frame() %>%
+  mutate(
+    estimate = round(estimate, 3),
+    SE = round(SE, 3),
+    lower.CL = round(lower.CL, 3),
+    upper.CL = round(upper.CL, 3),
+    p.value = signif(p.value, 3)
+  )
+
+kable(
+  line_vs_WT_by_BX_mmf1_area,
+  caption = "Mutant vs WT contrasts within each BX condition for mmf1 rosette area (Holm-adjusted)"
+)
+
+# -----------------------------
+# D. Estimated marginal means for line
+#    averaged across BX conditions
+# -----------------------------
+emm_line_mmf1_area <- emmeans(mmf1_area_lmm$model, ~ line)
+
+emm_line_mmf1_area_table <- summary(emm_line_mmf1_area) %>%
+  as.data.frame() %>%
+  mutate(
+    emmean = round(emmean, 3),
+    SE = round(SE, 3),
+    lower.CL = round(lower.CL, 3),
+    upper.CL = round(upper.CL, 3)
+  )
+
+kable(
+  emm_line_mmf1_area_table,
+  caption = "Estimated marginal means for mmf1 rosette area by line, averaged across BX conditions (experiment included as a random intercept)"
+)
+
+# -----------------------------
+# E. Mutant vs WT averaged across BX conditions
+# -----------------------------
+line_vs_WT_mmf1_area <- contrast(
+  emm_line_mmf1_area,
+  method = "trt.vs.ctrl",
+  ref = "WT",
+  adjust = "holm"
+) %>%
+  summary(infer = TRUE) %>%
+  as.data.frame() %>%
+  rename(
+    diff_EMM = estimate,
+    t = t.ratio,
+    p = p.value
+  ) %>%
+  mutate(
+    diff_EMM = round(diff_EMM, 3),
+    SE = round(SE, 3),
+    lower.CL = round(lower.CL, 3),
+    upper.CL = round(upper.CL, 3),
+    p = signif(p, 3)
+  )
+
+kable(
+  line_vs_WT_mmf1_area,
+  caption = "Mutant vs WT contrasts for mmf1 rosette area, averaged across BX conditions and corrected for experiment (Holm-adjusted)"
+)
+
+# -----------------------------
+# F. All line × BX combinations relative to WT in BXminus
+#    Uses the same mixed model, so experiment is still accounted for
+# -----------------------------
+emm_line_BX_mmf1_area <- emmeans(mmf1_area_lmm$model, ~ line * BX)
+
+emm_line_BX_mmf1_area_table <- summary(emm_line_BX_mmf1_area) %>%
+  as.data.frame() %>%
+  mutate(
+    emmean = round(emmean, 3),
+    SE = round(SE, 3),
+    lower.CL = round(lower.CL, 3),
+    upper.CL = round(upper.CL, 3)
+  )
+
+kable(
+  emm_line_BX_mmf1_area_table,
+  caption = "Estimated marginal means for mmf1 rosette area by line and BX condition (experiment included as a random intercept)"
+)
+
+# Check that row 1 is WT in BXminus
+emm_line_BX_mmf1_area_table
+
+vs_WTminus_mmf1_area <- contrast(
+  emm_line_BX_mmf1_area,
+  method = "trt.vs.ctrl",
+  ref = 1,
+  adjust = "holm"
+) %>%
+  summary(infer = TRUE) %>%
+  as.data.frame() %>%
+  rename(
+    diff_vs_WTminus = estimate,
+    t = t.ratio,
+    p = p.value
+  ) %>%
+  mutate(
+    diff_vs_WTminus = round(diff_vs_WTminus, 3),
+    SE = round(SE, 3),
+    lower.CL = round(lower.CL, 3),
+    upper.CL = round(upper.CL, 3),
+    p = signif(p, 3)
+  )
+
+kable(
+  vs_WTminus_mmf1_area,
+  caption = "Rosette area contrasts relative to WT in BXminus soil for mmf1 lines (experiment included as a random intercept; Holm-adjusted)"
+)
+```
+
+### 
+
+### Plot combined mmf1 rosette area
+
+```{r}
+#| label: fig-mmf1-area-combined
+#| fig-height: 4
+#| fig-width: 5
+#| echo: false
+#| fig-cap: |
+#|   Extended Data Figure 5a (rosette area) | Growth feedback in a BXplus microbiome is consistently
+#|   lost in mmf1 mutants. (a and b) Repeated growth feedbacks (Experiment III - V, VIII, IX and X)
+#|   of Col-0 wild type (WT) and two mmf1 T-DNA insertion mutants (At3g44630) grown on the BXminus
+#|   and BXplus soil microbiomes. Feedback experiments were performed on greenhouse-conditioned soil
+#|   batches BS04 (Experiment III and IV), BS09 (V and X), BS10 (IX) and BS11 (VIII). (a)
+#|   Z-score--transformed fresh weight and rosette area of WT and mmf1 mutants across six independent
+#|   experiments. WT was present in all six experiments, mmf1-1 in three and mmf1-2 in five. Values
+#|   were z-score--transformed within experiment to account for between-experiment variation. Each
+#|   point is an individual plant grown in its own pot, i.e. a biological replicate; number of
+#|   replicates is given below each plot. Boxplots show the median (centre line) and the 25th and
+#|   75th percentiles (box bounds); whiskers extend to the most extreme value within 1.5 × the
+#|   interquartile range of the nearest box bound, and all plants are plotted as points. The
+#|   statistics above the plots are estimated marginal mean (EMM) contrasts of the BX effect within
+#|   each genotype (ΔEMM = BXplus − BXminus), computed from a linear mixed-effects model with
+#|   experiment as a random intercept to account for variation between experiments. Each ΔEMM is a
+#|   two-sided t-test on the estimated marginal means (emmeans). ΔEMM is therefore expressed in the
+#|   units of the measurement, not in z-score units. (b) Summary of the same linear mixed-effects
+#|   model in (a). For each genotype, the BX effect is reported as the EMM contrast Δ(BXplus −
+#|   BXminus) with unadjusted two-sided P values. The table also reports interaction contrasts
+#|   relative to WT (ΔΔ vs WT = Δ_mutant − Δ_WT), which test whether the BX response of each mutant
+#|   differs from that of WT; these two comparisons form one family per measure and are two-sided
+#|   t-tests with Holm adjusted P values. Data are from Dataset 4.
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Produces: Extended Data Fig. 5a
+#   Z-scored rosette area, WT vs mmf1 across experiments
+#   -> Output/figures/mmf1_mutants_area_comb_zscore.pdf
+# ------------------------------------------------------------
+
+rosette_area_comb_mmf1_z <- zscore_within_experiment(
+  rosette_area_comb_mmf1,
+  response = "plant_region_area",
+  experiment_var = "experiment",
+  new_name = "plant_area_z"
+)
+
+p_table_mmf1_area <- mmf1_area_lmm$effects_by_line %>%
+  mutate(
+    line = factor(line, levels = c("WT", "mmf1-1", "mmf1-2")),
+    label = paste0("ΔEMM = ", effect_plus_minus, "\n", "p = ", p)
+  )
+
+plot_mmf1_area_combined <- make_combined_plot(
+  data = rosette_area_comb_mmf1_z,
+  y_var = "plant_area_z",
+  y_lab = "Rosette area (z-score per experiment)",
+  plot_title = "mmf1 - Rosette area",
+  x_labels = c("WT", expression(italic("mmf1-1")), expression(italic("mmf1-2"))),
+  shape_var = "experiment",
+  y_limits = c(-3, 4),
+  p_table = p_table_mmf1_area,
+  text_y = 4,
+  shape_values = c(21, 22, 23, 24, 25, 8)
+)
+
+plot_mmf1_area_combined
+
+ggsave(
+  filename = "mmf1_mutants_area_comb_zscore.pdf", 
+  plot = plot_mmf1_area_combined, 
+  width = 10, 
+  height = 11, 
+  units = "cm", 
+  path = "Output/figures/"
+)
+```
+#Export Source Data
+
+```{r}
+#| label: Source Data
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+## ---- Source data export: Extended Data Fig. 5 --------------------------------
+## Run after the ED Fig. 5 objects exist, i.e. after the chunks that create
+##   plant_weight_comb_mmf1_z, rosette_area_comb_mmf1_z   (panel a)
+##   mmf1_fw_lmm, mmf1_area_lmm                           (panel b)
+## Re-run those chunks first if you have changed the input data, so that the
+## z-scores and the model contrasts both come from the cleaned samples.
+
+library(dplyr)
+library(openxlsx)
+
+OUT <- "Output/Tables/Source_Data_Extended_Data_Fig5.xlsx"
+
+## ---- panel (a): one row per plotted point ------------------------------------
+## measured value and the z-score that is actually plotted, both kept.
+panel_a <- function(df, value_col, z_col, rep_col = "number", label_col = "exp") {
+  stopifnot(all(c("line", "condition", "BX", rep_col, "experiment",
+                  value_col, z_col) %in% names(df)))
+  out <- df %>%
+    transmute(genotype   = as.character(line),
+              condition  = as.character(condition),
+              microbiome = as.character(BX),
+              replicate  = .data[[rep_col]],
+              experiment = experiment,
+              experiment_label = if (label_col %in% names(df)) as.character(.data[[label_col]]) else NA_character_,
+              !!value_col := .data[[value_col]],
+              !!z_col     := .data[[z_col]]) %>%
+    arrange(experiment, genotype, microbiome, replicate)
+  if (all(is.na(out$experiment_label))) out$experiment_label <- NULL
+  out
+}
+
+fw_sheet   <- panel_a(plant_weight_comb_mmf1_z, "fresh_weight",      "fresh_weight_z")
+area_sheet <- panel_a(rosette_area_comb_mmf1_z, "plant_region_area", "plant_area_z")
+
+## ---- panel (b): both contrast families from the fitted models ----------------
+contrasts_of <- function(lmm, measure) {
+  within_genotype <- lmm$effects_by_line %>%
+    transmute(measure,
+              contrast_type = "BX effect within genotype",
+              genotype = as.character(line),
+              contrast = as.character(contrast),
+              estimate = effect_plus_minus, SE, df, lower.CL, upper.CL,
+              t_ratio = t, p_value = p)
+
+  dd <- lmm$diff_in_diff_vs_WT
+  line_col <- grep("^line", names(dd), value = TRUE)[1]   # line_trt.vs.ctrl
+  bx_col   <- grep("^BX",   names(dd), value = TRUE)[1]   # BX_revpairwise
+
+  vs_wt <- dd %>%
+    transmute(measure,
+              contrast_type = "genotype x BX interaction vs WT",
+              genotype = sub(" - WT$", "", as.character(.data[[line_col]])),
+              contrast = paste0("(", .data[[bx_col]], ") in ", .data[[line_col]]),
+              estimate = diff_vs_WT, SE, df, lower.CL, upper.CL,
+              t_ratio = t, p_value = p_adj)
+
+  bind_rows(within_genotype, vs_wt)
+}
+
+lmm_sheet <- bind_rows(contrasts_of(mmf1_fw_lmm,   "fresh weight"),
+                       contrasts_of(mmf1_area_lmm, "rosette area"))
+
+## ---- index tab ---------------------------------------------------------------
+index <- data.frame(
+  Figure      = "Extended Data Fig. 5",
+  Panel       = c("a", "a", "b"),
+  Description = c("Z-scored fresh weight across experiments",
+                  "Z-scored rosette area across experiments",
+                  "Linear mixed model contrasts"),
+  Worksheet   = c("EDFig5a_fresh_weight_z", "EDFig5a_rosette_area_z",
+                  "EDFig5b_LMM_contrasts"),
+  `Source data` = c(
+    rep("Both the measured value and the z-score that is plotted are given. One row per plant.", 2),
+    paste("Model: response ~ BX * line + (1 | experiment), fitted on the measured values.",
+          "BX effect within genotype: unadjusted. Interaction vs WT: Holm-adjusted within measure.",
+          "Two-sided t-tests, Kenward-Roger degrees of freedom.")),
+  check.names = FALSE)
+
+## ---- checks ------------------------------------------------------------------
+## the exported z must be the z that was plotted: within each experiment it is
+## centred, so the mean is zero. a non-zero mean means the frame was z-scored
+## before the samples were dropped.
+zmeans <- c(tapply(fw_sheet$fresh_weight_z,  fw_sheet$experiment,   mean, na.rm = TRUE),
+            tapply(area_sheet$plant_area_z,  area_sheet$experiment, mean, na.rm = TRUE))
+if (max(abs(zmeans)) > 1e-6)
+  warning("z-scores are not centred within experiment - re-run the z-scoring after cleaning")
+
+stopifnot(nrow(fw_sheet) > 0, nrow(area_sheet) > 0, nrow(lmm_sheet) > 0,
+          !any(duplicated(fw_sheet[c("experiment", "genotype", "microbiome", "replicate")])),
+          !any(duplicated(area_sheet[c("experiment", "genotype", "microbiome", "replicate")])))
+
+cat("genotypes:", paste(sort(unique(fw_sheet$genotype)), collapse = ", "),
+    "| experiments:", paste(sort(unique(fw_sheet$experiment)), collapse = ", "), "\n")
+print(table(fw_sheet$genotype, fw_sheet$microbiome))
+print(table(area_sheet$genotype, area_sheet$microbiome))
+
+## ---- write -------------------------------------------------------------------
+wb <- createWorkbook()
+sheets <- list(Index = index,
+               EDFig5a_fresh_weight_z = fw_sheet,
+               EDFig5a_rosette_area_z = area_sheet,
+               EDFig5b_LMM_contrasts  = lmm_sheet)
+for (nm in names(sheets)) {
+  d <- sheets[[nm]]
+  addWorksheet(wb, nm)
+  writeData(wb, nm, d)
+  addStyle(wb, nm, createStyle(textDecoration = "bold"), rows = 1, cols = seq_len(ncol(d)))
+  freezePane(wb, nm, firstRow = TRUE)
+  setColWidths(wb, nm, seq_len(ncol(d)), "auto")
+}
+saveWorkbook(wb, OUT, overwrite = TRUE)
+
+cat("wrote", OUT, "|", nrow(fw_sheet), "fresh-weight rows,",
+    nrow(area_sheet), "rosette-area rows,", nrow(lmm_sheet), "contrasts\n")
+```
+
+```{r}
+#| label: Source Data ED Fig6
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+## ---- Source data export: Extended Data Fig. 6 --------------------------------
+## Run after the ED Fig. 6 objects exist, i.e. after the chunks that create
+##   plant_weight_comb_ETI_z, plant_area_comb_ETI_z   (panel b)
+##   eti_fw_lmm, eti_area_lmm                         (panel c)
+## Re-run those chunks first if you have changed the input data, so that the
+## z-scores and the model contrasts both come from the cleaned samples.
+
+library(dplyr)
+library(openxlsx)
+
+OUT  <- "Output/Tables/Source_Data_Extended_Data_Fig6.xlsx"
+KEYS <- c("experiment", "genotype", "microbiome", "replicate")
+
+## ---- panel (b): one row per plotted point ------------------------------------
+## Rows with no measurement (empty pots, NA) are dropped; extra columns such as
+## dry_weight are not used as a filter, so a plant weighed fresh but not dry stays.
+panel_b <- function(df, value_col, z_col, rep_col = "number",
+                    extra = character(), label_col = "exp", drop_na = TRUE) {
+  stopifnot(all(c("line", "BX", rep_col, "experiment", value_col, z_col) %in% names(df)))
+  extra <- extra[extra %in% names(df)]
+  out <- df %>%
+    transmute(genotype   = as.character(line),
+              microbiome = as.character(BX),
+              replicate  = .data[[rep_col]],
+              experiment = as.character(experiment),
+              experiment_label = if (label_col %in% names(df)) as.character(.data[[label_col]]) else NA_character_,
+              !!value_col := .data[[value_col]],
+              across(all_of(extra)),
+              !!z_col := .data[[z_col]])
+
+  if (drop_na) {
+    n0  <- nrow(out)
+    out <- filter(out, !is.na(.data[[value_col]]), !is.na(.data[[z_col]]))
+    if (n0 > nrow(out))
+      message(sprintf("%s: dropped %d row(s) with no %s - empty pots, not exported",
+                      z_col, n0 - nrow(out), value_col))
+  }
+
+  out <- arrange(out, experiment, genotype, microbiome, replicate)
+  if (all(is.na(out$experiment_label))) out$experiment_label <- NULL
+  out
+}
+
+fw_sheet   <- panel_b(plant_weight_comb_ETI_z, "fresh_weight", "fresh_weight_z",
+                      extra = "dry_weight")
+area_sheet <- panel_b(plant_area_comb_ETI_z, "plant_region_area", "rosette_area_z")
+
+## ---- panel (c): both contrast families from the fitted models ----------------
+contrasts_of <- function(lmm, measure) {
+  within_genotype <- lmm$effects_by_line %>%
+    transmute(measure,
+              contrast_type = "BX effect within genotype",
+              genotype = as.character(line),
+              contrast = as.character(contrast),
+              estimate = effect_plus_minus, SE, df, lower.CL, upper.CL,
+              t_ratio = t, p_value = p)
+
+  dd <- lmm$diff_in_diff_vs_WT
+  line_col <- grep("^line", names(dd), value = TRUE)[1]   # line_trt.vs.ctrl
+  bx_col   <- grep("^BX",   names(dd), value = TRUE)[1]   # BX_revpairwise
+
+  vs_wt <- dd %>%
+    transmute(measure,
+              contrast_type = "genotype x BX interaction vs WT",
+              genotype = sub(" - WT$", "", as.character(.data[[line_col]])),
+              contrast = paste0("(", .data[[bx_col]], ") in ", .data[[line_col]]),
+              estimate = diff_vs_WT, SE, df, lower.CL, upper.CL,
+              t_ratio = t, p_value = p_adj)
+
+  bind_rows(within_genotype, vs_wt)
+}
+
+lmm_sheet <- bind_rows(contrasts_of(eti_fw_lmm,   "fresh weight"),
+                       contrasts_of(eti_area_lmm, "rosette area"))
+
+## ---- index tab ---------------------------------------------------------------
+index <- data.frame(
+  Figure      = "Extended Data Fig. 6",
+  Panel       = c("b", "b", "c", "c"),
+  Description = c("Z-scored fresh weight across experiments",
+                  "Z-scored rosette area across experiments",
+                  "BX effect within genotype",
+                  "Genotype x BX interaction contrasts against WT"),
+  Worksheet   = c("EDFig6b_fresh_weight_z", "EDFig6b_rosette_area_z",
+                  "EDFig6c_LMM_contrasts", "EDFig6c_LMM_contrasts"),
+  `Source data` = c(
+    "Both the measured value and the z-score that is plotted are given. One row per plant. Dry weight is included where it was recorded.",
+    "Both the measured value and the z-score that is plotted are given. One row per plant.",
+    "Model: response ~ BX * line + (1 | experiment), fitted on the measured values. Unadjusted two-sided t-tests, Kenward-Roger degrees of freedom.",
+    "Same model. Holm-adjusted across the three mutant-versus-WT comparisons within each measure."),
+  check.names = FALSE)
+
+## ---- checks ------------------------------------------------------------------
+## Rows identical in every column are one plant recorded twice: collapse and say so.
+## Rows sharing a key but holding different values are different plants with a bad
+## identifier: never merged, only reported.
+clean_rows <- function(d, label) {
+  n0 <- nrow(d)
+  d  <- distinct(d)
+  if (n0 > nrow(d))
+    message(sprintf("%s: collapsed %d exact duplicate row(s)", label, n0 - nrow(d)))
+  k <- d[, KEYS, drop = FALSE]
+  clash <- k[duplicated(k) | duplicated(k, fromLast = TRUE), , drop = FALSE]
+  if (nrow(clash)) {
+    warning(label, ": ", nrow(unique(clash)),
+            " key(s) shared by plants with different values - 'replicate' is not unique, see below")
+    print(unique(clash[order(clash$experiment, clash$genotype,
+                             clash$microbiome, clash$replicate), ]))
+  }
+  d
+}
+
+fw_sheet   <- clean_rows(fw_sheet,   "EDFig6b_fresh_weight_z")
+area_sheet <- clean_rows(area_sheet, "EDFig6b_rosette_area_z")
+
+## the two phenotypes should describe the same plants once empty pots are gone
+only_fw   <- anti_join(fw_sheet[KEYS],   area_sheet[KEYS], by = KEYS)
+only_area <- anti_join(area_sheet[KEYS], fw_sheet[KEYS],   by = KEYS)
+if (nrow(only_fw) || nrow(only_area)) {
+  message("plants in fresh weight only: ", nrow(only_fw),
+          " | in rosette area only: ", nrow(only_area))
+  print(bind_rows(mutate(only_fw,   in_sheet = "fresh weight only"),
+                  mutate(only_area, in_sheet = "rosette area only")))
+}
+
+## z-scores are centred within experiment; a non-zero mean means the frame was
+## z-scored before the samples were cleaned
+zmeans <- c(tapply(fw_sheet$fresh_weight_z,   fw_sheet$experiment,   mean, na.rm = TRUE),
+            tapply(area_sheet$rosette_area_z, area_sheet$experiment, mean, na.rm = TRUE))
+if (max(abs(zmeans)) > 1e-6)
+  warning("z-scores are not centred within experiment - re-run the z-scoring after cleaning")
+
+stopifnot(nrow(fw_sheet) > 0, nrow(area_sheet) > 0, nrow(lmm_sheet) > 0)
+
+cat("genotypes:", paste(unique(fw_sheet$genotype), collapse = ", "),
+    "| experiments:", paste(sort(unique(fw_sheet$experiment)), collapse = ", "), "\n")
+print(table(fw_sheet$genotype,   fw_sheet$microbiome))
+print(table(area_sheet$genotype, area_sheet$microbiome))
+
+## ---- write -------------------------------------------------------------------
+wb <- createWorkbook()
+sheets <- list(Index = index,
+               EDFig6b_fresh_weight_z = fw_sheet,
+               EDFig6b_rosette_area_z = area_sheet,
+               EDFig6c_LMM_contrasts  = lmm_sheet)
+for (nm in names(sheets)) {
+  d <- sheets[[nm]]
+  addWorksheet(wb, nm)
+  writeData(wb, nm, d)
+  addStyle(wb, nm, createStyle(textDecoration = "bold"), rows = 1, cols = seq_len(ncol(d)))
+  freezePane(wb, nm, firstRow = TRUE)
+  setColWidths(wb, nm, seq_len(ncol(d)), "auto")
+}
+saveWorkbook(wb, OUT, overwrite = TRUE)
+
+cat("wrote", OUT, "|", nrow(fw_sheet), "fresh-weight rows,",
+    nrow(area_sheet), "rosette-area rows,", nrow(lmm_sheet), "contrasts\n")
+```
+
+# Export selected datasets
+
+```{r}
+#| label: export-data
+#| echo: false
+
+Dataset4_export <- createWorkbook()
+
+addWorksheet(Dataset4_export, "ExpIII_mmf1_weight")
+writeData(Dataset4_export, "ExpIII_mmf1_weight", weight_EIII)
+
+addWorksheet(Dataset4_export, "ExpIII_mmf1_area")
+writeData(Dataset4_export, "ExpIII_mmf1_area", area_EIII)
+
+addWorksheet(Dataset4_export, "ExpIV_mmf1_weight")
+writeData(Dataset4_export, "ExpIV_mmf1_weight", weight_EIV)
+
+addWorksheet(Dataset4_export, "ExpIV_mmf1_area")
+writeData(Dataset4_export, "ExpIV_mmf1_area", area_EIV)
+
+addWorksheet(Dataset4_export, "ExpV_mmf1_weight")
+writeData(Dataset4_export, "ExpV_mmf1_weight", weight_EV)
+
+addWorksheet(Dataset4_export, "ExpV_mmf1_area")
+writeData(Dataset4_export, "ExpV_mmf1_area", area_EV)
+
+addWorksheet(Dataset4_export, "ExpVI_ETI_weight")
+writeData(Dataset4_export, "ExpVI_ETI_weight", weight_EVI)
+
+addWorksheet(Dataset4_export, "ExpVI_ETI_area")
+writeData(Dataset4_export, "ExpVI_ETI_area", area_EVI)
+
+saveWorkbook(
+  Dataset4_export,
+  "Output/Tables/Dataset4_exported_from_analysis.xlsx",
+  overwrite = TRUE
+)
+```
+
+# **Session information**
+
+```{r}
+#| label: session-info
+#| echo: false
+
+SI <- sessionInfo()
+
+cat("R version:", SI$R.version$version.string, "\n\n")
+cat("Attached packages:\n")
+
+invisible(lapply(SI$otherPkgs, function(pkg) {
+  cat(pkg$Package, "-", pkg$Version, "\n")
+}))
+```
+
+```{r}
+#| label: write-bib
+#| echo: false
+
+knitr::write_bib(file = "packages_mutants.bib")
+```
