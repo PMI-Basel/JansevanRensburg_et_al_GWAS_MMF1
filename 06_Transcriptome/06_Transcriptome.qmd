@@ -1,0 +1,2908 @@
+---
+title: "06_Transcriptome"
+author: "Henry Janse van Rensburg"
+date:  "`r Sys.Date()`"  # Automatically updates to the current date
+format:
+  pdf:
+    toc: true  # Adds a table of contents
+    toc-depth: 2  # Includes up to second-level headings in the TOC
+    number-sections: true  # Adds numbering to sections
+    keep-tex: true  # Retains the intermediate .tex file for debugging
+    documentclass: article  # Default LaTeX class for academic documents
+    fig-width: 6  # Adjust figure width
+    fig-height: 4  # Adjust figure height
+    fig-dpi: 300  # High-quality figures
+    highlight-style: tango  # Syntax highlighting style
+    fontsize: 11pt  # Adjust font size
+    mainfont: "Arial"  # Adjust font family
+    geometry: a4paper, margin=0.8in  # Use A4 paper size
+  html:
+    toc: true  # Adds a table of contents
+    toc-depth: 2  # Includes up to second-level headings in the TOC
+    number-sections: true  # Adds numbering to sections
+    highlight-style: tango  # Syntax highlighting style
+    code-fold: true # Allow users to fold/unfold code chunks
+    mainfont: "Arial" 
+execute:
+  echo: true  # Show code output in the document
+  warning: false  # Suppress warnings
+  message: false  # Suppress messages
+editor_options: 
+  chunk_output_type: inline
+---
+
+# Background
+
+We conducted this experiment to investigate the effect of the mmf1 mutation on the transcriptome of *Arabidopsis*. The mmf1 mutation is a deletion of the gene encoding a TNL protein. Plants lacking mmf1 does not show BX-growth feedbacks, and assemble a unique microbiome. We hypothesize that the deletion of the MMF1 gene will lead to changes in the expression of genes involved downstream signalling pathways.
+
+## Materials and methods
+
+We grew wild-type and mmf1 mutant plants under controlled conditions on soil conditioned in the greenhouse (BS04) for 6 weeks. We harvested the roots and split them into samples for microbiome analysis and transcriptome. Three or two roots were pooled per sample. We etracted RNA and sequenced the RNA using the Illumina platform. We used the `DESeq2` package in R to identify differentially expressed genes.
+
+-   **Purpose**: Perform PCA on the transformed data to identify major sources of variation among samples. The PCA plot helps visualize how different conditions and genotypes cluster together, revealing potential patterns in the data. The plot is saved as a high-resolution PDF.
+
+## Important results
+
+We see a clear seperation between conditions and genotypes in the PCA plot. The PERMANOVA analysis confirms that both genotype and conditioning have a significant effect on the transcriptome, especially on the BXplus microbiome. The interaction between genotype and conditioning also shows a significant effect, indicating a combined influence on gene expression. \### Conclusions
+
+# Setup
+
+```{r}
+#| label: Setup
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+
+##clear the object from memory
+rm(list=ls())
+
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+
+#load libraries
+library(DESeq2)
+library(ggplot2)
+library(apeglm)
+library(ggplot2)
+library(scales) 
+library(viridis)
+library(vsn)
+library(RColorBrewer)
+library(hexbin)
+library(dplyr)
+library(ggrepel)
+library(ComplexHeatmap)
+library(glmpca)
+library(tibble)
+library(PoiClaClu)
+library(gridExtra)
+library(ggVennDiagram)
+library(tidyverse)
+library(magrittr)
+library(Cairo)
+library(ggnewscale)
+
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+
+#setwd
+## set source to file location
+library(rstudioapi)
+
+#set seed
+set.seed(100)
+
+```
+
+# Sample exploring
+
+**Method:** We import the (not normalized) gene count table, the corresponding meta-files and conduct the sequence depth. Then, We run the standard differential gene expression analysis with DESeq on the whole data set and perform shrinkage for better visualization. Then we visualize the samples in a heatmap and a principle component analysis.
+
+## Reading Data
+
+```{r}
+#| label: Import data
+#| warning: false
+#| include: false
+#| paged-print: false
+# Load required package
+library(openxlsx)
+
+# Read the count data from the "Counts_Table" sheet
+cts <- read.xlsx("Input/Dataset6.xlsx", sheet = "Counts_Table", rowNames = TRUE)
+
+# Read the metadata from the "Meta_Data" sheet
+meta <- read.xlsx("Input/Dataset6.xlsx", sheet = "Meta_Data", rowNames = TRUE)
+
+# Display as tables 
+kable(cts[1:3, 1:5], caption = "Counts Table")
+kable(meta[1:3, ], caption = "Meta Data Table")
+```
+
+-   **Purpose**: Load the raw count data (`cts`) and sample metadata (`meta`) into R. These datasets are essential for downstream differential expression analysis.
+
+## Preparing Metadata
+
+```{r}
+#| label: Factoring
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# Convert the 'genotype' column in the metadata to a factor, specifying the order of levels.
+meta$genotype <- factor(meta$genotype, levels=c("WT","mmf1"))
+
+# Convert the 'conditioning' column in the metadata to a factor, specifying the order of levels.
+meta$conditioning <- factor(meta$conditioning, levels=c("minus", "plus"))
+
+# Define colors for the 'conditioning' factor, which will be used in plots.
+cols_condition <- c("gold2", "seagreen")
+names(cols_condition) <- c("plus", "minus")
+```
+
+-   **Purpose**: Convert the `genotype` and `conditioning` columns to factors with specific levels, ensuring consistent interpretation in the analysis. Also, define colors for `conditioning` levels to use in visualizations.
+
+## Sequencing Depth Visualization
+
+```{r}
+#| label: Read count
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+# Calculate the total number of reads (sequencing depth) for each sample by summing the counts across all genes.
+meta$n_reads <- colSums(cts)
+
+# Create a boxplot of sequencing depth by genotype, with points colored by conditioning.
+meta |>
+  ggplot(aes(genotype, n_reads)) +
+    geom_boxplot(fill="grey90", outlier.shape = NA, alpha=0.5) +
+    geom_jitter(aes(fill=conditioning), size=3, width = 0.2, pch=21) +
+    theme_bw() +
+    labs(x="Genotype", y="Number of reads") +
+    scale_fill_manual(values=cols_condition)
+```
+
+-   **Purpose**: Visualize the distribution of sequencing depth across genotypes, with jittered points showing individual samples and colored by conditioning. This helps check for any biases in sequencing depth across groups.
+
+## Creating DESeq2 Object and Running Differential Expression Analysis
+
+```{r}
+#| label: Run DESEq
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# Create a DESeq2 object using the count data and metadata, specifying a design formula that includes genotype and conditioning.
+dds <- DESeqDataSetFromMatrix(countData = cts,
+                              colData = meta,
+                              design = ~ conditioning + genotype + conditioning:genotype)
+
+# Filter out genes with very low counts across all samples, as they are unlikely to be informative.
+keep <- rowSums(counts(dds)) >= 10
+dds <- dds[keep,]
+
+# Relevel the genotype factor in the DESeq2 object to set WT as the reference level for comparisons.
+dds$genotype <- relevel(dds$genotype, ref = "WT")
+
+# Run the differential expression analysis, which includes normalization and model fitting.
+dds <- DESeq(dds)
+res <- results(dds)
+kable(res[1:3, ], caption = "Differential expression.")
+
+```
+
+-   **Purpose**: Set up the DESeq2 object for differential expression analysis, filter out low-count genes, relevel factors, and run the analysis. The result is a table (`res`) containing statistics like log2 fold changes and p-values for each gene.
+
+## Log Fold Change Shrinkage
+
+```{r message=FALSE}
+#| label: LF Shrinkage
+#| echo: false
+#| warning: false
+#| paged-print: false
+# Apply log fold change shrinkage to the results using the 'apeglm' method, which helps stabilize estimates for low-count genes.
+resLFC <- lfcShrink(dds, coef ="genotype_mmf1_vs_WT" , type="apeglm")
+kable(resLFC[1:3, ], caption = "Shrunken log fold changes.")
+```
+
+-   **Purpose**: Shrink the log fold changes for better interpretability, especially for genes with low counts. This reduces noise and makes the results more reliable.
+
+## Variance Stabilizing Transformation (VST) and Heatmap Preparation
+
+```{r}
+#| label: VST
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Supports: Fig. 6b
+#   DESeq2 run and VST
+# ------------------------------------------------------------
+# Apply variance stabilizing transformation (VST) to the count data. This transformation makes the variance independent of the mean.
+vsd <- vst(dds, blind=FALSE)
+rld <- rlog(dds, blind=FALSE)
+
+# Select the top 20 most highly expressed genes based on the mean of normalized counts.
+select <- order(rowMeans(counts(dds, normalized=TRUE)), decreasing=TRUE)[1:20]
+df <- as.data.frame(colData(dds)[,c("conditioning", "genotype")])
+kable(df[1:3, ], caption = "Sample metadata.")
+```
+
+-   **Purpose**: Transform the count data to stabilize variance, making it suitable for clustering and heatmaps. Select the top 20 most highly expressed genes for focused visualization.
+
+## Sample Clustering Heatmap
+
+```{r}
+#| label: Sample Clustering
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# Calculate the Euclidean distances between samples based on the VST-transformed data.
+sampleDists <- dist(t(assay(vsd)))
+
+# Convert the distance object into a matrix for heatmap visualization.
+sampleDistMatrix <- as.matrix(sampleDists)
+rownames(sampleDistMatrix) <- colnames(vsd)
+colnames(sampleDistMatrix) <- NULL
+
+# Define a color palette for the heatmap.
+colors <- colorRampPalette(brewer.pal(11, "RdYlBu"))(500)
+
+# Plot the heatmap of sample distances, showing how similar or different the samples are to each other.
+Heatmap(sampleDistMatrix,
+        col=colors,
+        heatmap_legend_param = list(title = "dist"))
+```
+
+-   **Purpose**: Visualize the similarity between samples using a heatmap of Euclidean distances. This helps assess sample clustering, which is important for identifying potential batch effects or outliers.
+
+## Principal Component Analysis (PCA)\*\*
+
+```{r}
+#| label: PCA transcriptome
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+#| fig-cap: |
+#|   Figure 6b | Plants lacking MMF1 fail to mount a transcriptional response to a BX microbiome.
+#|   (b) Principal component analysis (PCA) of the same root transcriptome confirms the line
+#|   (WT, closed circles; mmf1-2, open triangles) and microbiome (BXminus, green; BXplus, yellow)
+#|   effects of the PERMANOVA. Axes show the percentage of variance explained by each principal
+#|   component. (c and d) MA plots of differentially expressed genes (DEGs) in WT between BXminus and
+#|   BXplus (left), and the absence of DEGs in mmf1-2 (right). Genes upregulated on BXplus (yellow)
+#|   or BXminus (green) are colour coded. DEGs were identified with DESeq2 (two-sided Wald test,
+#|   Benjamini--Hochberg-adjusted; absolute log₂ fold change ≥ 1 and adjusted P < 0.05; n = 5 root
+#|   transcriptomes per genotype and soil). (e) Hierarchical clustering and gene ontology (GO) term
+#|   enrichment analysis of the DEGs in roots of wild-type plants from (c). The top five most
+#|   significantly enriched GO terms (Benjamini--Hochberg (BH), P < 0.01; one-sided hypergeometric
+#|   over-representation test, see Methods) for each cluster are shown. Point size indicates the
+#|   ratio of genes in a cluster mapping to the respective GO term, and point colour reflects the
+#|   BH-adjusted P value. Shading indicates clusters upregulated in plants grown on the BXplus
+#|   microbiome (yellow) or upregulated in plants grown on BXminus microbiome (green). No
+#|   significantly enriched GO terms were found for clusters 1 and 9. Bios., biosynthesis; metabol.,
+#|   metabolism; biol., biological; reg., regulation.
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Produces: Fig. 6b
+#   PCA of variance-stabilised transcriptome counts
+#   -> Output/Figures/PCA_plot_transcriptome.pdf
+# ------------------------------------------------------------
+# Perform variance stabilizing transformation (VST) on the DESeq2 object to prepare data for PCA.
+vsdata <- vst(dds, blind=FALSE)
+
+# Generate PCA plot data with variance explained by PC1 and PC2.
+vsPCA <- plotPCA(vsdata, intgroup = c("genotype", "conditioning"), returnData = TRUE)
+#vsPCA <- plotPCA(vsdata, returnData=T)
+variance_x <- vsPCA$labels$x
+variance_y <- vsPCA$labels$y
+
+# Rename columns for better readability and create a new column to differentiate conditions based on sample names.
+vsPCA <- vsPCA %>% 
+  #rename(genotype = condition) %>% 
+  mutate(conditioning = ifelse(grepl("m[0-9]", name), "minus", "plus"))
+kable(vsPCA[1:3, ], caption = "PCA data.")
+# Create a PCA plot with ellipses representing the 95% confidence region for each conditioning level.
+
+PCA_plot <- ggplot(vsPCA, aes(x = PC1, y = PC2)) +
+  # Add ellipses with consistent styles
+  stat_ellipse(
+    geom = "polygon", type = "t", level = 0.95, size = 0.4, 
+    aes(group = conditioning, color = conditioning, fill = conditioning), 
+    alpha = 0.01  # Low transparency for fill
+  ) +
+  # Set custom colors for fill and border of ellipses
+  scale_color_manual(values = c("seagreen", "gold2")) + 
+  scale_fill_manual(values = c("seagreen", "gold2")) +
+  new_scale_color() +
+  
+  # Add points with shape and color distinction
+  geom_point(
+    size = 1.5, aes(shape = factor(genotype), color = factor(conditioning))
+  ) +
+  scale_shape_manual(values = c(16, 2)) +  # Define shapes (e.g., closed circle, open triangle)
+  scale_color_manual(values = c("seagreen", "gold2")) + 
+  
+  # Add labels and subtitles
+  labs(
+    x = paste0("PC1 (", variance_x, "%)"), 
+    y = paste0("PC2 (", variance_y, "%)"), 
+    subtitle = "PCA of transcriptome", 
+    color = "Microbiome", fill = "Microbiome", shape = "Line"
+  ) +
+  
+  # Apply a clean theme with consistent font size
+  theme_bw() +
+  theme(
+    text = element_text(size = 7),                # Uniform text size
+    axis.title = element_text(size = 7),          # Axis titles
+    axis.text = element_text(size = 7),           # Axis text
+    legend.title = element_text(size = 7),        # Legend titles
+    legend.text = element_text(size = 7),         # Legend text
+    plot.title = element_text(size = 7),          # Plot title
+    plot.subtitle = element_text(size = 7)        # Subtitle
+  ) +
+  
+  # Adjust legend for better visibility
+  guides(
+    fill = guide_legend(override.aes = list(shape = 21))  # Use shape override for clarity
+  )
+
+# Save the updated plot object
+PCA_plot
+
+ggsave("PCA_plot_transcriptome.pdf", plot = PCA_plot, width = 10.5, height = 8, units = "cm", dpi = 600)
+```
+
+## PERMANOVA Analysis of Lines within Conditioning Levels
+
+```{r}
+#| label: PCA factoring
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+# Ensure factors are correctly set for analysis
+vsPCA$genotype <- factor(vsPCA$genotype)
+vsPCA$conditioning <- factor(vsPCA$conditioning)
+```
+
+-   **Purpose**: Convert the `genotype` and `conditioning` columns in `vsPCA` to factors to ensure that the subsequent PERMANOVA analysis correctly interprets these variables as categorical.
+
+```{r message=FALSE}
+#| label: Split condition
+#| echo: false
+#| warning: false
+#| paged-print: false
+# Split data by conditioning levels
+conditioning_levels <- levels(vsPCA$conditioning)
+results <- list()
+```
+
+-   **Purpose**: Extract the different levels of `conditioning` and initialize an empty list `results` to store the PERMANOVA results for each conditioning level.
+
+```{r}
+#| label: Run PERMANOVA
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+library(vegan)
+for (cond in conditioning_levels) {
+  # Subset data for the current conditioning level
+  subset_data <- subset(vsPCA, conditioning == cond)
+  
+  # Prepare distance matrix using PCA scores for the subset
+  pca_scores <- subset_data[, c("PC1", "PC2")]
+  dist_matrix <- dist(pca_scores)
+  
+  # Perform PERMANOVA for genotype within the current conditioning level
+  result <- adonis2(dist_matrix ~ genotype, data = subset_data)
+  
+  # Store results in a list
+  results[[cond]] <- result$aov.tab
+}
+```
+
+-   **Purpose**:
+    -   **Loop**: For each conditioning level, the code:
+        -   Subsets the data for that conditioning level.
+        -   Calculates a distance matrix based on the first two principal components (`PC1` and `PC2`).
+        -   Performs PERMANOVA (`adonis`) to test if `genotype` significantly explains differences in the distance matrix.
+        -   Stores the ANOVA table from the PERMANOVA result in the `results` list.
+
+```{r}
+#| label: PERMANOVA
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+# Print results for each conditioning level
+for (cond in names(results)) {
+  cat("Conditioning:", cond, "\n")
+  print(results[[cond]])
+  cat("\n")
+}
+```
+
+-   **Purpose**: Print the PERMANOVA results for each conditioning level to examine how `genotype` influences variation within each conditioning level.
+
+## PERMANOVA Analysis of Conditioning within Genotypes
+
+```{r}
+#| label: Factoring B
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# Ensure factors are correctly set for analysis
+vsPCA$genotype <- factor(vsPCA$genotype)
+vsPCA$conditioning <- factor(vsPCA$conditioning)
+```
+
+-   **Purpose**: Reaffirm that the `genotype` and `conditioning` columns are treated as factors in the analysis.
+
+```{r}
+#| label: Split genotype condition
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+# Split data by genotype levels
+genotype_levels <- levels(vsPCA$genotype)
+results <- list()
+
+```
+
+-   **Purpose**: Extract the different levels of `genotype` and initialize an empty list `results` to store the PERMANOVA results for each genotype.
+
+```{r}
+#| label: Pairwise PERMAOVA
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+library(vegan)
+for (geno in genotype_levels) {
+  # Subset data for the current conditioning level
+  subset_data <- subset(vsPCA, genotype == geno)
+  
+  # Prepare distance matrix using PCA scores for the subset
+  pca_scores <- subset_data[, c("PC1", "PC2")]
+  dist_matrix <- dist(pca_scores)
+  
+  # Perform PERMANOVA for genotype within the current conditioning level
+  result <- adonis2(dist_matrix ~ conditioning, data = subset_data)
+  
+  # Store results in a list
+  results[[geno]] <- result$aov.tab
+}
+```
+
+-   **Purpose**:
+    -   **Loop**: For each genotype level, the code:
+        -   Subsets the data for that genotype level.
+        -   Computes a distance matrix based on the first two principal components (`PC1` and `PC2`).
+        -   Performs PERMANOVA to test if `conditioning` significantly explains differences in the distance matrix within each genotype.
+        -   Stores the ANOVA table from the PERMANOVA result in the `results` list.
+
+```{r}
+#| label: Pairwise PERMANOVA - condition
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+#| fig-cap: |
+#|   Figure 6a (pairwise rows) | Plants lacking MMF1 fail to mount a transcriptional response to a BX
+#|   microbiome. (a) The output of PERMANOVA on Euclidean distances of the root transcriptome of wild
+#|   type (WT) and mmf1-2 mutant plants in response to the BXminus and BXplus microbiomes (sampled
+#|   from experiment IV, Table S1). The R2 and P values summarize the effects of line (plant
+#|   genotype) and microbiome (soil condition) and their interaction (999 permutations; P values are
+#|   one-sided by construction; see Methods). n = 20 root transcriptomes, five per genotype ×
+#|   microbiome combination, each consisting of pooled roots from two individual plants (biological
+#|   replicates). Pairwise PERMANOVA compares WT with mmf1-2 on each soil and BXplus with BXminus
+#|   within each line  (same settings; four tests, unadjusted P values); significant effects (P <
+#|   0.05) are indicated in bold. 
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Produces: Fig. 6a
+#   Pairwise PERMANOVA, condition within genotype
+#   -> (table printed in the document)
+# ------------------------------------------------------------
+# Print results for each conditioning level
+for (geno in names(results)) {
+  cat("Genotype:", geno, "\n")
+  print(results[[geno]])
+  cat("\n")
+}
+```
+
+-   **Purpose**: Print the PERMANOVA results for each genotype to evaluate how `conditioning` influences variation within each genotype.
+
+## PERMANOVA Analysis of Lines vs. Conditioning
+
+```{r}
+#| label: Prep full
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Supports: Fig. 6a
+#   Distance matrix and factor preparation for the full model
+# ------------------------------------------------------------
+# Prepare for PERMANOVA 
+pca_scores <- vsPCA[, c("PC1", "PC2")]
+dist_matrix <- dist(pca_scores)
+```
+
+-   **Purpose**: Extract the first two principal components (`PC1` and `PC2`) from `vsPCA` and compute a distance matrix from these scores. This matrix represents the pairwise dissimilarities between samples.
+
+```{r}
+#| label: Factoring full
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# Ensure factors are correctly set for analysis
+vsPCA$genotype <- factor(vsPCA$genotype)
+vsPCA$conditioning <- factor(vsPCA$conditioning)
+```
+
+-   **Purpose**: Ensure that both `genotype` and `conditioning` are treated as categorical factors in the PERMANOVA analysis.
+
+```{r}
+#| label: PERMANOVA full
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+#| fig-cap: |
+#|   Figure 6a | Plants lacking MMF1 fail to mount a transcriptional response to a BX microbiome. (a)
+#|   The output of PERMANOVA on Euclidean distances of the root transcriptome of wild type (WT) and
+#|   mmf1-2 mutant plants in response to the BXminus and BXplus microbiomes (sampled from experiment
+#|   IV, Table S1). The R2 and P values summarize the effects of line (plant genotype) and microbiome
+#|   (soil condition) and their interaction (999 permutations; P values are one-sided by
+#|   construction; see Methods). n = 20 root transcriptomes, five per genotype × microbiome
+#|   combination, each consisting of pooled roots from two individual plants (biological replicates).
+#|   Pairwise PERMANOVA compares WT with mmf1-2 on each soil and BXplus with BXminus within each line
+#|   (same settings; four tests, unadjusted P values); significant effects (P < 0.05) are indicated
+#|   in bold.
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Produces: Fig. 6a
+#   PERMANOVA of the root transcriptome (line x microbiome)
+#   -> (table printed in the document)
+# ------------------------------------------------------------
+# Perform PERMANOVA for the interaction of genotype and conditioning
+library(vegan)
+result <- adonis2(dist_matrix ~ genotype * conditioning, data = vsPCA)
+#print(result$aov.tab)
+kable(result$aov.tab, caption = "PERMANOVA results.")
+```
+
+-   **Purpose**:
+    -   **PERMANOVA**: Perform a PERMANOVA to assess whether `genotype`, `conditioning`, and their interaction significantly explain the variation in the distance matrix.
+    -   **Interaction**: The `genotype * conditioning` formula tests both the main effects of `genotype` and `conditioning` as well as their interaction.
+    -   **Output**: Print the ANOVA table, which provides p-values and statistics to evaluate the significance of the factors.
+
+# Differential expression
+
+## Setup and Library Loading
+
+```{r}
+#| label: Setup DESEq
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+## Clear the workspace to avoid conflicts with existing objects.
+rm(list=ls())
+# Purpose: Remove all objects from the R environment to ensure a clean workspace.
+
+# Set global chunk options: hide code in the output and suppress messages and warnings.
+knitr::opts_chunk$set(echo = FALSE)
+# Purpose: Ensure that the R code isn't displayed in the final document, and suppress any messages or warnings.
+
+# Load BiocManager, installing it if not already available.
+#if (!require("BiocManager", quietly = TRUE))
+    #install.packages("BiocManager")
+# Purpose: Check if BiocManager is installed, and install it if necessary for managing Bioconductor packages.
+
+# Install and load the DESeq2 package for differential expression analysis.
+#BiocManager::install("DESeq2")
+library(DESeq2)
+# Purpose: Install DESeq2 if needed and load it for performing RNA-seq differential expression analysis.
+
+library(ggrastr)
+# Load ggplot2 for data visualization.
+library(ggplot2)
+# Purpose: Load the ggplot2 package for creating plots.
+
+# Ensure BiocManager is available for further package installations.
+#if (!require("BiocManager", quietly = TRUE))
+    #install.packages("BiocManager")
+# Purpose: Re-check and install BiocManager if necessary to avoid any issues during package installations.
+
+# Install and load apeglm for shrinkage estimation in differential expression.
+#BiocManager::install("apeglm")
+library(apeglm)
+# Purpose: Install and load apeglm to perform log fold change shrinkage in DESeq2 analysis.
+
+# Load additional libraries for data visualization and transformation.
+library(scales)
+library(viridis)
+# Purpose: Load scales for scaling functions and viridis for color palettes.
+
+# Ensure BiocManager is ready for installing vsn.
+#if (!require("BiocManager", quietly = TRUE))
+    #install.packages("BiocManager")
+# Purpose: Reconfirm that BiocManager is installed to manage further package installations.
+
+# Install and load vsn for variance stabilization.
+#BiocManager::install("vsn")
+#library(vsn)
+# Purpose: Install and load vsn to apply variance-stabilizing transformations to count data.
+
+# Load color palettes, hexagonal binning, and data manipulation libraries.
+library(RColorBrewer)
+library(hexbin)
+library(dplyr)
+library(ggrepel)
+# Purpose: Load additional libraries for color palettes, hexagonal binning plots, data manipulation, and improved text label placement in plots.
+
+# Install and load ComplexHeatmap for advanced heatmap visualizations.
+#BiocManager::install("ComplexHeatmap")
+#library(ComplexHeatmap)
+# Purpose: Install and load ComplexHeatmap to create sophisticated heatmaps.
+
+# Load additional packages for PCA, tibbles, Poisson clustering, grid arrangements, and Venn diagrams.
+library(glmpca)
+library(tibble)
+library(PoiClaClu)
+library(gridExtra)
+library(ggVennDiagram)
+# Purpose: Load necessary libraries for generalized PCA, handling modern data frames, Poisson clustering, arranging multiple plots, and creating Venn diagrams.
+
+# Load the tidyverse for data manipulation and magrittr for pipe operators.
+library(tidyverse)
+library(magrittr)
+# Purpose: Load the tidyverse suite for comprehensive data manipulation and magrittr for enhanced piping.
+
+# Load cowplot for combining plots and Cairo for enhanced graphic rendering.
+library(cowplot)
+library(Cairo)
+# Purpose: Load cowplot to combine multiple plots and Cairo for high-quality vector graphics.
+
+# Set the working directory to the location of the current R script or R Markdown file.
+library(rstudioapi)
+#setwd(dirname(getActiveDocumentContext()$path))
+# Purpose: Automatically set the working directory to the script's location, ensuring relative paths work correctly.
+
+# Set a random seed for reproducibility.
+set.seed(100)
+# Purpose: Ensure reproducibility of random processes by setting a fixed seed.
+```
+
+## Data Import and Preprocessing
+
+```{r}
+#| label: Factoring DESEq
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+# Load required package
+library(openxlsx)
+
+# Read the count data from the "Counts_Table" sheet
+cts <- read.xlsx("Input/Dataset6.xlsx", sheet = "Counts_Table", rowNames = TRUE)
+
+# Read the metadata from the "Meta_Data" sheet
+meta <- read.xlsx("Input/Dataset6.xlsx", sheet = "Meta_Data", rowNames = TRUE)
+
+# Convert genotype and conditioning columns in the metadata to factors with specific levels.
+meta$genotype <- factor(meta$genotype, levels=c("WT","mmf1"))
+meta$conditioning <- factor(meta$conditioning, levels=c("minus","plus"))
+# Purpose: Ensure that `genotype` and `conditioning` are treated as categorical variables with predefined levels.
+
+# Define colors for different conditioning levels to be used in plots.
+cols_condition <- c("gold2", "seagreen")
+names(cols_condition) <- c("plus", "minus")
+# Purpose: Assign specific colors to the conditioning levels for consistent plotting.
+
+```
+
+-   **Purpose**: Load the RNA-seq count data and associated metadata for downstream analysis.Ensure that `genotype` and `conditioning` are treated as categorical variables with predefined levels.Assign specific colors to the conditioning levels for consistent plotting.
+
+```{r}
+#| label: DESEq Run
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+dds_analysis <- function(treatment, subset=T){
+  if(subset){
+    #subset
+    #regex <- paste0("(",treatment,"|CTRL)")
+    regex <- treatment
+    cts_sub <- cts[,grepl(regex, colnames(cts))]
+    meta_sub <- meta[grepl(regex, rownames(meta)),]
+  } else{
+    cts_sub <- cts
+    meta_sub <- meta
+  }
+  
+  #return(list(cts_sub, meta_sub))
+  
+  #dds analysis
+  dds <- DESeqDataSetFromMatrix(countData = cts_sub, colData = meta_sub, design = ~ conditioning)
+  dds$conditioning <- relevel(dds$conditioning, ref = "minus") # set factor levels to which level to compare against
+  dds <- DESeq(dds, quiet = T, parallel=T) # run analysis
+  keep <- rowSums(counts(dds)) >= 10 #filtering
+  dds <- dds[keep,]
+  res <- results(dds, contrast=c("conditioning","plus","minus"), parallel=T)#results
+
+  #differental genes
+  #minus is reference: LFC > 0 -> upregulated in BXminus, LFC < 0 -> downregulated in BXminus
+  df <- as.data.frame(res) %>% mutate(signif = ifelse(padj <= 0.05 & (log2FoldChange <=-1 | log2FoldChange >=1), "significant", "non-significant"))
+  df %<>% mutate(direction = ifelse(signif=="significant", ifelse(log2FoldChange <=-1, "BXplus downregulated","BXplus upregulated" ), "unchanged"))
+
+  #return
+  return(df)
+}
+
+#WT
+df_WT <- dds_analysis("WT")
+df_WT_sig <- df_WT[df_WT$signif=="significant" & !(is.na(df_WT$signif)),]
+df_WT$GeneId <- rownames(df_WT)
+#write.csv(df_WT, "Output/Tables/DESeq_Col0.csv", row.names = TRUE)
+
+#mmf1
+df_mmf1 <- dds_analysis("mmf1")
+df_mmf1_sig <- df_mmf1[df_mmf1$signif=="significant" & !(is.na(df_mmf1$signif)),]
+df_mmf1$GeneId <- rownames(df_mmf1)
+#write.csv(df_mmf1, "Output/Tables/DESeq_mmf1.csv", row.names = TRUE)
+```
+
+## Import data
+
+```{r}
+#| label: Import DESEQ res
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+
+# Read the count data from the "Counts_Table" sheet
+df_WT <- read.xlsx("Input/Dataset6.xlsx", sheet = "Deseq_Col0", rowNames = TRUE)
+df_WT_sig <- df_WT[df_WT$signif=="significant" & !(is.na(df_WT$signif)),]
+# Read the metadata from the "Meta_Data" sheet
+df_mmf1 <- read.xlsx("Input/Dataset6.xlsx", sheet = "Deseq_mmf1", rowNames = TRUE)
+df_mmf1_sig <- df_mmf1[df_mmf1$signif=="significant" & !(is.na(df_mmf1$signif)),]
+```
+
+-   **Purpose**: Conduct differential expression analysis for mmf1 mutants and extract significant results, adding Gene IDs for reference.
+
+## Plot Creation Function
+
+```{r}
+#| label: DESEq plots
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Supports: Fig. 6c-d
+#   Combined volcano + MA plotting function
+# ------------------------------------------------------------
+# Define a function to create a combined volcano and MA plot for differential expression analysis results.
+library(ggrastr)
+
+# Function to create a combined volcano and MA plot for differential expression analysis.
+# Inputs:
+#   df    — data frame with columns: log2FoldChange, padj, baseMean, direction, signif
+#   title — string prefix for the volcano plot title
+create_plot <- function(df, title=""){
+  
+  # Plot unchanged genes first so significant genes render on top
+  df <- df[order(df$signif),]
+  
+  # Build legend labels showing direction and gene count, e.g. "BXplus upregulated (42)"
+  labs <- table(df$direction) %>% paste0(names(.), " (", ., ")")
+  
+  # Colour scheme: green = down, grey = unchanged, gold = up
+  cols <- c("seagreen","grey80", "gold2")
+  names(cols) <- c("BXplus downregulated","unchanged", "BXplus upregulated")
+  
+  # ---------------------------
+  # Volcano plot
+  # X-axis: log2 fold change
+  # Y-axis: -log10 adjusted p-value (higher = more significant)
+  # ---------------------------
+  vulcano <- ggplot(na.omit(df), aes(x=log2FoldChange, y=-log10(padj), fill=direction)) +
+    
+    # Rasterize points to reduce PDF file size; axes and labels remain as vectors
+    rasterize(geom_point(pch=21, col="black", size=2, stroke=0.1, alpha=0.7), dpi=600) +
+    
+    scale_fill_manual("BXm ~ BXp", labels=labs, values=cols) +
+    theme_bw() +
+    xlim(-5, 10) +
+    ylim(0, 28) +
+    
+    # Significance threshold line: padj = 0.05
+    geom_hline(yintercept=-log10(0.05), lty=2, lwd=0.3, color="black") +
+    
+    # Fold change threshold lines: |log2FC| = 1 (i.e. 2-fold change)
+    geom_vline(xintercept=-1, lty=2, lwd=0.3, color="black") +
+    geom_vline(xintercept=1,  lty=2, lwd=0.3, color="black") +
+    
+    ggtitle(paste0(title, ": Differentially expressed genes"))
+  
+  # ---------------------------
+  # MA plot
+  # X-axis: log10 mean normalised counts (expression level)
+  # Y-axis: log2 fold change
+  # Useful for visualising whether fold changes are expression-level dependent
+  # ---------------------------
+  MA <- ggplot(na.omit(df), aes(x=log10(baseMean), y=log2FoldChange, fill=direction)) +
+    
+    # Rasterize points to reduce PDF file size; axes and labels remain as vectors
+    rasterize(geom_point(pch=21, col="black", size=2, stroke=0.1, alpha=0.7), dpi=600) +
+    
+    scale_fill_manual("BXm ~ BXp", labels=labs, values=cols) +
+    theme_bw() +
+    xlim(0, 6) +
+    ylim(-5, 10) +
+    
+    # Reference line at log2FC = 0 (no change)
+    geom_hline(yintercept=0, lty=2, lwd=0.3, color="black")
+  
+  # ---------------------------
+  # Combine volcano and MA side by side, suppressing individual legends
+  # ---------------------------
+  dds_plot <- plot_grid(
+    vulcano + theme(legend.position="none"),
+    MA      + theme(legend.position="none") + labs(colour=""),
+    nrow=1, align="hv"
+  )
+  
+  # Extract legend from volcano plot and add it below the combined panel
+  legend   <- get_legend(vulcano + theme(legend.position="right"))
+  dds_plot <- plot_grid(dds_plot, legend, ncol=1, rel_heights=c(1, 0.1))
+  
+  return(dds_plot)
+}
+```
+
+-   **Purpose**: Create a combined volcano and MA plot for differential expression analysis results, displaying differentially expressed genes.
+
+## Plotting Differential Expression Results
+
+```{r}
+#| label: volcano WT
+#| message: false
+#| warning: false
+#| fig-height: 5
+#| include: false
+#| paged-print: false
+#| fig-cap: |
+#|   Figure 6c | Plants lacking MMF1 fail to mount a transcriptional response to a BX microbiome. 
+#|   (c and d) MA plots of differentially expressed genes (DEGs) in WT between BXminus and
+#|   BXplus (left), and the absence of DEGs in mmf1-2 (right). Genes upregulated on BXplus (yellow)
+#|   or BXminus (green) are colour coded. DEGs were identified with DESeq2 (two-sided Wald test,
+#|   Benjamini--Hochberg-adjusted; absolute log₂ fold change ≥ 1 and adjusted P < 0.05; n = 5 root
+#|   transcriptomes per genotype and soil). 
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Produces: Fig. 6c
+#   MA plot, WT on BXplus vs BXminus
+#   -> Output/Figures/volcano_plot_WT.pdf
+# ------------------------------------------------------------
+
+# Generate a volcano plot for wildtype (WT) plants and save it as a PDF.
+volcano_WT <- create_plot(df_WT, "WT")
+
+CairoPDF(
+  file = "volcano_plot_WT.pdf",
+  width = 8,
+  height = 5,
+  pointsize = 10,
+  family = "Helvetica",
+  title = "Volcano plot WT",
+  fallback_resolution = 600
+)
+
+print(volcano_WT)
+dev.off()
+
+```
+
+-   **Purpose**: Create and save a volcano plot for WT plants, displaying differentially expressed genes.
+
+```{r}
+#| label: Volcano mmf1
+#| message: false
+#| warning: false
+#| fig-height: 5
+#| include: false
+#| paged-print: false
+#| fig-cap: |
+#|   Figure 6d | Plants lacking MMF1 fail to mount a transcriptional response to a BX microbiome. (a)
+#|   (c and d) MA plots of differentially expressed genes (DEGs) in WT between BXminus and
+#|   BXplus (left), and the absence of DEGs in mmf1-2 (right). Genes upregulated on BXplus (yellow)
+#|   or BXminus (green) are colour coded. DEGs were identified with DESeq2 (two-sided Wald test,
+#|   Benjamini--Hochberg-adjusted; absolute log₂ fold change ≥ 1 and adjusted P < 0.05; n = 5 root
+#|   transcriptomes per genotype and soil). 
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Produces: Fig. 6d
+#   MA plot, mmf1-2 on BXplus vs BXminus
+#   -> Output/Figures/volcano_plot_mmf1.pdf
+# ------------------------------------------------------------
+# Generate a volcano plot for mmf1 mutants and save it as a PDF.
+volcano_mmf1 <- create_plot(df_mmf1, "mmf1")
+
+CairoPDF(
+  file = "volcano_plot_mmf1.pdf",
+  width = 8,
+  height = 5,
+  pointsize = 10,
+  family = "Helvetica",
+  title = "Volcano plot mmf1",
+  fallback_resolution = 600
+)
+
+print(volcano_mmf1)
+dev.off()
+# Purpose: Create and save a volcano plot for mmf1 mutants, displaying differentially expressed genes.
+```
+
+-   **Purpose**: Create and save a volcano plot for mmf1 mutants, displaying differentially expressed genes.
+
+```{r}
+#| label: Volcano plots
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-height: 10
+#| paged-print: false
+# Combine the volcano plots for WT and mmf1 into a single figure.
+volcano_plots <- plot_grid(volcano_WT, volcano_mmf1, nrow=2, rel_widths = c(1, 1))
+volcano_plots
+ggsave("volcano_plots.pdf", plot= volcano_plots, width = 18, height = 20, units = "cm", dpi = 600)
+# Purpose: Combine the volcano plots for WT and mmf1 into one figure and save it as a PDF.
+```
+
+-   **Purpose**: Combine the volcano plots for WT and mmf1 into one figure and save it as a PDF.
+
+```{r}
+#| label: VENN diagram upregulated
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+#| fig-cap: |
+#|   Extended Data Figure 9c (upper) | Root transcriptome of WT and mmf1-2 mutants grown on the
+#|   BXminus and BXplus soils. (c) Venn diagrams showing the overlap between the top 100 up-regulated (top) and top 100 down-regulated
+#|   (bottom) genes in WT and mmf1-2 plants grown on the BXplus compared to BXminus microbiomes. 
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Produces: Extended Data Fig. 9c
+#   Venn diagram of top 100 up-regulated genes
+#   -> Output/Figures/VENN_diagram.png
+# ------------------------------------------------------------
+# Required libraries
+library(dplyr)
+library(ggvenn)  # or alternatively use VennDiagram
+
+# Step 1: Select top 100 genes by absolute log2FoldChange from each dataframe
+top100_WT <- df_WT |>
+  arrange(desc(abs(log2FoldChange))) |>
+  slice_head(n = 100) |>
+  pull(GeneId)
+
+top100_mmf1 <- df_mmf1 |>
+  arrange(desc(abs(log2FoldChange))) |>
+  slice_head(n = 100) |>
+  pull(GeneId)
+
+# Step 2: Prepare list for Venn diagram
+venn_data <- list(
+  WT = top100_WT,
+  mmf1 = top100_mmf1
+)
+
+# Step 3: Plot Venn diagram
+top100_overl_up <- ggvenn(
+  venn_data,
+  fill_color = c("#E69F00", "#56B4E9"),
+  stroke_size = 0.5,
+  set_name_size = 4
+)
+top100_overl_up <- top100_overl_up + ggtitle("Top 100 shared up-regulated genes (|log2FC|) — BXplus vs BXminus") +
+  theme(
+    plot.title = element_text(
+      hjust = 0.2,  # center title
+      face = "bold",
+      size = 8
+    )
+  )
+
+ggsave("VENN_diagram.png", plot = top100_overl_up, width = 10, height = 8, units = "cm", path = "Output/Figures/")
+```
+
+```{r}
+#| label: VENN diagram downregulated
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+#| fig-cap: |
+#|   Extended Data Figure 9c (lower) | Root transcriptome of WT and mmf1-2 mutants grown on the
+#|   BXminus and BXplus soils. (c) Venn vdiagrams showing the overlap between the top 100 up-regulated (top) and top 100 down-regulated
+#|   (bottom) genes in WT and mmf1-2 plants grown on the BXplus compared to BXminus microbiomes. 
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Produces: Extended Data Fig. 9c
+#   Venn diagram of top 100 down-regulated genes
+#   -> Output/Figures/VENN_diagram_downregulated.png
+# ------------------------------------------------------------
+library(dplyr)
+library(ggvenn)
+library(ggplot2)
+
+# Step 1: Select top 100 most downregulated genes from each dataframe
+top100_neg_WT <- df_WT |>
+  filter(log2FoldChange < 0) |>
+  arrange(log2FoldChange) |>
+  slice_head(n = 100) |>
+  pull(GeneId)
+
+top100_neg_mmf1 <- df_mmf1 |>
+  filter(log2FoldChange < 0) |>
+  arrange(log2FoldChange) |>
+  slice_head(n = 100) |>
+  pull(GeneId)
+
+# Step 2: Prepare list for Venn diagram
+venn_data_neg <- list(
+  WT = top100_neg_WT,
+  mmf1 = top100_neg_mmf1
+)
+
+# Step 3: Plot Venn diagram
+top100_overl_down <- ggvenn(
+  venn_data_neg,
+  fill_color = c("#E69F00", "#56B4E9"),
+  stroke_size = 0.5,
+  set_name_size = 4
+)
+
+top100_overl_down <- top100_overl_down + ggtitle("Top 100 shared down-regulated genes (|log2FC|) — BXplus vs BXminus") +
+  theme(
+    plot.title = element_text(
+      hjust = 0.2,  # center title
+      face = "bold",
+      size = 8
+    )
+  )
+
+# Save the plot
+ggsave("VENN_diagram_downregulated.png", plot = top100_overl_down, width = 10, height = 8, units = "cm", path = "Output/Figures/")
+
+#Combine the two plots side by side and save is PDF
+venn_combined <- plot_grid(top100_overl_up, top100_overl_down, nrow = 1)
+ggsave("VENN_diagram_combined.pdf", plot = venn_combined, width = 20, height = 10, units = "cm", path = "Output/Figures/")
+
+```
+
+## Prepare data to compare WT to mmf1
+
+```{r message=FALSE, warning=FALSE}
+#| label: cts plus
+#| echo: false
+#| paged-print: false
+#For BX plus
+meta_plus <- meta %>% filter(conditioning %in% "plus")
+# Purpose: Filter the metadata to include only samples conditioned with "plus".
+
+# Step 1: Get row names from meta_plus
+rows_to_select <- rownames(meta_plus)
+# Purpose: Extract the row names (sample names) from the filtered metadata.
+
+# Step 2: Subset cts using these names
+cts_plus <- cts[, rows_to_select, drop = FALSE]
+# Purpose: Subset the counts data to include only the columns corresponding to the samples in "plus" conditioning.
+```
+
+-   **Purpose**: Prepare the data by filtering the metadata and count data to compare WT to mmf1 samples conditioned with BXplus.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#| label: cts minus
+#| paged-print: false
+#For BX minus
+meta_minus <- meta %>% filter(conditioning %in% "minus")
+# Purpose: Filter the metadata to include only samples conditioned with "minus".
+
+# Step 1: Get row names from meta_minus
+rows_to_select <- rownames(meta_minus)
+# Purpose: Extract the row names (sample names) from the filtered metadata.
+
+# Step 2: Subset cts using these names
+cts_minus <- cts[, rows_to_select, drop = FALSE]
+# Purpose: Subset the counts data to include only the columns corresponding to the samples in "minus" conditioning.
+```
+
+-   **Purpose**: Prepare the data by filtering the metadata and count data to compare WT to mmf1 samples conditioned with BXplus and BXminus.
+
+# Differential Expression Analysis between lines within conditioning levels
+
+```{r}
+#| label: Modify DESEq tables 
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Supports: Extended Data Fig. 9a-b, d
+#   Per-soil DESeq2 comparisons (WT vs mmf1-2)
+# ------------------------------------------------------------
+# Read the count data from the "Counts_Table" sheet
+df_plus <- read.xlsx("Input/Dataset6.xlsx", sheet = "Deseq_BXplus", rowNames = TRUE)
+df_plus <- df_plus %>%
+  mutate(direction = recode(
+    direction,
+    "Col-0 upregulated" = "Col-0 downregulated",
+    "Col-0 downregulated" = "Col-0 upregulated"
+  ))
+# Read the metadata from the "Meta_Data" sheet
+df_minus <- read.xlsx("Input/Dataset6.xlsx", sheet = "Deseq_BXminus", rowNames = TRUE)
+df_minus <- df_minus %>%
+  mutate(direction = recode(
+    direction,
+    "Col-0 upregulated" = "Col-0 downregulated",
+    "Col-0 downregulated" = "Col-0 upregulated"
+  ))
+# Read the DESeq output from Dataset6 containing the transcriptome of mmf1 mutants on MS plates
+df_mmf1_plate <- read.xlsx("Input/Dataset6.xlsx", sheet = "Deseq_mmf1_plates", rowNames = TRUE)
+
+# Filter for significant genes only.
+df_plus_sig <- df_plus[df_plus$signif == "significant" & !is.na(df_plus$signif),]
+# Purpose: Create a subset of the results containing only significant genes.
+# Filter for significant genes only.
+df_minus_sig <- df_minus[df_minus$signif == "significant" & !is.na(df_minus$signif),]
+# Purpose: Create a subset of the results containing only significant genes.
+
+```
+
+-   **Purpose**: Perform differential expression analysis for BXplus samples, extract significant results, and add gene IDs for reference.
+
+## Split significant genes by direction (upregulated/downregulated)
+
+```{r}
+#| label: Split genes by direction
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+# For BXplus samples
+df_plus_sig_up <- df_plus_sig %>% filter(direction == "Col-0 downregulated")
+df_plus_sig_down <- df_plus_sig %>% filter(direction == "Col-0 upregulated")
+# Purpose: Separate the significant genes from BXplus samples into upregulated and downregulated categories.
+ 
+
+# For BXminus samples
+df_minus_sig_up <- df_minus_sig %>% filter(direction == "Col-0 downregulated")
+df_minus_sig_down <- df_minus_sig %>% filter(direction == "Col-0 upregulated")
+# Purpose: Separate the significant genes from BXminus samples into upregulated and downregulated categories.
+```
+
+-   **Purpose**: Separate the significant genes from BXplus and BXminus samples into upregulated and downregulated categories.
+
+## Create and Plot Volcano and MA plots for BXplus and BXminus
+
+```{r}
+#| label: Volcano condition function
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# Function to create volcano and MA plots for the soil analysis
+create_plot_soil <- function(df, title = "") {
+  
+  # Reorder data to plot "unchanged" first
+  df <- df[order(df$signif), ]
+  
+  # Add gene numbers to legend
+  labs <- table(df$direction) %>% paste0(names(.), " (", ., ")")
+  
+  # Colors for the plot
+  cols <- c("steelblue4", "grey80", "red4")
+  names(cols) <- c("Col-0 upregulated", "unchanged", "Col-0 downregulated")
+  
+  # Volcano plot
+  vulcano <- ggplot(na.omit(df), aes(x = log2FoldChange, y = -log10(padj), fill = direction)) +
+    geom_point(pch = 21, col = "black", size = 2, stroke = 0.1, alpha = 0.7) +
+    scale_fill_manual("BXm ~ BXp", labels = labs, values = cols) +
+    theme_bw() +
+    geom_hline(yintercept = -log10(0.05), lty = 2, lwd = 0.3, color = "black") +
+    geom_vline(xintercept = -1, lty = 2, lwd = 0.3, color = "black") +
+    geom_vline(xintercept = 1, lty = 2, lwd = 0.3, color = "black") +
+    ggtitle(paste0(title, ": Differentially expressed genes")) +
+    theme(
+      text = element_text(size = 7),        # Set all text to 7pt
+      axis.title = element_text(size = 7),
+      axis.text = element_text(size = 7),
+      legend.title = element_text(size = 7),
+      legend.text = element_text(size = 7),
+      plot.title = element_text(size = 7)
+    )
+  
+  # MA plot
+  MA <- ggplot(na.omit(df), aes(x = log10(baseMean), y = log2FoldChange, fill = direction)) +
+    geom_point(pch = 21, col = "black", size = 2, stroke = 0.1, alpha = 0.7) +
+    scale_fill_manual("BXm ~ BXp", labels = labs, values = cols) +
+    geom_hline(yintercept = 0, lty = 2, lwd = 0.3, color = "black") +
+    theme_bw() +
+    theme(
+      text = element_text(size = 7),        # Set all text to 7pt
+      axis.title = element_text(size = 7),
+      axis.text = element_text(size = 7),
+      legend.title = element_text(size = 7),
+      legend.text = element_text(size = 7),
+      plot.title = element_text(size = 7)
+    )
+  
+  # Combine plots
+  dds_plot <- plot_grid(vulcano + theme(legend.position = "none"),
+                        MA + theme(legend.position = "none") + labs(colour = ""),
+                        nrow = 1, align = "hv")
+  
+  # Add legend
+  legend <- get_legend(vulcano + theme(legend.position = "right"))
+  dds_plot <- plot_grid(dds_plot, legend, ncol = 1, rel_heights = c(1, 0.1))
+  
+  return(dds_plot)
+}
+```
+
+-   **Purpose**: Create a function to generate volcano and MA plots for the soil analysis, combining the two plots into a single figure.
+
+```{r}
+#| label: MA_plot_soils_plate_function
+#| message: false
+#| warning: true
+#| include: false
+#| paged-print: false
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Supports: Extended Data Fig. 9a-b, d
+#   Three-panel MA plotting function
+# ------------------------------------------------------------
+
+library(ggrastr)
+
+create_plot_soil_MA_both <- function(df_minus, df_plus, df_mmf1_plate, title = "") {
+
+  stopifnot(requireNamespace("ggplot2", quietly = TRUE))
+  stopifnot(requireNamespace("cowplot", quietly = TRUE))
+  stopifnot(requireNamespace("magrittr", quietly = TRUE))
+  stopifnot(requireNamespace("ggrastr", quietly = TRUE))
+
+  prep_df <- function(df) {
+    df <- df[order(df$signif), , drop = FALSE]
+
+    labs <- table(df$direction) %>%
+      paste0(names(.), " (", ., ")")
+
+    cols <- c("steelblue4", "grey80", "red4")
+    names(cols) <- c("Col-0 upregulated", "unchanged", "Col-0 downregulated")
+
+    list(df = df, labs = labs, cols = cols)
+  }
+
+  make_ma <- function(df, labs, cols, panel_title = NULL) {
+    ggplot2::ggplot(
+      stats::na.omit(df),
+      ggplot2::aes(x = log10(baseMean + 1), y = log2FoldChange, fill = direction)
+    ) +
+      ggrastr::geom_point_rast(
+        pch = 21,
+        col = "black",
+        size = 2,
+        stroke = 0.1,
+        alpha = 0.7,
+        raster.dpi = 600
+      ) +
+      ggplot2::scale_fill_manual(NULL, labels = labs, values = cols) +
+      ggplot2::geom_hline(yintercept = 0, lty = 2, linewidth = 0.3, color = "black") +
+      ggplot2::theme_bw() +
+      ggplot2::labs(
+        title = panel_title,
+        x = "log10(baseMean + 1)",
+        y = "log2FoldChange"
+      ) +
+      ggplot2::theme(
+        text = ggplot2::element_text(size = 7),
+        axis.title = ggplot2::element_text(size = 7),
+        axis.text = ggplot2::element_text(size = 7),
+        legend.title = ggplot2::element_text(size = 7),
+        legend.text = ggplot2::element_text(size = 7),
+        plot.title = ggplot2::element_text(size = 7)
+      )
+  }
+
+  p_minus <- prep_df(df_minus)
+  p_plus <- prep_df(df_plus)
+  p_plate <- prep_df(df_mmf1_plate)
+
+  ma_minus <- make_ma(p_minus$df, p_minus$labs, p_minus$cols, panel_title = "Minus")
+  ma_plus <- make_ma(p_plus$df, p_plus$labs, p_plus$cols, panel_title = "Plus")
+  ma_plate <- make_ma(p_plate$df, p_plate$labs, p_plate$cols, panel_title = "mmf1 plate")
+
+  # Shared legend
+  leg <- cowplot::get_legend(ma_minus + ggplot2::theme(legend.position = "right"))
+
+  # Correct panel order
+  ma_row <- cowplot::plot_grid(
+    ma_minus + ggplot2::theme(legend.position = "none"),
+    ma_plus + ggplot2::theme(legend.position = "none"),
+    ma_plate + ggplot2::theme(legend.position = "none"),
+    nrow = 1,
+    align = "hv"
+  )
+
+  out <- cowplot::plot_grid(
+    ma_row,
+    leg,
+    ncol = 1,
+    rel_heights = c(1, 0.12)
+  )
+
+  if (nzchar(title)) {
+    out <- cowplot::ggdraw(out) +
+      cowplot::draw_label(
+        title,
+        x = 0.5, y = 0.99,
+        hjust = 0.5, vjust = 1,
+        fontface = "bold",
+        size = 9
+      )
+  }
+
+  out
+}
+```
+
+```{r}
+#| label: MA plots soils
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+#| fig-cap: |
+#|   Extended Data Figure 9a, 9b, 9d | Root transcriptome of WT and mmf1-2 mutants grown on the
+#|   BXminus and BXplus soils. MA plot of differentially expressed genes between mmf1-2 mutants and
+#|   WT plants in response to the (a) BXminus and (b) BXplus soil microbiome. Significantly
+#|   differentially expressed genes were calculated using DESeq2 (log2 fold change ≥ 1; empirical
+#|   Bayes statistic false discovery rate < 0.05). n = 5 root transcriptomes (each a pool from two
+#|   individual plants) per genotype and soil; P values are from the two-sided Wald test,
+#|   Benjamini--Hochberg-adjusted across all genes, with apeglm shrinkage applied to the fold
+#|   changes. These statistics apply to all DESeq2 results in this figure (a, b, d and e). (c) Venn
+#|   diagrams showing the overlap between the top 100 up-regulated (top) and top 100 down-regulated
+#|   (bottom) genes in WT and mmf1-2 plants grown on the BXplus compared to BXminus microbiomes. (d)
+#|   MA plot of differentially expressed genes between mmf1-2 mutants and WT plants grown under
+#|   sterile conditions, with significance defined as in (a) and (b); n = [TO COMPLETE] seedlings per
+#|   genotype, each a whole seedling harvested from a separate ½ MS plate on which both genotypes
+#|   were grown together. 
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Produces: Extended Data Fig. 9a-b, d
+#   MA plots, mmf1-2 vs WT on BXminus, BXplus and in vitro
+#   -> Output/Figures/MA_plots_soil.pdf
+# ------------------------------------------------------------
+p <- create_plot_soil_MA_both(df_minus, df_plus, df_mmf1_plate,  title = "MA plots")
+print(p)
+ggsave("MA_plots_soil.pdf", plot = p, width = 24.0, height = 10, units = "cm", dpi = 600)
+```
+
+## Plot Volcano and MA Plots for BXplus Soil
+
+```{r}
+#| label: Volcano plus
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+volcano_plus <- plot(create_plot_soil(df_plus,"BXplus"))
+# Purpose: Generate the volcano and MA plots for BXplus soil using the `create_plot_soil` function and save it to `volcano_plus`.
+
+CairoPDF(file = "volcano_plot_plus.pdf", width = 8, height = 5, pointsize = 10, family = "Helvetica", title = "Volcano plot BXplus", fallback_resolution = 600)
+# Purpose: Create a PDF file to save the volcano plot for BXplus soil.
+
+print(volcano_plus)  # This prints your plot to the PDF
+# Purpose: Output the `volcano_plus` plot to the previously created PDF file.
+
+dev.off()
+# Purpose: Close the PDF file and save the plot.
+```
+
+-   **Purpose**: Generate the volcano and MA plots for BXplus soil using the `create_plot_soil` function and save it as a high-resolution PDF.
+
+### **Plot Volcano and MA Plots for BXminus Soil**
+
+```{r}
+#| label: Volcanon minus
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+volcano_minus <- plot(create_plot_soil(df_minus,"BXminus"))
+# Purpose: Generate the volcano and MA plots for BXminus soil using the `create_plot_soil` function and save it to `volcano_minus`.
+
+CairoPDF(file = "volcano_plot_minus.pdf", width = 8, height = 5, pointsize = 10, family = "Helvetica", title = "Volcano plot BXminus", fallback_resolution = 600)
+# Purpose: Create a PDF file to save the volcano plot for BXminus soil.
+
+print(volcano_minus)  # This prints your plot to the PDF
+# Purpose: Output the `volcano_minus` plot to the previously created PDF file.
+
+dev.off()
+# Purpose: Close the PDF file and save the plot.
+```
+
+-   **Purpose**: Generate the volcano and MA plots for BXminus soil using the `create_plot_soil` function and save it as a high-resolution PDF.
+
+## Combine Volcano Plots for BXplus and BXminus Soils
+
+```{r}
+#| label: Combined volcano
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+volcano_plots_soil <- plot_grid(volcano_minus, volcano_plus, nrow = 2, rel_widths = c(1, 1))
+# Purpose: Combine the volcano plots for BXminus and BXplus soils into a single plot, stacking them vertically.
+print(volcano_plots_soil)
+ggsave("volcano_plots_soil.pdf", width = 16.2, height = 18, units = "cm")
+# Purpose: Save the combined volcano plot as a PDF file named "volcano_plots_soil.pdf".
+```
+
+-   **Purpose**: Combine the volcano plots for BXminus and BXplus soils into a single plot and save it as a PDF file.
+
+## Extract Gene Lists for Further Analysis
+
+```{r}
+#| label: Extract gene list
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+# Extract significant upregulated and downregulated genes from the BXplus results.
+genes_df_plus_sig_up <- rownames(df_plus_sig_up)
+genes_df_plus_sig_down <- rownames(df_plus_sig_down)
+# Purpose: Create lists of gene IDs for genes that are significantly upregulated and downregulated in BXplus soil.
+
+# Extract significant upregulated and downregulated genes from the BXminus results.
+genes_df_minus_sig_up <- rownames(df_minus_sig_up)
+genes_df_minus_sig_down <- rownames(df_minus_sig_down)
+# Purpose: Create lists of gene IDs for genes that are significantly upregulated and downregulated in BXminus soil.
+```
+
+-   **Purpose**: Extract lists of gene IDs for significantly upregulated and downregulated genes in BXplus and BXminus soils for further analysis.
+
+## Identify Overlapping Genes between BXplus and BXminus Soils
+
+```{r}
+#| label: Identify overlapping gened
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+# Identify genes that are upregulated in both BXplus and BXminus soils.
+overlap_genes_up <- intersect(genes_df_minus_sig_up, genes_df_plus_sig_up)
+# Purpose: Find the intersection of upregulated genes in BXplus and BXminus soils, identifying genes upregulated in both conditions.
+
+# Identify genes that are downregulated in both BXplus and BXminus soils.
+overlap_genes_down <- intersect(genes_df_minus_sig_down, genes_df_plus_sig_down)
+# Purpose: Find the intersection of downregulated genes in BXplus and BXminus soils, identifying genes downregulated in both conditions.
+```
+
+-   **Purpose**: Identify overlapping genes that are upregulated and downregulated in both BXplus and BXminus soils for further analysis.
+
+## Create Lists of Overlapping Genes for Visualizatio
+
+```{r}
+#| label: Generate gene list
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# Create a list of upregulated genes in both BXminus and BXplus soils.
+gene_lists_up <- list(BXminus = genes_df_minus_sig_up, BXplus = genes_df_plus_sig_up)
+# Purpose: Prepare a list of upregulated genes for creating Venn diagrams or other visualizations.
+
+# Create a list of downregulated genes in both BXminus and BXplus soils.
+gene_lists_down <- list(BXminus = genes_df_minus_sig_down, BXplus = genes_df_plus_sig_down)
+# Purpose: Prepare a list of downregulated genes for creating Venn diagrams or other visualizations.
+
+```
+
+-   **Purpose**: Prepare lists of upregulated and downregulated genes in both BXplus and BXminus soils for visualization.
+
+## Visualize Overlapping Genes Using Venn Diagrams
+
+```{r}
+#| label: VENN overlap condition
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+# Load the ggvenn library for Venn diagram visualization.
+library(ggvenn)
+# Purpose: Load the `ggvenn` library to create Venn diagrams.
+
+# Create and save Venn diagrams for upregulated genes between Col-0 and mmf1 in BXplus soil.
+ggvenn(gene_lists_up, c("BXminus", "BXplus"),
+       fill_color = c("seagreen","gold2"),
+       stroke_size = 0.5, 
+       show_percentage = FALSE,
+       text_size = 3,
+       set_name_size = 2)
+# Purpose: Generate a Venn diagram to visualize the overlap of upregulated genes between Col-0 and mmf1 genotypes in BXplus soil.
+
+ggsave("VENN_Colmmf1_soil_up.png", width = 5, height = 5, units = "cm")
+# Purpose: Save the upregulated gene Venn diagram as a PNG file.
+
+# Create and save Venn diagrams for downregulated genes between Col-0 and mmf1 in BXplus soil.
+ggvenn(gene_lists_down, c("BXminus", "BXplus"),
+       fill_color = c("seagreen","gold2"),
+       stroke_size = 0.5, 
+       show_percentage = FALSE,
+       text_size = 3,
+       set_name_size = 2)
+# Purpose: Generate a Venn diagram to visualize the overlap of downregulated genes between Col-0 and mmf1 genotypes in BXplus soil.
+
+ggsave("VENN_Colmmf1_soil_down.png", width = 5, height = 5, units = "cm")
+# Purpose: Save the downregulated gene Venn diagram as a PNG file.
+
+```
+
+-   **Purpose**: Create Venn diagrams to visualize the overlap of differentially expressed genes between Col-0 and mmf1 genotypes in BXplus and BXminus soils.
+
+# GO term Enrichment Analysis
+
+## Setup and Load Required Libraries
+
+```{r}
+#| label: Setup GO
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# Clear the environment
+rm(list = ls())
+# Purpose: Removes all objects from the R environment to start with a clean workspace.
+
+# Purpose: Configures the knitr options to suppress the printing of R code in the output.
+
+# Load necessary libraries
+library(dplyr)           # Data manipulation
+library(DESeq2)          # Differential expression analysis
+library(BiocParallel)    # Parallel computation for Bioconductor packages
+
+# Check if "BiocManager" is installed, if not, install it
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+# Purpose: Ensure BiocManager is installed for managing Bioconductor packages.
+
+# Install and load the coseq package for co-expression analysis
+BiocManager::install("coseq")
+library(coseq)
+
+# Load additional libraries for parallel processing, plotting, and data manipulation
+library(foreach)         # For parallel processing
+library(doParallel)      # Parallel backend for foreach
+library(ggplot2)         # Data visualization
+library(tidyr)           # Data tidying
+library(viridis)         # Color palettes
+library(ComplexHeatmap)  # Advanced heatmap plotting
+
+# Check if "BiocManager" is installed again (redundant but safe)
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+# Install and load the "org.At.tair.db" package for Arabidopsis thaliana annotations
+BiocManager::install("org.At.tair.db")
+library(org.At.tair.db)
+
+# Load additional libraries for plotting, GO enrichment analysis, and data manipulation
+library(gridExtra)        # Arranging multiple plots
+library(clusterProfiler)  # GO term enrichment analysis
+library(ggsci)            # Scientific journal color palettes
+library(DOSE)             # Disease Ontology Semantic and Enrichment analysis
+library(splitstackshape)  # Split and reshape data
+library(reshape2)         # Data reshaping
+
+# Check again if "BiocManager" is installed
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+# Install and load the "simplifyEnrichment" package for GO term analysis
+BiocManager::install("simplifyEnrichment")
+library(simplifyEnrichment)
+
+# Load additional libraries for data manipulation and Venn diagram plotting
+library(data.table)       # Fast data manipulation
+library(doBy)             # Group by and summary statistics
+library(tibble)           # Tidyverse core data structure
+library(varhandle)        # Handling variable types
+library(ggvenn)           # Venn diagram plotting
+library(knitr)
+# Source custom co-expression functions from an external file
+source("Input/co-expression_functions.R")
+# Purpose: Load custom functions for co-expression analysis from an external file.
+
+# Set working directory to the source file location
+library(rstudioapi)
+#setwd(dirname(getActiveDocumentContext()$path))
+# Purpose: Automatically set the working directory to the location of the current R script.
+
+# Set a random seed for reproducibility
+set.seed(100)
+# Purpose: Ensure that random operations produce the same results each time the script is run.
+
+# Use multiple cores for parallel processing to speed up computations
+register(MulticoreParam(8))
+# Purpose: Register a parallel backend using 8 cores to improve performance for heavy computations.
+```
+
+------------------------------------------------------------------------
+
+## Co-Expression Analysis Setup
+
+```{r}
+#| label: Co expression setup
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# Read the count data from the "Counts_Table" sheet
+cts <- read.xlsx("Input/Dataset6.xlsx", sheet = "Counts_Table", rowNames = TRUE)
+
+# Read the metadata from the "Meta_Data" sheet
+meta <- read.xlsx("Input/Dataset6.xlsx", sheet = "Meta_Data", rowNames = TRUE)
+# Purpose: Load the RNA-seq count data and corresponding metadata into R.
+
+# Set genotype and conditioning variables as factors and define their levels
+meta$genotype <- factor(meta$genotype, levels = c("WT", "mmf1"))
+meta$conditioning <- factor(meta$conditioning, levels = c("minus", "plus"))
+# Purpose: Convert the genotype and conditioning columns in the metadata to factors, specifying the order of levels.
+
+# Define colors for plotting different conditions
+cols_condition <- c("gold2", "palegreen3")
+names(cols_condition) <- c("plus", "minus")
+# Purpose: Assign colors to the different levels of conditioning (plus, minus) for use in plots.
+
+```
+
+-   **Purpose**: The code chunk above sets up the R environment by loading the necessary libraries, setting the working directory, and importing the count data and metadata for the co-expression analysis. It also converts the genotype and conditioning variables to factors and defines their levels, as well as assigns colors for plotting different conditions.
+
+## Differential Gene Expression Analysis
+
+```{r}
+#| label: Diff expression
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# Get WT and mmf1 data separately
+WT_meta <- meta %>% filter(genotype == "WT")
+cts_WT <- cts %>% subset.matrix(TRUE, as.vector(row.names(WT_meta))) %>%.[, row.names(WT_meta)]
+
+mmf1meta <- meta %>% filter(genotype == "mmf1")
+cts_mmf1 <- cts %>% subset.matrix(TRUE, as.vector(row.names(mmf1meta))) %>%.[, row.names(mmf1meta)]
+# Purpose: Separate the count data and metadata for WT and mmf1 genotypes.
+
+# Perform Differential Gene Expression (DGE) analyses
+#deseq_WT <- DESeq2_analysis(cts_WT, WT_meta, shrinkage = T, funct = ~ conditioning)
+#deseq_mmf1 <- DESeq2_analysis(cts_mmf1, mmf1meta, shrinkage = T, funct = ~conditioning)
+# Purpose: Perform differential gene expression analysis using DESeq2 for both WT and mmf1 genotypes.
+
+#Export DESeq results as an RDS file
+#saveRDS(deseq_WT, file = "Output/Tables/deseq_WT.rds")
+#saveRDS(deseq_mmf1, file = "Output/Tables/deseq_mmf1.rds")
+
+#Load DESeq results from RDS file
+#deseq_WT <- readRDS("Output/Tables/deseq_WT.rds")
+#deseq_mmf1 <- readRDS("Output/Tables/deseq_mmf1.rds")
+
+# Clean up the environment by removing intermediate data
+#rm(meta, cts, cts_WT, cts_mmf1, WT_meta, mmf1meta)
+# Purpose: Remove intermediate variables from the environment to free up memory.
+```
+
+-   **Purpose**: The code chunk above separates the count data and metadata for the WT and mmf1 genotypes and performs differential gene expression analysis using DESeq2 for each genotype. It also cleans up the environment by removing intermediate data to free up memory.
+
+## Co-Expression Analysis (Coseq) Setup
+
+```{r}
+#| label: Coseq_setup
+#| eval: false
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# Subset DESeq2 results for adjusted p-value < 0.05
+filtered_deseq <- data.frame(deseq_WT[[2]]) %>% filter(padj < 0.05)
+filtered_genes <- row.names(filtered_deseq)
+write.csv(filtered_deseq, "Output/Tables/Diff_genes_Col0.csv", row.names = TRUE)
+# Purpose: Filter the DESeq2 results to retain only significantly differentially expressed genes (p.adj < 0.05).
+
+# Set parameters for Coseq clustering
+#reps <- 20
+# Purpose: Set the number of repetitions to estimate the optimal number of clusters (K).
+
+# Detect the number of cores available and register for parallel processing
+#numCores <- detectCores() - 1
+#registerDoParallel(numCores)
+# Purpose: Use one less than the maximum number of cores available for parallel processing.
+
+# Estimate the optimal number of clusters (K) in the background using the job package
+#library(job)
+#job({ clust <- foreach (i = 1:reps, .combine = 'c') %dopar% {
+#    temp <- coseq(deseq_WT[[1]], K = 2:25, verbose = FALSE, parallel = T, alpha = 0.05, iter.max = 9999, model = "Normal", transformation = "arcsin", seed = 12345, subset = filtered_genes)
+#    names(which.min(temp@metadata$ICL))
+#}})
+# Purpose: Run the coseq clustering analysis in parallel to estimate the optimal number of clusters (K) based on the Integrated Complete Likelihood (ICL).
+
+# Select the most frequently calculated K value
+#clust <- data.frame(clust) %>%
+#  dplyr::rename(cluster = clust) %>%
+#  mutate(cluster = gsub("K=", "", cluster), cluster = as.numeric(cluster))
+# Purpose: Extract and clean the cluster results to determine the most frequently selected number of clusters.
+
+# Plot the distribution of the selected cluster numbers
+#ggplot(clust, aes(x = cluster)) + geom_histogram()
+#table(clust$cluster)
+# Purpose: Visualize the distribution of selected cluster numbers to help choose the optimal K.
+
+# Double-check the optimal K value using the Adjusted Rand Index (ARI)
+#WT.coseq <- coseq(deseq_WT[[1]], K = 3:15, verbose = FALSE, parallel = T, alpha = 0.05, iter.max = 9999, model = "Normal", transformation = "arcsin")
+#compareARI(WT.coseq , K = 3:15)
+# Purpose: Verify the similarity of models with different K values using the ARI to confirm the optimal number of clusters.
+```
+
+-   **Result**: We idenntify the optimal number of clusters as 8 based on the distribution of selected cluster numbers and the Adjusted Rand Index (ARI) comparison.
+
+### **Final Coseq Analysis with Optimal Cluster Number**
+
+Best to not rerun this part, but import previously run file
+
+```{r}
+#| label: Coseq run
+#| eval: false
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Supports: Extended Data Fig. 9e
+#   coseq clustering of WT DEGs
+# ------------------------------------------------------------
+#DO NOT RERUN THIS CHUNK OF CODE UNLESS CLUSTERS NEED TO BE REDEFINED
+# Run coseq analysis with the optimal number of clusters (K = 8)
+WT.coseq <- coseq(deseq_WT[[1]], K=8, verbose=FALSE, parallel = T, alpha=0.05, iter.max=9999, model="Normal", transformation="arcsin", seed=12345, subset.index=filtered_genes)
+# Purpose: Perform the final co-expression analysis for the WT genotype using the previously determined optimal K value of 8 clusters.
+
+WT_clusters<- data.frame(Genes=names(clusters(WT.coseq)))
+WT_clusters$Cluster <- clusters(WT.coseq)
+# Purpose: Extract and save the cluster assignments for each gene from the co-expression analysis.
+
+fullres <- coseqFullResults(WT.coseq) %>% 
+  data.frame(.[["K=8"]]) %>% 
+  dplyr::select(-contains("K.8")) %>% 
+  tibble::rownames_to_column("gene") %>% 
+  reshape2::melt(id.vars="gene", variable.name="Cluster", value.name = "likelihood") %>% 
+  group_by(gene) %>%
+  filter(likelihood == max(likelihood))
+# Purpose: Process the full co-expression results, converting them into a tidy format with genes assigned to the cluster where they have the highest likelihood.
+
+ggplot(fullres, aes(x=likelihood)) +
+         geom_density(col="darkred") +
+  geom_vline(xintercept = 0.95)
+# Purpose: Plot the density of likelihood values for gene-cluster assignments and add a vertical line at the 0.95 cutoff.
+
+## final cluster assignment (cutoff at likelihood <=0.95)
+fullres <- dplyr::filter(fullres, likelihood >=0.95) %>% 
+  dplyr::mutate(Cluster = gsub("Cluster_", "", Cluster))
+# Purpose: Filter out low-confidence cluster assignments (likelihood < 0.95) and clean up the cluster labels for the final result.
+
+exprofiles <- data.frame(profiles(WT.coseq)) %>% 
+  tibble::rownames_to_column("gene") %>% 
+  reshape2::melt(id.vars="gene", variable.name="Sample", value.name="profile") %>% 
+  dplyr::mutate(Cluster = fullres$Cluster[base::match(gene, fullres$gene)]) %>% 
+  na.omit()
+# Purpose: Extract the expression profiles for each gene, reshape the data, and match genes with their assigned clusters, omitting any NA values.
+
+#write.table(exprofiles, "/Users/Henry/Desktop/Desktop - pseudomonas/Data/2022_09_23_GWAS_mutant_screening_E2/RNA_seq/RNASeq/02_Stats/WT_coseq.clusters_new.txt", row.names = F, col.names = T, sep = "\t", quote = F)
+# Purpose: Save the final co-expression profiles and cluster assignments to a text file for further analysis or visualization.
+```
+
+-   **Purpose**: Perform the final co-expression analysis for the WT genotype using the previously determined optimal K value of 8 clusters.
+
+```{r}
+#| label: Import data count tables
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# Read the count data from the "Counts_Table" sheet
+df_WT <- read.xlsx("Input/Dataset6.xlsx", sheet = "Deseq_Col0", rowNames = TRUE, colNames = TRUE)
+df_WT_sig <- df_WT[df_WT$signif=="significant" & !(is.na(df_WT$signif)),]
+```
+
+## Figure 5: Annotated Heatmap
+
+```{r}
+#| label: Heatmap print
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-height: 8
+#| fig-width: 9
+#| paged-print: false
+library(openxlsx)
+### make matrix of the co-seq data
+WTCL <- read.xlsx("Input/Dataset6.xlsx", sheet = "WT_coseq_clusters")
+#WTCL <- read.table("Input/WT_coseq.clusters_new.txt", header = T, sep = "\t")
+# Purpose: Load the co-seq cluster data (`WTCL`) from a text file that was generated in the previous step. This file contains the gene expression profiles and their associated clusters.
+
+#WTCL <- exprofiles
+# Note: An alternative way to load the co-seq data is commented out, which would load directly from `exprofiles` instead of a file.
+
+## sort clusters by expression (up->down)
+#WTCL <- clustersort(WTCL, deseq_WT)
+# Purpose: Sort the clusters in `WTCL` by their expression profiles, from highest to lowest, using a custom `clustersort` function. This ordering helps in visualizing the data in a more interpretable manner.
+#write.csv(WTCL, "Output/Tables/GeneClusters_Col0.csv", row.names = TRUE)
+
+#WTGO <- GOanalysis(WTCL, deseq_WT, dotplot = F)
+# Export the GO enrichment results for each cluster to a RDS file
+#saveRDS(WTGO, file = "Output/Tables/WTGO.rds")
+#Import WTGO from RDS file
+#WTGO <- readRDS("Input/WTGO.rds")
+WTGO <- read.xlsx("Input/Dataset6.xlsx", sheet = "GO_Col0", rowNames = TRUE)
+# Purpose: Perform Gene Ontology (GO) analysis on the sorted clusters using a custom `GOanalysis` function. The analysis identifies enriched GO terms for each cluster without generating dot plots (`dotplot = F`).
+#write.csv(WTGO[1], "Output/Tables/GO_Col0.csv", row.names = TRUE)
+#WTGO_clusters <- WTGO[[1]]
+WTGO_clusters <- read.xlsx("Input/Dataset6.xlsx", sheet = "GO_Col0", rowNames = TRUE)
+# Install the biomaRt package if it's not already installed
+#install.packages("biomaRt")
+
+# Load the biomaRt library
+library(biomaRt)
+
+# Connect to the Ensembl Plants BioMart database for Arabidopsis thaliana
+mart <- useMart(biomart = "plants_mart", dataset = "athaliana_eg_gene", host = "https://plants.ensembl.org")
+
+# Specify the attributes you want to retrieve: GeneID, Gene Name, and Description
+attributes <- c("ensembl_gene_id", "external_gene_name", "description")
+
+# Extract the unique GeneIDs from your WTGO_clusters dataframe
+gene_ids <- unique(WTGO_clusters$geneID)
+
+# Query the Ensembl Plants database to get the gene name and description for the gene IDs
+gene_annotations <- biomaRt::getBM(attributes = attributes,
+                          filters = "ensembl_gene_id", 
+                          values = gene_ids, 
+                          mart = mart)
+
+# Merge WTGO_clusters with the gene_annotations data frame
+WTGO_clusters_annotated <- merge(WTGO_clusters, gene_annotations, 
+                                 by.x = "geneID", by.y = "ensembl_gene_id", 
+                                 all.x = TRUE)
+
+# Convert rownames of filtered_deseq to a column for merging
+df_WT_sig$geneID <- rownames(df_WT_sig)
+
+# Select only the columns we want to merge (log2FoldChange and padj, along with geneID)
+filtered_deseq_subset <- df_WT_sig[, c("geneID", "log2FoldChange", "padj")]
+
+# Merge filtered_deseq with WTGO_clusters_annotated by the geneID column
+WTGO_clusters_annotated <- merge(WTGO_clusters_annotated, filtered_deseq_subset, 
+                                 by = "geneID", all.x = TRUE)
+
+# Add a new column "significant" based on the specified conditions
+WTGO_clusters_annotated$significant <- with(WTGO_clusters_annotated, 
+                                            log2FoldChange > 1 | log2FoldChange < -1 & padj < 0.05)
+
+# View the resulting data frame with the added columns
+#head(WTGO_clusters_annotated)
+kable(WTGO_clusters_annotated[1:3, 1:3],caption = "Annotated GO clusters in WT")
+
+#write.csv(WTGO_clusters_annotated, "Output/Tables/GO_Col0_annotated.csv", row.names = TRUE)
+
+#write.table(data.frame(WTGO[[2]]@compareClusterResult), "output/WT_GOenrichment_new.txt",row.names = F, col.names = T, quote = F, sep = "\t")
+# Purpose: (Commented out) Save the GO enrichment results for each cluster to a text file for further analysis or review.
+
+#write.table(data.frame(WTGO[[1]]), "/WT_GOenrichment_clusters.txt",row.names = F, col.names = T, quote = F, sep = "\t")
+# Purpose: Save the summarized GO enrichment results for each cluster to a text file. These results can later be used to annotate the heatmap or for other downstream analyses.
+
+# Open PDF device
+#pdf("WT_coseq.annotated.heatmap_new.pdf", width = 15, height = 8)
+# Purpose: Open a PDF device for plotting, specifying the file path and dimensions (width and height). This allows the annotated heatmap to be saved as a PDF.
+
+## make annotated heatmap
+#heatmap <- clusterheatmap(WTCL, deseq_WT, WTGO, GOnumber = 5, cluster_order = T)
+# Purpose: Generate an annotated heatmap using a custom `clusterheatmap` function. The heatmap displays the expression profiles of the clusters along with GO annotations. The top 5 GO terms for each cluster are included, and clusters are ordered (`cluster_order = T`).
+
+#Close PDF device
+#dev.off()
+# Purpose: Close the PDF device, finalizing the PDF file that contains the annotated heatmap.
+#print(heatmap)
+#png("heat_maps.png", height = 1000, width= 1500)
+# Purpose: (Commented out) Option to save the heatmap as a PNG image instead of a PDF, with specified dimensions.
+
+# #save as pdf
+#pdf("/Users/Henry/Desktop/Desktop - pseudomonas/Data/2022_09_23_GWAS_mutant_screening_E2/RNA_seq/RNASeq/02_Stats/Figs/WT_coseq.annotated.heatmap_new.pdf", onefile = T, useDingbats = F, height=10, width=8)
+# clusterheatmap(WTCL, deseq_WT, WTGO, GOnumber=5, cluster_order = F)
+# dev.off()
+# Purpose: (Commented out) Another approach to save the heatmap as a PDF, with slightly different settings such as `onefile = T` and `useDingbats = F`. This section seems redundant with the previous PDF saving step, hence it’s commented out.
+```
+
+-   **Purpose**: Generate an annotated heatmap of the co-expression clusters for the WT genotype, displaying the expression profiles of the clusters along with Gene Ontology (GO) annotations. The heatmap is saved as a PDF file for further analysis or visualization.
+
+## Function to create the cluster heatmap
+
+```{r}
+#| label: clusterheatmap function3
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Supports: Extended Data Fig. 9e
+#   Cluster heatmap function
+# ------------------------------------------------------------
+clusterheatmap3 <- function(CL, deseq, GOdf, GOnumber, cluster_order) {
+  # Load required libraries
+  require(tidyr)
+  require(viridis)
+  require(ComplexHeatmap)
+  require(org.At.tair.db)
+  require(clusterProfiler)
+  require(ggsci)
+  require(gridExtra)
+  require(data.table)
+  require(dplyr)
+  
+  # Check and load simplifyEnrichment for word_cloud_grob
+  if (!requireNamespace("simplifyEnrichment", quietly = TRUE)) {
+    stop("The 'simplifyEnrichment' package is required for word_cloud_grob. Please install it using install.packages('simplifyEnrichment').")
+  }
+  require(simplifyEnrichment)
+
+  # Process the input dataframe CL
+  x <- CL[order(CL$Cluster), ]
+  x <- filter(x, Cluster %in% base::unique(GOdf$Cluster))
+  mat <- pivot_wider(x, names_from = Sample, values_from = profile, id_cols = gene)
+
+  # Make matrix
+  mat$gene <- factor(mat$gene, levels(as.factor(x$gene)), ordered = TRUE)
+  mat <- mat %>% tibble::column_to_rownames("gene")
+  mat <- as.matrix(mat)
+
+  # Crop outliers
+  max <- quantile(mat, 0.99)
+  idx <- mat > max
+  mat[idx] <- max
+
+  min <- quantile(mat, 0.01)
+  idx <- mat < min
+  mat[idx] <- min
+
+  ### Make matrix for LFC 
+  LFC <- deseq %>% 
+    tibble::rownames_to_column("gene") %>% 
+    dplyr::select(gene, log2FoldChange) %>% 
+    dplyr::filter(gene %in% c(row.names(mat)))
+
+  LFC$Cluster <- x$Cluster[match(LFC$gene, x$gene)]
+  LFC <- LFC[order(LFC$Cluster), ]
+
+  clus <- sort(LFC$Cluster, decreasing = FALSE) ## cluster vector
+
+  ### Make matrix for padj value
+  padj <- deseq %>% 
+    tibble::rownames_to_column("gene") %>% 
+    dplyr::select(gene, padj) %>% 
+    dplyr::filter(gene %in% c(row.names(mat)))
+
+  padj$Cluster <- x$Cluster[match(padj$gene, x$gene)]
+  padj <- padj[order(padj$Cluster), ]
+
+  ## Make heatmap
+  conditioning <- ifelse(grepl("m[0-9]", base::colnames(mat)), "minus", "plus")
+  ha <- HeatmapAnnotation(
+    df = data.frame(conditioning = conditioning),
+    col = list(conditioning = c("plus" = "gold2", "minus" = "seagreen")),
+    show_annotation_name = FALSE,
+    annotation_legend_param = list(title_gp = gpar(fontsize = 8, fontface = 2), labels_gp = gpar(fontsize = 8), conditioning = list(nrow = 1)),
+    simple_anno_size = unit(3, "mm")
+  )
+
+  if (cluster_order) {
+    column_dend <- as.dendrogram(hclust(dist(t(mat))))
+  } else {
+    column_dend <- rev(as.dendrogram(hclust(dist(t(mat)))))
+  }
+
+  heatmap <- Heatmap(
+    mat,
+    name = "expression\nprofile",
+    cluster_rows = FALSE,
+    cluster_columns = column_dend,
+    show_row_names = FALSE,
+    split = LFC$Cluster,
+    col = rev(rocket(256)),
+    bottom_annotation = ha,
+    column_names_gp = grid::gpar(fontsize = 8),
+    row_names_gp = grid::gpar(fontsize = 8),
+    row_title_gp = gpar(fontsize = 8),
+    width = unit(5, "cm"),
+    heatmap_legend_param = list(title_gp = gpar(fontsize = 8, fontface = 2), 
+                                labels_gp = gpar(fontsize = 8), direction = "horizontal")
+  ) +
+    Heatmap(
+      LFC$log2FoldChange,
+      name = "log2FoldChange",
+      width = unit(6, "mm"),
+      column_names_gp = gpar(fontsize = 8),
+      heatmap_legend_param = list(title_gp = gpar(fontsize = 8, fontface = 2),
+                                  labels_gp = gpar(fontsize = 8), 
+                                  direction = "horizontal")
+    ) +
+    Heatmap(
+      padj$padj,
+      name = "p.adjust",
+      width = unit(6, "mm"),
+      column_names_gp = gpar(fontsize = 8),
+      col = cividis(256),
+      heatmap_legend_param = list(title_gp = gpar(fontsize = 8, fontface = 2),
+                                  labels_gp = gpar(fontsize = 8), 
+                                  direction = "horizontal")
+    )
+
+  ########## Annotations ###########
+  ## Make heatmap annotations
+  GO <- GOdf[!base::duplicated(GOdf[, c("Cluster", "ID", "geneID", "p.adjust")]), ] %>%
+    dplyr::select(c(Cluster, ID, Description, p.adjust)) %>%
+    base::unique() %>%
+    dplyr::select(!ID)
+
+  ## Select the first GOnumber GO terms with the lowest p.adjust for each cluster
+  df <- setDT(GO)[order(p.adjust), head(.SD, GOnumber), by = Cluster] %>%
+    dplyr::mutate(
+      freq = -log10(p.adjust),
+      Description = gsub("biosyn. process", "biosynthesis", Description),
+      Description = gsub("metabolic process", "metabolism", Description)
+    ) %>%
+    dplyr::rename(words = Description) %>%
+    dplyr::select(!p.adjust) %>%
+    dplyr::mutate(words = paste(words, "\t\t", sep = "")) %>%
+    base::unique()
+
+  ## Split df into list by Cluster
+  d <- df %>% group_split(Cluster)
+  d <- lapply(d, function(x) {
+    dplyr::select(x, -Cluster)
+  })
+  names(d) <- unique(GO$Cluster)
+  d <- lapply(d, function(x) {
+    data.frame(x)
+  })
+
+  ## Defining the alignment variable per cluster
+  align_to <- split(seq_len(nrow(mat)), clus)
+  align_to <- align_to[names(align_to) %in% names(d)]
+
+  ## Specify font size range for annotations
+  fontsize_range <- c(8, 8)
+  gbl <- lapply(names(align_to), function(nm) {
+    kw <- d[[nm]][, 1]
+    freq <- d[[nm]][, 2]
+    # Inline scaling logic for fontsize
+    fontsize <- (freq - min(1, freq)) / (max(10, freq) - min(1, freq)) * (fontsize_range[2] - fontsize_range[1]) + fontsize_range[1]
+    fontsize <- pmin(pmax(fontsize, fontsize_range[1]), fontsize_range[2])
+    
+    word_cloud_grob(text = kw, fontsize = fontsize, 
+                    col = c("#561643", "#6C0E23", "#8F5C38", "#7180AC", "grey30"),
+                    word_space = 4)
+  })
+  names(gbl) <- names(align_to)
+
+  ## Specify annotation margins (height + width)
+  margin <- unit(8, "pt")
+  gbl_h <- lapply(gbl, function(x) convertHeight(grobHeight(x), "cm") + margin)
+  gbl_h <- do.call(unit.c, gbl_h)
+
+  gbl_w <- lapply(gbl, function(x) convertWidth(grobWidth(x), "cm"))
+  gbl_w <- do.call(unit.c, gbl_w)
+  gbl_w <- max(gbl_w) + margin
+
+  ## Function for annotation panels
+  panel_fun <- function(index, nm) {
+    grid.rect(gp = gpar(fill = "#EEF1EF", col = NA))
+    grid.lines(c(0, 1, 1, 0), c(0, 0, 1, 1), gp = gpar(col = "#AAAAAA"), 
+               default.units = "npc")
+    gb <- gbl[[nm]]
+    pushViewport(viewport(
+      x = margin / 2, y = margin / 2,
+      width = grobWidth(gb), height = grobHeight(gb),
+      just = c("left", "bottom")
+    ))
+    grid.draw(gb)
+    popViewport()
+  }
+
+  # Final annotated heatmap
+  annotatedhm <- heatmap + rowAnnotation(
+    d = anno_link(
+      align_to = align_to,
+      which = "row",
+      panel_fun = panel_fun,
+      size = gbl_h,
+      gap = unit(2, "mm"),
+      width = gbl_w + unit(5, "mm"),
+      link_gp = gpar(fill = "#EEF1EF", col = "#AAAAAA"),
+      internal_line = FALSE
+    )
+  )
+
+  # Draw the heatmap
+  draw(annotatedhm, heatmap_legend_side = "bottom", annotation_legend_side = "bottom", merge_legend = TRUE)
+}
+```
+
+```{r, fig.height=8, fig.width=7 ,echo=TRUE, message=FALSE, warning=FALSE}
+#| fig-cap: |
+#|   Extended Data Figure 9e | Root transcriptome of WT and mmf1-2 mutants grown on the BXminus and
+#|   BXplus soils. (e) Heatmap of co-expressed gene clusters as identified with coseq (Benjamini-Hochberg, adjusted P < 0.01) from
+#|   WT roots grown on BXminus (green) or BXplus (yellow) soils. The genes entering the clustering
+#|   are those differentially expressed between the two soils in WT roots by DESeq2 (statistics as
+#|   above). Colours indicate the expression profiles in terms of normalized gene counts for each
+#|   gene. The log2 fold change (direction of regulation) and adjusted P values  for each gene
+#|   inferred from DESeq2 are shown on the right. Cluster labels indicate the top five enriched GO
+#|   biological process terms within each cluster, from a one-sided hypergeometric
+#|   over-representation test, Benjamini--Hochberg adjusted, adjusted P < 0.01 and q < 0.01. GO text
+#|   colour is for better readability only. Full tables of all enriched GO terms in each cluster are
+#|   provided in Dataset 6.
+# Open PDF device
+pdf("WT_coseq.annotated.heatmap2_new.pdf", width = 14, height = 7)
+# Purpose: Open a PDF device for plotting, specifying the file path and dimensions (width and height). This allows the annotated heatmap to be saved as a PDF.
+
+## make annotated heatmap
+heatmap2 <- clusterheatmap3(WTCL, df_WT, WTGO, GOnumber = 5, cluster_order = T)
+# Purpose: Generate an annotated heatmap using a custom `clusterheatmap` function. The heatmap displays the expression profiles of the clusters along with GO annotations. The top 5 GO terms for each cluster are included, and clusters are ordered (`cluster_order = T`).
+
+#Close PDF device
+dev.off()
+# Purpose: Close the PDF device, finalizing the PDF file that contains the annotated heatmap.
+print(heatmap2)
+```
+
+## GO Enrichment Data Preparation and Filtering
+
+```{r}
+#| label: GO enrich data prep
+#| eval: false
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Supports: Fig. 6e
+#   GO enrichment data preparation and term ordering
+# ------------------------------------------------------------
+#new_labels <- c("activated" = "Upregulated", "suppressed" = "Downregulated")
+# Purpose: (Commented out) Optionally, define new labels for terms used in the analysis, like "Upregulated" and "Downregulated".
+
+#Subset WTGO for plotting and extract Cluster, Description, Count, p.adjust, GeneRatio
+WTGO_filt <- data.frame(WTGO[[2]]@compareClusterResult) %>%
+  dplyr::select(Cluster, Description, Count, ID, p.adjust, GeneRatio) %>%
+  dplyr::mutate(Cluster = factor(Cluster, levels = unique(Cluster), ordered = T))
+# Purpose: Create a filtered data frame (`WTGO_filt`) by selecting relevant columns (Cluster, Description, Count, ID, p.adjust, GeneRatio) from the GO enrichment results. The `Cluster` column is converted into an ordered factor.
+
+#Convert GeneRatio using parse_ratio
+WTGO_filt$GeneRatio <- parse_ratio(WTGO_filt$GeneRatio)
+# Purpose: Convert the `GeneRatio` column to a numeric ratio using the `parse_ratio` function. This step is crucial for accurately representing the ratio in the subsequent plots.
+
+## select the first 5 GO terms with the lowest p.adjust for each cluster
+## I converted the p.adjust to -log10(p.adjust) to get positive values - in case the GO terms should be displayed with different font sizes (this is later defined with the variable gbl)
+## I also simplified GO descriptions (e.g. biosyn. process = biosynthesis)
+
+WTGO_filt_top5 <- setDT(WTGO_filt)[, .SD[which.minn(p.adjust, 5)], by=Cluster] %>%
+  dplyr::mutate(freq=-log10(p.adjust), Description = gsub("biosynthetic process", "bios.",  Description), Description = gsub("biological process", "biol. process",  Description), Description = gsub("oxygen levels", "oxygen",  Description), Description = gsub("regulation", "reg.",  Description),  Description = gsub("metabolic process", "metabol.", Description)) %>%
+  base::unique()
+# Purpose: For each cluster, select the top 5 GO terms with the lowest p.adjust values. Convert p.adjust to -log10(p.adjust) to facilitate plotting and simplify GO term descriptions for better readability. Ensure uniqueness of entries.
+
+#Add a column called "Expression" to WTGO_filt_top5 that adds the following text: "Upregulated" for Cluster 2, 3 and 4, and "Downregulated" for Cluster 6, 7 and 8
+WTGO_filt_top5$Expression <- ifelse(WTGO_filt_top5$Cluster %in% c(1, 2, 3, 4), "Upregulated", "Downregulated")
+# Purpose: Add a new column `Expression` to `WTGO_filt_top5`, categorizing clusters as "Upregulated" or "Downregulated" based on their cluster numbers.
+
+WTGO_filt_top5$Cluster_number <- paste("Cluster", WTGO_filt_top5$Cluster)
+# Purpose: Create a new column `Cluster_number` by concatenating the string "Cluster" with the cluster number. This column is used for labeling in the plot.
+```
+
+-   **Purpose**: Prepare the GO enrichment data for plotting by filtering the results, selecting the top 5 GO terms with the lowest p.adjust values for each cluster, converting p.adjust to -log10(p.adjust), simplifying GO term descriptions, and adding an `Expression` column to categorize clusters as "Upregulated" or "Downregulated." The `Cluster_number` column is also created for labeling in the plot.
+
+Sorting and Ordering Data
+
+```{r}
+#| label: Ordering GO terms
+#| eval: false
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Supports: Fig. 6e
+#   GO term ordering
+# ------------------------------------------------------------
+# Ensure Cluster is numeric if it's not
+WTGO_filt_top5$Cluster <- as.numeric(WTGO_filt_top5$Cluster)
+# Purpose: Convert the `Cluster` column to numeric to ensure proper sorting and ordering in plots.
+
+# Sort by GeneRatio and then Description alphabetically
+WTGO_filt_top5 <- WTGO_filt_top5 %>%
+  arrange(Cluster, Description)
+# Purpose: Sort `WTGO_filt_top5` by `Cluster` first and then alphabetically by `Description` for better organization in the plot.
+
+# Convert Description to a factor with levels ordered by GeneRatio and Description
+WTGO_filt_top5$Description <- factor(WTGO_filt_top5$Description, levels = rev(unique(WTGO_filt_top5$Description[order(WTGO_filt_top5$Cluster)])))
+# Purpose: Convert `Description` to a factor with levels ordered by `GeneRatio` and `Description`, ensuring consistent and meaningful ordering in the plot.
+write.csv(WTGO_filt_top5, "Output/Tables/GO_Col0_top5.csv", row.names = TRUE)
+```
+
+-   **Purpose**: Re-sort the data frame by `Cluster` and `Description` to maintain consistency. Reorder the `Description` factor levels to match the order determined by `GeneRatio` and `Description`.
+
+## Plotting GO Enrichment Results
+
+```{r}
+#| label: Import GO terms
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+# Import file with the Top 5 GO terms for each cluster in Col-0
+WTGO_filt_top5 <- read.xlsx("Input/Dataset6.xlsx", sheet = "GO_Col0_top5", rowNames = TRUE)
+WTGO_filt_top5$Description <- factor(WTGO_filt_top5$Description, levels = rev(unique(WTGO_filt_top5$Description[order(WTGO_filt_top5$Cluster)])))
+```
+
+```{r}
+#| label: Enrichment dotplot
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-height: 6
+#| paged-print: false
+#| fig-cap: |
+#|   Figure 6e | Plants lacking MMF1 fail to mount a transcriptional response to a BX microbiome. (e) Hierarchical clustering and gene ontology (GO) term
+#|   enrichment analysis of the DEGs in roots of wild-type plants from (c). The top five most
+#|   significantly enriched GO terms (Benjamini--Hochberg (BH), P < 0.01; one-sided hypergeometric
+#|   over-representation test, see Methods) for each cluster are shown. Point size indicates the
+#|   ratio of genes in a cluster mapping to the respective GO term, and point colour reflects the
+#|   BH-adjusted P value. Shading indicates clusters upregulated in plants grown on the BXplus
+#|   microbiome (yellow) or upregulated in plants grown on BXminus microbiome (green). No
+#|   significantly enriched GO terms were found for clusters 1 and 9. Bios., biosynthesis; metabol.,
+#|   metabolism; biol., biological; reg., regulation.
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Produces: Fig. 6e
+#   GO enrichment dot plot of WT co-expression clusters
+#   -> Output/Figures/GO_enrich_WT_Facet_ggplot.pdf
+# ------------------------------------------------------------
+# Plot GO enrichment results
+ggplot(WTGO_filt_top5, aes(x = Cluster_number, y = Description, size = GeneRatio),
+       split=".sign") +
+  geom_rect(aes(xmin = 0.8, xmax = 4.2, ymin = -Inf, ymax = Inf), fill = "seagreen",
+            alpha = 0.01) +
+  geom_rect(aes(xmin = 4.7, xmax = 7.2, ymin = -Inf, ymax = Inf), fill = "gold2",
+            alpha = 0.01) +
+  geom_point(aes(fill = p.adjust, shape = setType), shape = 21, alpha = 1) + # Adjust alpha for slight transparency
+  theme_minimal(base_size = 12) +  # Cleaner theme, appropriate base text size
+  scale_fill_continuous(low = "red3", high = "blue3") +  # Color gradient for fill
+  labs(x = "Cluster",  y = NA, fill = "p. adjust", size = "Gene ratio") +  # Clear labels
+  theme(
+    legend.position = "right",  # Adjust legend position if necessary
+    axis.text.x = element_text(vjust = 1, size = 8),  # Improve X axis labels readability
+    axis.title.x = element_text(margin = margin(t = 8), size =8),  # Adjust title spacing
+    axis.title.y = element_blank(),
+    panel.grid.major = element_line(color = "gray90"),  # Lighter grid lines
+    panel.grid.minor = element_blank(),  # Remove minor grid lines
+    strip.background = element_blank(),  # Clean up facet strip background if necessary
+    strip.text.x = element_text(size = 8),
+    axis.text.y = element_text(size = 10),
+    legend.text = element_text(size = 6),
+    legend.title = element_text(size = 7)
+  )
+ggsave("GO_enrich_WT_Facet_ggplot.pdf", width = 25, height = 15, units = "cm")
+# Purpose: Generate a plot of the GO enrichment results using `ggplot2`, displaying clusters along the x-axis and GO terms along the y-axis. The size of points represents `GeneRatio`, and color represents `p.adjust`. The plot is saved as a PDF.
+```
+
+-   **Purpose**: Plot the GO enrichment results for the WT genotype, displaying clusters along the x-axis and GO terms along the y-axis. The size of points represents `GeneRatio`, and color represents `p.adjust`. The plot is saved as a PDF for further analysis or visualization.
+
+```{r}
+#| label: Cluster profiler setup
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# Install if needed
+if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
+BiocManager::install(c("clusterProfiler", "org.At.tair.db", "enrichplot"))
+
+# Load required packages
+library(clusterProfiler)
+library(org.At.tair.db)
+library(enrichplot)
+library(ggplot2)
+```
+
+```{r}
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# Clean and rank gene list
+gene_list <- df_WT$log2FoldChange
+names(gene_list) <- rownames(df_WT)
+gene_list <- sort(na.omit(gene_list), decreasing = TRUE)
+```
+
+```{r}
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+gsea_go <- gseGO(
+  geneList     = gene_list,
+  OrgDb        = org.At.tair.db,
+  ont          = "BP",         # BP: Biological Process
+  keyType      = "TAIR",       # for Arabidopsis AGI codes
+  nPerm        = 1000,
+  minGSSize    = 5,
+  maxGSSize    = 1000,
+  pvalueCutoff = 0.5,
+  verbose      = TRUE
+)
+```
+
+```{r}
+#| label: GSEA_GO
+#| eval: false
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# Dotplot of top GO terms
+GSEA_GO <- dotplot(gsea_go, showCategory = 10, title = "GSEA - GO Biological Processes")
+GSEA_GO
+ggsave("GSEA_GO_WT.pdf", width = 18, height = 15, units = "cm")
+# Enrichment score curve for one pathway (replace with actual ID)
+gseaplot2(gsea_go, geneSetID = gsea_go$ID[1], title = gsea_go$Description[1])
+```
+
+```{r}
+#| eval: false
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+# ---------------------------
+# 1. Load required libraries
+# ---------------------------
+if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
+
+packages <- c("fgsea", "org.At.tair.db", "AnnotationDbi", "dplyr", "ggplot2")
+lapply(packages, function(pkg) {
+  if (!requireNamespace(pkg, quietly = TRUE)) BiocManager::install(pkg)
+  library(pkg, character.only = TRUE)
+})
+
+# ---------------------------
+# 2. Prepare ranked gene list
+# ---------------------------
+
+# Assumes df_WT exists with TAIR IDs as rownames and log2FoldChange column
+gene_list <- df_WT$log2FoldChange
+names(gene_list) <- rownames(df_WT)
+gene_list <- sort(na.omit(gene_list), decreasing = TRUE)
+
+# ---------------------------
+# 3. Build GO Biological Process gene sets
+# ---------------------------
+
+# Extract GO annotations from org.At.tair.db
+go_df <- AnnotationDbi::select(
+  org.At.tair.db,
+  keys = keys(org.At.tair.db, keytype = "TAIR"),
+  columns = c("GO", "ONTOLOGY"),
+  keytype = "TAIR"
+)
+
+# Filter for Biological Process (BP) only
+go_bp <- go_df %>%
+  filter(ONTOLOGY == "BP", !is.na(GO)) %>%
+  distinct(TAIR, GO)
+
+# Create list: GO term -> vector of TAIR IDs
+go_sets <- split(go_bp$TAIR, go_bp$GO)
+
+# Filter gene sets to keep only those with genes in gene_list
+go_sets <- lapply(go_sets, function(genes) intersect(genes, names(gene_list)))
+go_sets <- go_sets[lengths(go_sets) >= 10 & lengths(go_sets) <= 500]
+
+# ---------------------------
+# 4. Run fgsea
+# ---------------------------
+
+fgseaRes <- fgsea(
+  pathways = go_sets,
+  stats = gene_list,
+  nperm = 10000,
+  minSize = 10,
+  maxSize = 500
+)
+
+fgseaRes <- fgseaRes[order(fgseaRes$padj), ]
+
+# ---------------------------
+# 5. Save and inspect results
+# ---------------------------
+
+write.csv(
+  fgseaRes %>% dplyr::select(-leadingEdge),
+  "fgsea_GO_BP_results_WT.csv",
+  row.names = FALSE
+)
+head(fgseaRes[, c("pathway", "NES", "pval", "padj")])
+
+# ---------------------------
+# 6. Plot top enriched pathway
+# ---------------------------
+
+if (nrow(fgseaRes) > 0) {
+  top_pathway <- fgseaRes$pathway[1]
+  plotEnrichment(go_sets[[top_pathway]], gene_list) +
+    ggtitle(paste("Top Enriched GO Term:", top_pathway)) +
+    theme_minimal(base_size = 10)
+  
+  ggsave("fgsea_top_GO_term_WT.pdf", width = 6, height = 4)
+} else {
+  message("No significantly enriched GO terms found.")
+}
+```
+
+```{r}
+#| eval: false
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+library(dplyr)
+
+# Keep only significantly enriched terms (adjusted p-value < 0.05)
+fgsea_sig <- fgseaRes %>% 
+  filter(padj < 0.05) %>%
+  arrange(desc(NES))  # or use abs(NES) for magnitude sort
+
+# Optionally, limit to top N terms
+top_n <- 30
+fgsea_top <- head(fgsea_sig, top_n)
+```
+
+```{r}
+#| eval: false
+#| message: false
+#| warning: false
+#| include: false
+#| paged-print: false
+if (!requireNamespace("GO.db", quietly = TRUE)) BiocManager::install("GO.db")
+library(GO.db)
+
+# Map GO IDs to term names (descriptions)
+term_names <- Term(GOTERM[fgseaRes$pathway])
+
+# Add to the results
+fgseaRes$description <- unname(term_names[fgseaRes$pathway])
+
+library(dplyr)
+
+fgsea_sig <- fgseaRes %>%
+  filter(padj < 0.05, !is.na(description)) %>%
+  arrange(desc(NES))
+
+# Optional: Top N terms
+fgsea_top <- head(fgsea_sig, 30)
+
+library(ggplot2)
+
+ggplot(fgsea_top, aes(x = reorder(description, NES), y = NES, fill = NES)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  theme_minimal(base_size = 11) +
+  labs(
+    title = "Top Enriched GO Terms (WT)",
+    x = "GO Term",
+    y = "Normalized Enrichment Score (NES)"
+  ) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
+
+ggplot(fgsea_top, aes(x = NES, y = reorder(description, NES), size = -log10(padj), color = NES)) +
+  geom_point() +
+  theme_minimal(base_size = 11) +
+  labs(
+    title = "Top Enriched GO Terms (WT)",
+    x = "Normalized Enrichment Score (NES)",
+    y = "GO Term",
+    size = "-log10(padj)"
+  ) +
+  scale_color_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
+```
+
+## Session Information
+
+```{r}
+#| label: Session Info GO
+#| echo: false
+#| message: false
+#| warning: false
+#| paged-print: false
+sessionInfo()
+```
+
+-   **Purpose**: Print the session information, including details about the R version, loaded packages, and the system environment. This is useful for reproducibility, as it documents the computational environment in which the analysis was performed.
+
+# Expression of genes neighbouring the T-DNA insertion {#sec-tdna}
+
+Section imported from the standalone report `MMF1_TDNA_neighbourhood.qmd`: a local positional test of the *mmf1* T-DNA, asking whether the genotype effect could be collateral damage at the insertion site rather than loss of *MMF1*. Gene coordinates come from Ensembl Plants (TAIR10 / Araport11) and are cached under `Input/cache/`, so the section renders offline after the first run.
+
+```{r}
+#| label: tdna-setup
+#| echo: false
+#| message: false
+#| warning: false
+#| cache: false
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Supports: Extended Data Fig. 4e
+#   Expression of genes neighbouring the T-DNA insertion
+#   -> Output/Figures/MMF1_TDNA_neighbourhood_panel_a.pdf
+# ------------------------------------------------------------
+
+suppressPackageStartupMessages({
+  library(DESeq2); library(dplyr); library(tidyr); library(readr)
+  library(stringr); library(jsonlite); library(ggplot2); library(ggrepel)
+  library(patchwork); library(knitr)
+})
+
+## dplyr/tidyr verbs are masked in this document: clusterProfiler, AnnotationDbi
+## and the Bioconductor stack are attached by earlier chunks, after dplyr, so a
+## bare select() dispatches to the S4 generic. Bind the tidyverse versions for
+## this section.
+select <- dplyr::select; filter <- dplyr::filter; rename <- dplyr::rename
+count  <- dplyr::count;  slice_min <- dplyr::slice_min; desc <- dplyr::desc
+first  <- dplyr::first;  last <- dplyr::last; collapse <- dplyr::collapse
+
+## ---- house style -----------------------------------------------------------
+COL_MMF1 <- "#B2182B"   # the T-DNA target
+COL_WT   <- "#2166AC"   # wild type
+COL_BG   <- "grey65"
+base_sz  <- 8
+
+theme_set(theme_minimal(base_size = base_sz) +
+  theme(panel.grid.minor = element_blank(),
+        plot.title    = element_text(face = "bold", size = base_sz + 1),
+        plot.subtitle = element_text(colour = "grey35", size = base_sz - 1),
+        axis.text     = element_text(size = base_sz - 2),
+        legend.title  = element_blank(),
+        legend.text   = element_text(size = base_sz - 1),
+        legend.position = "bottom",
+        legend.key.size = unit(7, "pt"),
+        legend.margin = margin(t = -4)))
+
+kt <- function(x, ...) kable(x, booktabs = TRUE, linesep = "", ...)
+fmt_p <- function(p) ifelse(is.na(p), "not testable",
+                     ifelse(p < 1e-10, sprintf("%.0e", p), signif(p, 2)))
+
+IN    <- "Input"
+MMF1  <- "AT3G44630"
+WIN   <- 20000           # analytical window, half-width in bp
+FETCH <- 30000           # coordinates pulled slightly wider than the window
+ALPHA <- 0.05
+
+cts <- as.matrix(read.table(file.path(IN, "ReadsPerGene_all.txt"),
+                            header = TRUE, row.names = 1, check.names = FALSE))
+meta <- read_csv(file.path(IN, "meta_data.csv"), show_col_types = FALSE) |>
+  mutate(genotype     = factor(genotype, levels = c("WT", "mmf1")),
+         conditioning = factor(conditioning, levels = c("minus", "plus")))
+stopifnot(identical(colnames(cts), meta$sample))
+
+meta |> count(genotype, conditioning, name = "libraries") |>
+  rename(`soil conditioning` = conditioning) |>
+  kt(caption = "Design of the in-house transcriptome.")
+
+CACHE <- file.path(IN, "cache/ensembl_window.json")
+ENS   <- "https://rest.ensembl.org"
+
+## re-fetch if the cache is absent or was built for a different span
+stale <- TRUE
+if (file.exists(CACHE)) {
+  W <- fromJSON(CACHE)
+  stale <- is.null(W$fetch) || W$fetch != FETCH
+}
+if (stale) {
+  dir.create(file.path(IN, "cache"), showWarnings = FALSE, recursive = TRUE)
+  gl <- fromJSON(sprintf("%s/lookup/id/%s?content-type=application/json",
+                         ENS, MMF1))
+  gr <- fromJSON(sprintf("%s/overlap/region/arabidopsis_thaliana/%s:%d-%d?feature=gene;content-type=application/json",
+                         ENS, gl$seq_region_name,
+                         gl$start - FETCH, gl$end + FETCH))
+  write_json(list(mmf1 = gl[c("seq_region_name", "start", "end", "strand")],
+                  fetch = FETCH, genes = gr),
+             CACHE, auto_unbox = TRUE, digits = NA)
+  W <- fromJSON(CACHE)
+}
+
+m    <- W$mmf1
+gtab <- as_tibble(W$genes)
+## the overlap endpoint returns the identifier as `gene_id` or `id` by release
+gtab$Gene <- if ("gene_id" %in% names(gtab)) gtab$gene_id else gtab$id
+if (!"description" %in% names(gtab)) gtab$description <- NA_character_
+
+gw <- gtab |>
+  select(Gene, chr = seq_region_name, start, end, strand, biotype,
+         desc = description) |>
+  mutate(desc = replace_na(desc, ""),
+         ## signed distance to the MMF1 locus; zero when the spans overlap
+         dist = case_when(end   < m$start ~ end - m$start,
+                          start > m$end   ~ start - m$end,
+                          TRUE            ~ 0L),
+         kb = dist / 1000) |>
+  filter(abs(dist) <= WIN) |>
+  arrange(start)
+stopifnot(MMF1 %in% gw$Gene)
+
+nearest_out <- gtab |>
+  mutate(dist = case_when(end < m$start ~ end - m$start,
+                          start > m$end ~ start - m$end, TRUE ~ 0L)) |>
+  filter(abs(dist) > WIN) |> slice_min(abs(dist), n = 1)
+
+dds <- DESeqDataSetFromMatrix(cts, as.data.frame(meta),
+                              design = ~ conditioning + genotype)
+dds <- dds[rowSums(counts(dds)) > 0, ]
+dds <- DESeq(dds, quiet = TRUE)
+res <- lfcShrink(dds, coef = "genotype_mmf1_vs_WT", type = "apeglm",
+                 quiet = TRUE) |>
+  as.data.frame() |> tibble::rownames_to_column("Gene") |>
+  select(Gene, baseMean, lfc = log2FoldChange, lfcSE, padj)
+
+nc <- counts(dds, normalized = TRUE)
+## same size factors applied to the unfiltered matrix, so that neighbours with
+## zero counts in every library still appear in the per-gene panel
+nc_all <- t(t(cts[, meta$sample]) / sizeFactors(dds))
+
+win <- gw |> left_join(res, by = "Gene") |>
+  mutate(expressed = !is.na(baseMean) & baseMean > 10,
+         de        = !is.na(padj) & padj < ALPHA,
+         is_mmf1   = Gene == MMF1,
+         ## two-sided 95% interval on the shrunken estimate
+         lo = lfc - 1.96 * lfcSE, hi = lfc + 1.96 * lfcSE,
+         bound = pmax(abs(lo), abs(hi)))
+
+n_de   <- sum(res$padj < ALPHA, na.rm = TRUE)
+n_test <- sum(!is.na(res$padj))
+bg_rate <- mean(res$padj[res$baseMean > 10] < ALPHA, na.rm = TRUE)
+mm     <- win |> filter(is_mmf1)
+```
+
+The window holds `r nrow(gw)` annotated genes including *MMF1* itself; `r format(n_test, big.mark = ",")` genes are testable transcriptome-wide and `r format(n_de, big.mark = ",")` of them differ between genotypes at FDR `r ALPHA`.
+
+```{r}
+#| label: fig-tdna
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-height: 3
+#| fig-width: 7.4
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Produces: Extended Data Fig. 4e
+#| fig-cap: |
+#|   Extended Data Figure 4e | Genetic characterization of mmf1 T-DNA insertion lines. (a) Genomic
+#|   location of the T-DNA insertion sites for mmf1-1 and mmf1-2 in the open reading frame of MMF1.
+#|   Exons and introns are shown in colour, and the T-DNA insertion position as triangles. (b)
+#|   Genotyping results of mmf1-1 (SALK_144159C) and mmf1-2 (SALK_002318C) by PCR to confirm the
+#|   presence of the T-DNA insertion. The gels represent genotyping of 6 mutant plants for the T-DNA
+#|   insertion allele (left, LBb1.3 and RP primers) and the wild-type allele (right, LP and RP
+#|   primers). Gels were cropped; size-marker positions are shown (based on a 1kb DNA ladder), and
+#|   uncropped gels are provided in the Source Data. Genotyping was performed twice on independent
+#|   material with similar results. (c) Relative expression levels of MMF1 determined by qRT-PCR in
+#|   wild-type Col-0 and the two MMF1 mutant lines. Bars show the mean; points are individual
+#|   biological replicates (n = 3 per line, RNA from a single plant). Lines were compared by one-way
+#|   ANOVA followed by two-sided Tukey’s HSD test, adjusted for multiple comparisons; lines sharing a
+#|   letter do not differ at P < 0.05. (d) Mapping of genomic long-reads from mmf1-2 onto Col-CEN
+#|   v1.2. Top panel shows the genomic coordinates on chromosome 3, middle panel shows the annotation
+#|   of the coding sequence of MMF1, bottom panel shows the aggregated pile-up of mapped reads of
+#|   mmf1-2, confirming the T-DNA insertion in the third exon. (e) Log2 fold change (mmf1-2 versus
+#|   wild type) for every annotated gene within 20 kb of MMF1, plotted at their distance from MMF1
+#|   and their 95% confidence intervals. The grey band shows the central 95% of fold changes across
+#|   the expressed transcriptome, representing the range expected in the absence of a local position
+#|   effect. MMF1, AT3G44620 and AT3G44635 lie within 1 kb of one another and are spaced out along
+#|   the x axis for legibility. Genes below the expression threshold carry no fold-change estimate
+#|   and are marked at zero. AT3G44635 is shown as a distinct category because it is annotated
+#|   antisense within the MMF1 transcript; its wide confidence interval reflects low raw read counts.
+#   Expression of genes neighbouring the T-DNA insertion
+#   -> Output/Figures/MMF1_TDNA_neighbourhood_panel_a.pdf
+# ------------------------------------------------------------
+
+#| fig-width: 7.4
+#| fig-height: 7.0
+bgq <- quantile(res$lfc[res$baseMean > 10], c(0.025, 0.975), na.rm = TRUE)
+
+## Colour used to flag the overlapping antisense gene; adjust to match the
+## rest of the manuscript's palette (alongside COL_MMF1, COL_WT, COL_BG).
+COL_OVERLAP <- "#D95F02"
+
+## ggrepel nudges labels stochastically; fix the seed so the panel is reproducible
+set.seed(1)
+
+## every window gene appears in panel (a); only genes DESeq2 could not estimate
+## at all are marked on the zero line instead of carrying a point estimate.
+## AT3G44635 is pulled out as its own category ("overlapping gene") rather
+## than being grouped with the flanking genes, since it lies antisense
+## within MMF1 rather than adjacent to it -- flanking and overlapping imply
+## different spatial relationships and should not share a label or colour.
+CLS <- c("MMF1 (T-DNA insertion site)",
+         "Flanking gene, differentially expressed (FDR < 0.05)",
+         "Flanking gene, no significant change",
+         "Below expression threshold",
+         "Overlapping gene (antisense within MMF1)")
+
+## MMF1, AT3G44620 (ends a few hundred bp upstream) and AT3G44635 (nested
+## inside MMF1, kb = 0) all fall within ~1 kb of the locus and therefore
+## overplot one another on a +-20 kb axis, rendering as a single thick bar
+## rather than three distinguishable genes. We give this small cluster a
+## fixed, symmetric horizontal nudge for display only; the underlying `kb`
+## (true distance, used in the neighbourhood table and text) is unchanged.
+CLUSTER_KB <- 1     # genes within this many kb of the locus are nudged
+NUDGE_KB   <- 0.4   # spacing applied within the nudged cluster
+
+wa <- win |>
+  mutate(class = factor(case_when(is_mmf1            ~ CLS[1],
+                                  Gene == "AT3G44635" ~ CLS[5],
+                                  is.na(lfc)          ~ CLS[4],
+                                  de                  ~ CLS[2],
+                                  TRUE                ~ CLS[3]), levels = CLS),
+         y = ifelse(is.na(lfc), 0, lfc)) |>
+  arrange(kb, desc(is_mmf1)) |>
+  group_by(near_locus = abs(kb) <= CLUSTER_KB) |>
+  mutate(kb_plot = if (near_locus[1])
+                     mean(kb) + NUDGE_KB * (row_number() - (n() + 1) / 2)
+                   else kb) |>
+  ungroup() |>
+  select(-near_locus)
+
+xlim <- c(-WIN/1000 - 2, WIN/1000 + 2)
+cluster_rows <- wa[abs(wa$kb) <= CLUSTER_KB, ]
+y_lab <- max(wa$y, na.rm = TRUE)
+
+pa <- ggplot(wa, aes(kb_plot, y)) +
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = bgq[1], ymax = bgq[2],
+           fill = "grey88") +
+  annotate("text", x = xlim[1] + 0.5, y = bgq[2], vjust = -0.6, hjust = 0,
+           label = "Central 95% of all expressed genes",
+           size = base_sz / .pt - 1, colour = "grey35") +
+  ## bracket flags that this local trio is spaced out for legibility and is
+  ## not to scale, so the reader does not mistake the offsets for distance
+  annotate("segment",
+           x = min(cluster_rows$kb_plot) - 0.3,
+           xend = max(cluster_rows$kb_plot) + 0.3,
+           y = y_lab * 1.08, yend = y_lab * 1.08,
+           colour = "grey45", linewidth = 0.3) +
+  annotate("text", x = mean(cluster_rows$kb_plot), y = y_lab * 1.14,
+           label = "<1 kb apart, spaced for legibility",
+           size = base_sz / .pt - 1.2, colour = "grey45") +
+  geom_hline(yintercept = 0, colour = "grey45", linewidth = 0.3) +
+  geom_vline(xintercept = 0, colour = COL_MMF1, linewidth = 0.3,
+             linetype = "22") +
+  geom_linerange(data = filter(wa, !is.na(lo)),
+                 aes(ymin = lo, ymax = hi, colour = class), linewidth = 0.45) +
+  geom_point(aes(colour = class, shape = class, size = class)) +
+  geom_text_repel(aes(label = Gene),
+                  colour = "black",
+                  size = base_sz / .pt - 0.4, fontface = "italic",
+                  min.segment.length = 0, segment.size = 0.25,
+                  segment.colour = "grey55", box.padding = 0.5,
+                  max.overlaps = Inf, show.legend = FALSE) +
+  scale_colour_manual(values = setNames(c(COL_MMF1, "grey25", COL_BG, "grey45", COL_OVERLAP),
+                                        CLS), drop = FALSE) +
+  scale_shape_manual(values = setNames(c(16, 16, 16, 4, 17), CLS), drop = FALSE) +
+  scale_size_manual(values = setNames(c(2.3, 1.9, 1.9, 1.7, 2.1), CLS),
+                    guide = "none") +
+  scale_x_continuous(limits = xlim, breaks = seq(-WIN/1000, WIN/1000, 5)) +
+  coord_cartesian(clip = "off") +
+  guides(
+    colour = guide_legend(
+      nrow = 2,
+      override.aes = list(
+        shape = c(16, 16, 16, 4, 17),
+        size  = c(2.3, 1.9, 1.9, 1.7, 2.1)
+      )
+    ),
+    shape = "none"
+  ) +
+  labs(title = "Flanking genes are unaffected by the T-DNA insertion at MMF1",
+       x = "Distance from MMF1 (kb)",
+       y = expression(Log[2]*" fold change ("*italic(mmf1)*" vs WT)"))
+
+lab <- win |>
+  mutate(pos = case_when(is_mmf1 ~ "MMF1",
+                         kb == 0 ~ "overlapping",
+                         TRUE    ~ sprintf("%+.1f kb", kb)),
+         lbl = paste0(Gene, "\n", pos)) |>
+  select(Gene, lbl)
+
+long <- as_tibble(nc_all[win$Gene, ], rownames = "Gene") |>
+  pivot_longer(-Gene, names_to = "sample", values_to = "n") |>
+  left_join(meta, by = "sample") |> left_join(lab, by = "Gene") |>
+  mutate(lbl = factor(lbl, levels = lab$lbl),
+         genotype = factor(genotype, levels = c("WT", "mmf1")))
+pa
+
+pb <- ggplot(long, aes(genotype, n + 1, colour = genotype)) +
+  geom_point(position = position_jitter(width = 0.18, height = 0), size = 0.8,
+             alpha = 0.75) +
+  stat_summary(fun = median, geom = "crossbar", width = 0.55, linewidth = 0.3,
+               colour = "grey25") +
+  facet_wrap(~ lbl, nrow = 1, scales = "free_x") +
+  scale_y_log10(labels = scales::label_number(accuracy = 1)) +
+  scale_colour_manual(values = c(WT = COL_WT, mmf1 = COL_MMF1), guide = "none") +
+  labs(title = "Flanking genes are unaffected; the overlapping antisense gene is downregulated alongside MMF1",
+       x = NULL, y = "Normalised count + 1") +
+  theme(strip.text = element_text(size = base_sz - 2.2, lineheight = 1.1),
+        panel.grid.major.x = element_blank(),
+        axis.text.x = element_text(size = base_sz - 2.2, angle = 45, hjust = 1))
+
+## build and assign the combined figure — do not leave it as a bare/auto-printed
+## expression, or patchwork will try to size itself to the interactive device
+combined <- (pa / pb) +
+  plot_layout(heights = c(1.2, 1)) +
+  plot_annotation(tag_levels = "a")
+
+ggsave("Output/Figures/MMF1_TDNA_neighbourhood.png",
+       plot = combined, width = 7.4, height = 7.0, dpi = 300)
+
+ggsave("Output/Figures/MMF1_TDNA_neighbourhood_panel_a.pdf",
+       plot = pa, width = 20, height = 5.5, units ="cm", dpi = 300)
+
+ggsave("Output/Figures/MMF1_TDNA_neighbourhood_panel_b.png",
+       plot = pb, width = 7.4, height = 4.0, dpi = 300)
+```
+
+```{r}
+#| label: tdna-export
+#| echo: false
+#| message: false
+#| warning: false
+# --- PUBLICATION FIGURE REFERENCE ------------------------------------------
+# Supports: Extended Data Fig. 4e
+#   Expression of genes neighbouring the T-DNA insertion
+#   -> Output/Tables/MMF1_TDNA_neighbourhood.csv
+# ------------------------------------------------------------
+
+## the half-MS contrast of Col-0 vs mmf1-2, for comparison in the exported table
+ms <- readr::read_csv(file.path(IN, "col_mmf12_halfms_DETable.csv"),
+                      show_col_types = FALSE)
+
+win |> left_join(ms |> select(Gene = gene_id, ms_baseMean = baseMean,
+                              ms_lfc = log2FoldChange, ms_padj = padj),
+                 by = "Gene") |>
+  arrange(start) |>
+  select(Gene, chr, start, end, strand, biotype, kb, desc,
+         baseMean, lfc, lfcSE, lo, hi, padj,
+         ms_baseMean, ms_lfc, ms_padj) |>
+  write_csv("Output/Tables/MMF1_TDNA_neighbourhood.csv")
+```
