@@ -1,0 +1,195 @@
+configfile: "config.yaml"
+
+with open('samples.txt') as f:
+    sampleID = f.read().splitlines()
+
+REFfa=config["fasta"]
+REFgtf=config["gtf"]
+
+#rules --------------------------------------------------------
+rule all_output:
+    input:
+        "03_multiqc/multiqc_report.html",
+        "01_REFgenome/REFindex/",
+        expand("02_fastqc/{sample}.{lane}_{pair}_fastqc.zip", sample=sampleID, pair=config["reads"], lane=config["lanes"]),
+        expand("02_fastqc/{sample}.{lane}_{pair}_fastqc.html", sample=sampleID, pair=config["reads"], lane=config["lanes"]),
+        expand("04_mapping/{sample}/{sample}Aligned.sortedByCoord.out.bam", sample=sampleID),
+        expand("05_sorted_bam/{sample}_sortn.bam", sample=sampleID),
+        expand("06_qualimap/{sample}/rnaseq_qc_results.txt", sample=sampleID),
+        expand("06_qualimap/{sample}/rnaseq_qc_results.edit.txt", sample=sampleID),
+        "alignment_quality.report.html",
+        "07_counts/ReadsPerGene_all.txt"
+
+
+rule Index_REFgenome:
+    input:
+        fa=REFfa,
+        gtf=REFgtf
+    output:
+        index=directory("01_REFgenome/REFindex")
+    params:
+        overhang=config["sjdbOverhang"]
+    threads: 8
+    resources:
+        mem_mb=16000
+    shell:
+        """
+        module purge
+        ml STAR/2.7.9a-GCC-7.3.0-2.30
+        srun STAR \
+        --runThreadN {threads} \
+        --runMode genomeGenerate \
+        --genomeDir {output.index} \
+        --genomeFastaFiles {input.fa} \
+        --sjdbGTFfile {input.gtf} \
+        --sjdbOverhang {params.overhang} \
+        --genomeSAindexNbases 12
+        """
+
+
+rule FastQC:
+    input:
+        "00_rawdat/{sample}.{lane}_{pair}.fastq.gz"
+    output:
+        zip="02_fastqc/{sample}.{lane}_{pair}_fastqc.zip",
+        html="02_fastqc/{sample}.{lane}_{pair}_fastqc.html"
+    threads: 8
+    shell:
+        """
+        module purge
+        ml FastQC/0.11.8-Java-1.8
+        srun fastqc -t {threads} {input} -o 02_fastqc
+        """
+
+rule MultiQC:
+    input:
+        expand("02_fastqc/{sample}.{lane}_{pair}_fastqc.zip", sample=sampleID, pair=config["reads"], lane=config["lanes"]),
+        expand("02_fastqc/{sample}.{lane}_{pair}_fastqc.html", sample=sampleID, pair=config["reads"], lane=config["lanes"])
+    output:
+        "03_multiqc/multiqc_report.html",
+    shell:
+        """
+        module purge
+        ml MultiQC/1.7-foss-2018b-Python-2.7.15
+        srun multiqc 02_fastqc -o 03_multiqc
+        """
+
+rule alignment:
+    input:
+        index=rules.Index_REFgenome.output.index,
+        L1R1 = '00_rawdat/{sample}.L001_R1.fastq.gz',
+        L2R1 = '00_rawdat/{sample}.L002_R1.fastq.gz',
+        L1R2 = '00_rawdat/{sample}.L001_R2.fastq.gz',
+        L2R2 = '00_rawdat/{sample}.L002_R2.fastq.gz',
+
+    params:
+        prefix = "{sample}",
+        gtf=config["gtf"],
+        intronmin=config["Intronmin"],
+        intronmax=config["Intronmax"]
+
+    output:
+        bam="04_mapping/{sample}/{sample}Aligned.sortedByCoord.out.bam",
+        out="04_mapping/{sample}/{sample}Log.final.out",
+        counts="04_mapping/{sample}/{sample}ReadsPerGene.out.tab"
+    threads: 8
+    shell:
+        """
+        module purge
+        ml STAR/2.7.9a-GCC-7.3.0-2.30
+        srun STAR --genomeDir {input.index} \
+        --runThreadN {threads} \
+        --readFilesIn {input.L1R1},{input.L2R1} {input.L1R2},{input.L2R2} \
+        --readFilesCommand gunzip -c \
+        --sjdbGTFfile {params.gtf} \
+        --outFileNamePrefix 04_mapping/{params.prefix}/{params.prefix} \
+        --quantMode GeneCounts \
+        --outReadsUnmapped Fastx \
+        --outSAMtype BAM SortedByCoordinate \
+        --outSAMunmapped Within \
+        --outSAMattributes Standard \
+        --alignIntronMin {params.intronmin} \
+        --alignIntronMax {params.intronmax}
+        """
+
+
+rule bam_sort_byname:
+    input:
+        rules.alignment.output.bam
+    output:
+        "05_sorted_bam/{sample}_sortn.bam"
+    threads: 8
+    resources:
+        mem_mb=16000
+    shell:
+        """
+        module purge
+        module load SAMtools/1.9-foss-2018b
+        srun samtools sort -n -@ {threads} \
+        {input} -o {output} \
+        -T $TMPDIR/
+        """
+
+rule alignment_quality:
+    input:
+        bamfile=rules.bam_sort_byname.output,
+        gtf=REFgtf
+    output:
+        o1="06_qualimap/{sample}/rnaseq_qc_results.txt",
+        o2="06_qualimap/{sample}/qualimapReport.html"
+    params:
+        prefix = "{sample}",
+    resources:
+        mem_mb=4000
+    shell:
+        """
+        module purge
+        ml Qualimap/2.2.1-foss-2018b-R-4.0.0
+        srun qualimap rnaseq \
+        -outdir 06_qualimap/{params.prefix} \
+        -a proportional \
+        -bam {input.bamfile} \
+        -p strand-specific-reverse \
+        -gtf {input.gtf} \
+        -pe -s \
+        --java-mem-size=4G
+        """
+
+rule extract_qualimap_QCreport:
+    input:
+        rules.alignment_quality.output.o1
+    output:
+        "06_qualimap/{sample}/rnaseq_qc_results.edit.txt"
+    shell:
+        """
+        grep -E "exonic|intronic|intergenic|overlapping|5\'|3\'" {input} | sed -E 's/^ *//g' | sed 's/ = /\t/g' > {output}
+        """
+
+rule alignment_quality_report:
+        input:
+            p1=expand("04_mapping/{sample}/{sample}Log.final.out", sample=sampleID),
+            p2=expand("06_qualimap/{sample}/rnaseq_qc_results.edit.txt", sample=sampleID)
+        output:
+            "alignment_quality.report.html"
+        shell:
+            """
+            module purge
+            ml R/4.1.0-foss-2018b
+            ml Pandoc/2.7.3
+            cd scripts
+            Rscript alignment_quality.R
+            mv alignment_quality.html ../alignment_quality.report.html
+            """
+
+rule make_countmatrix:
+    input:
+        expand("04_mapping/{sample}/{sample}ReadsPerGene.out.tab", sample=sampleID)
+    output:
+        "07_counts/ReadsPerGene_all.txt"
+    shell:
+        """
+        module purge
+        ml R/4.1.0-foss-2018b
+        ml Pandoc/2.7.3
+        Rscript scripts/merge_readcounts.R
+        """

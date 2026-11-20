@@ -1,0 +1,106 @@
+---
+title: "Alignment Quality"
+author: "Lea Stauber"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+params:
+   rmd: "alignment_quality.Rmd"
+output:
+  html_document:
+    code_folding: hide
+    toc: true
+    toc_float: true
+---
+
+
+
+
+
+```{r setup, include=FALSE}
+
+library(dplyr)
+library(kableExtra)
+library(ggplot2)
+library(knitr)
+```
+
+
+### STAR alignment
+
+
+#### Percentage of mapped reads:
+```{r, message=FALSE, warning=F}
+
+samples <- list.files("../04_mapping/")
+files <- list.files(path=paste0("../04_mapping/", samples), pattern = "*.*final.out")
+
+dat <- paste0("../04_mapping/",samples, "/", files) %>%
+  lapply(., read.table, header = F, sep="\t", fill=T) %>%
+  Map(cbind, ., sample = samples) %>%
+  do.call(rbind.data.frame, .) %>%
+  mutate(V1 = gsub("^\\s*| \\|", "", V1))
+
+
+## plotting
+datplot <- dat %>%
+  filter(V1 %in% c("Uniquely mapped reads %", "% of reads mapped to multiple loci", "% of reads unmapped: too many mismatches",
+                   "% of reads mapped to too many loci", "% of reads unmapped: too short")) %>%
+  mutate(V2 = as.numeric(gsub("%", "", V2)),
+         V1 = gsub("% of reads unmapped: too many mismatches", "% of reads unmapped:\ntoo many mismatches", V1),
+         V1 = gsub("Uniquely mapped reads %", "% uniquely mapped reads", V1),
+         V1 = factor(V1, c("% uniquely mapped reads", "% of reads mapped to multiple loci", "% of reads unmapped:\ntoo many mismatches",
+                   "% of reads mapped to too many loci", "% of reads unmapped: too short"), ordered=T))
+
+
+data <- datplot %>% filter(V1=="% uniquely mapped reads")
+
+
+tab <- datplot %>%
+  group_by(V1) %>%
+  summarise(Mean = mean(V2), Median=median(V2),Min=min(V2), Max=max(V2)) %>%
+  dplyr::rename(Type=V1) %>%
+  mutate(Type = gsub("% of reads unmapped:\ntoo many mismatches", "% of reads unmapped: too many mismatches", Type))
+
+
+tab %>%
+  kbl() %>%
+  kable_styling()
+
+
+ggplot(datplot, aes(x=V2, fill=V1)) +
+  geom_histogram(alpha=.7, show.legend = F, bins=15, col="black") +
+  facet_wrap(.~V1) +
+  theme_light() +
+  scale_x_continuous(labels = function(x) paste0(x, "%")) +
+  theme(axis.title.x = element_blank(),
+        strip.text = element_text(colour = 'black')) +
+  expand_limits(x = c(0, 100))
+```
+
+
+
+#### Origin of reads and bias
+```{r, message=FALSE, warning=F}
+dat <- paste0("../06_qualimap/", samples, "/", "rnaseq_qc_results.edit.txt") %>%
+  lapply(., read.table, header = F, sep="\t", fill=T, quote="") %>%
+  Map(cbind, ., sample = samples) %>%
+  do.call(rbind.data.frame, .) %>%
+  mutate(V2 = gsub(".*\\(|\\)|%", "", V2),
+         V2 = as.numeric(V2))
+
+tab <- dat %>%
+  group_by(V1) %>%
+  summarise(Mean = round(mean(V2),2), Median=median(V2),Min=min(V2), Max=max(V2)) %>%
+  dplyr::rename(Type=V1) %>%
+  arrange(match(Type, c("exonic", "overlapping exon", "intronic", "intergenic", "3' bias", "5' bias", "5'-3' bias")))
+
+tab$Type[1:4] <- paste("%", tab$Type[1:4], sep=" ")
+
+
+
+
+kbl(tab[1:7,]) %>%
+kable_styling(full_width = T) %>%
+  row_spec(1, background = "seagreen") %>%
+  row_spec(7, background = "seagreen")
+
+```

@@ -1,0 +1,10 @@
+lanes: ["L001", "L002"]
+reads: ["R1", "R2"]
+
+fasta: 01_REFgenome/TAIR10.genome.fa
+gtf: 01_REFgenome/Araport11_GTF_genes_transposons.Mar202021.gtf
+
+sjdbOverhang: 50
+Intronmin: 50
+Intronmax: 10223
+memsize: 16G
