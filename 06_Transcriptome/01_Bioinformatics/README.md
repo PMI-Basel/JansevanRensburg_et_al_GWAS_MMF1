@@ -73,7 +73,7 @@ partition, module names and the conda activation path to your site.
 
 ## Raw data
 
-Raw fastq files are deposited at [accession — to complete]. `get_samples/get_samples.tab`
+Raw fastq files are deposited at European Nucleotide Archive (http://www.ebi.ac.uk/ena) PRJEB109937. `get_samples/get_samples.tab`
 records which sequencing-facility file became which sample name, so the deposited files
 can be matched to the sample names used throughout the analysis.
 
