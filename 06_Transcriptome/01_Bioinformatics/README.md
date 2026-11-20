@@ -27,7 +27,7 @@ replicates each, two lanes and paired reads per sample.
 
 ## The sample switch (read this before using the counts)
 
-`WTm2` and `WTp2` were exchanged at some point between sowing and sequencing. The
+`WTm2` and `WTp2` were swapped at sample preparation for sequencing. The
 analysis therefore uses a corrected count matrix in which those two column labels are
 swapped back; `OUTPUT/swap_samples/` holds the whole operation:
 
